@@ -13,9 +13,9 @@ import csv
 from pathlib import Path
 
 
-W = 4
-H = 4
-RAW = [
+BASE_W = 4
+BASE_H = 4
+BASE_RAW = [
     64, 128, 80, 160,
     96, 64, 120, 80,
     70, 140, 90, 180,
@@ -88,22 +88,53 @@ def frame(raw: list[int], width: int, height: int, mode: int, threshold: int) ->
     return out
 
 
-def write_csv(path: Path) -> None:
-    cases = [
-        ("normal_4x4", DFXISP_MODE_NORMAL, 90),
-        ("lowlight_4x4", DFXISP_MODE_LOW_LIGHT, 90),
-        ("auto_lowlight_4x4", DFXISP_MODE_AUTO, 120),
+def constant_raw(width: int, height: int, value: int) -> list[int]:
+    return [value for _ in range(width * height)]
+
+
+def gradient_raw(width: int, height: int, lo: int, hi: int) -> list[int]:
+    span = max(hi - lo, 0)
+    denom = max(width + height - 2, 1)
+    return [lo + (span * (x + y)) // denom for y in range(height) for x in range(width)]
+
+
+def checker_raw(width: int, height: int, dark: int, bright: int) -> list[int]:
+    return [dark if ((x // 2) + (y // 2)) % 2 == 0 else bright for y in range(height) for x in range(width)]
+
+
+def threshold_raw(width: int, height: int, threshold: int, delta: int) -> list[int]:
+    # Keep the integer average exactly at, or just below, the AUTO threshold.
+    return constant_raw(width, height, max(0, min(4095, threshold + delta)))
+
+
+def golden_cases() -> list[tuple[str, int, int, int, int, list[int]]]:
+    return [
+        ("normal_4x4", BASE_W, BASE_H, DFXISP_MODE_NORMAL, 90, BASE_RAW),
+        ("lowlight_4x4", BASE_W, BASE_H, DFXISP_MODE_LOW_LIGHT, 90, BASE_RAW),
+        ("auto_lowlight_4x4", BASE_W, BASE_H, DFXISP_MODE_AUTO, 120, BASE_RAW),
+        ("bright_normal_8x8", 8, 8, DFXISP_MODE_NORMAL, 512, gradient_raw(8, 8, 2600, 4095)),
+        ("dark_lowlight_8x8", 8, 8, DFXISP_MODE_LOW_LIGHT, 512, gradient_raw(8, 8, 16, 384)),
+        ("mixed_auto_16x16", 16, 16, DFXISP_MODE_AUTO, 1400, checker_raw(16, 16, 96, 2800)),
+        ("threshold_boundary_equal_8x8", 8, 8, DFXISP_MODE_AUTO, 512, threshold_raw(8, 8, 512, 0)),
+        ("threshold_boundary_below_8x8", 8, 8, DFXISP_MODE_AUTO, 512, threshold_raw(8, 8, 512, -1)),
     ]
+
+
+def write_csv(path: Path) -> int:
+    rows = 0
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="") as f:
         writer = csv.writer(f, lineterminator="\n")
         writer.writerow(["case", "width", "height", "mode", "threshold", "index", "x", "y", "raw", "expected_rgb_hex"])
-        for name, mode, threshold in cases:
-            rgb = frame(RAW, W, H, mode, threshold)
-            for idx, (raw_value, rgb_value) in enumerate(zip(RAW, rgb)):
-                x = idx % W
-                y = idx // W
-                writer.writerow([name, W, H, mode, threshold, idx, x, y, raw_value, f"0x{rgb_value:06x}"])
+        for name, width, height, mode, threshold, raw in golden_cases():
+            assert len(raw) == width * height
+            rgb = frame(raw, width, height, mode, threshold)
+            for idx, (raw_value, rgb_value) in enumerate(zip(raw, rgb)):
+                x = idx % width
+                y = idx // width
+                writer.writerow([name, width, height, mode, threshold, idx, x, y, raw_value, f"0x{rgb_value:06x}"])
+                rows += 1
+    return rows
 
 
 def main() -> int:
@@ -111,9 +142,8 @@ def main() -> int:
     parser.add_argument("--out", default="tests/golden_vectors.csv", help="output CSV path (default: tests/golden_vectors.csv)")
     args = parser.parse_args()
     out = Path(args.out)
-    write_csv(out)
-    rows = 1 + 3 * W * H
-    print(f"wrote {out} ({rows} rows including header)")
+    rows = write_csv(out)
+    print(f"wrote {out} ({rows + 1} rows including header; {rows} data rows; {len(golden_cases())} cases)")
     return 0
 
 

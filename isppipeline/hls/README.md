@@ -42,7 +42,7 @@ DFXISP C-sim smoke tests passed
 
 ## Generate and verify golden vectors
 
-`make golden` writes `tests/golden_vectors.csv` using a stdlib-only Python model that mirrors the documented C++ algorithm: GRBG Bayer input, clamped 3x3 demosaic, RAW12-to-RGB8 shift, and integer low-light gain/lift. `make verify` regenerates that CSV, runs C-sim, and bit-compares each packed `0x00RRGGBB` output against the golden values.
+`make golden` writes `tests/golden_vectors.csv` using a stdlib-only Python model that mirrors the documented C++ algorithm: GRBG Bayer input, clamped 3x3 demosaic, RAW12-to-RGB8 shift, and integer low-light gain/lift. C2 coverage includes the original 4x4 smoke set plus 8x8 and 16x16 bright/dark/mixed/AUTO threshold-boundary cases. `make verify` regenerates that CSV, runs C-sim, and bit-compares each packed `0x00RRGGBB` output against the golden values.
 
 ```bash
 cd isppipeline/hls
@@ -53,9 +53,9 @@ Expected output:
 
 ```text
 python3 tools/gen_golden_vectors.py --out tests/golden_vectors.csv
-wrote tests/golden_vectors.csv (49 rows including header)
+wrote tests/golden_vectors.csv (561 rows including header; 560 data rows; 8 cases)
 ./build/dfxisp_csim
-DFXISP golden vector compare passed (48 pixels)
+DFXISP golden vector compare passed (560 pixels)
 DFXISP C-sim smoke tests passed
 ```
 
@@ -74,7 +74,7 @@ Expected output:
 
 ```text
 python3 tools/gen_golden_vectors.py --out tests/golden_vectors.csv
-wrote tests/golden_vectors.csv (49 rows including header)
+wrote tests/golden_vectors.csv (561 rows including header; 560 data rows; 8 cases)
 python3 tools/gen_verification_report.py --out reports/latest.md
 wrote /path/to/isppipeline/hls/reports/latest.md (golden=pass, csim=pass)
 ```
@@ -167,4 +167,4 @@ ignored by the local `g++` build.
 
 1. Replace `load_bayer_window3x3()` clamped reads with a true streaming line buffer.
 2. Promote `low_light_reconfigurable_module()` into a standalone DFX RM packaging flow.
-3. Expand Python golden vector coverage beyond the current deterministic 4x4 GRBG smoke set.
+3. Expand Python golden vector coverage as fixture needs grow beyond the current C2 4x4/8x8/16x16 bright/dark/mixed/threshold-boundary set.

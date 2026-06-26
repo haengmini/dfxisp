@@ -106,6 +106,15 @@ def analyze_golden(path: Path) -> tuple[str, list[str], list[GoldenCase], int]:
         if case.rows != expected:
             notes.append(f"{case.name}: {case.rows} rows, expected {expected}")
 
+    names = {case.name for case in golden_cases}
+    sizes = {(case.width, case.height) for case in golden_cases}
+    for required_size in [(8, 8), (16, 16)]:
+        if required_size not in sizes:
+            notes.append(f"missing required {required_size[0]}x{required_size[1]} golden-vector coverage")
+    for required_label in ["bright", "dark", "mixed", "threshold_boundary"]:
+        if not any(required_label in name for name in names):
+            notes.append(f"missing required {required_label} golden-vector coverage")
+
     status = "pass" if total_rows > 0 and not notes else "fail"
     return status, notes, golden_cases, total_rows
 
@@ -165,6 +174,17 @@ def write_report(root: Path, out: Path) -> None:
             lines.append(f"| {case.name} | {case.mode} | {case.threshold} | {case.width}x{case.height} | {case.rows} |")
     else:
         lines.append("| n/a | n/a | n/a | n/a | 0 |")
+
+    lines.extend([
+        "",
+        "## DPU-facing shape policy",
+        "",
+        "Decision for this C2 verification set: keep the default HLS/C-sim output shape at `H x W` for NORMAL, LOW_LIGHT, and AUTO outputs. This preserves a fixed-size DPU-facing ABI while the H/2 x W/2 low-light binning path remains an explicit ablation/future RM variant rather than the default golden-vector contract.",
+        "",
+        "- Rationale: current `dfxisp_accel` signature exposes one output buffer without output-width/output-height metadata, so H/2 emission would make bit-exact comparison ambiguous and would force downstream resize/pad policy before DPU integration.",
+        "- Ablation policy: evaluate `H/2 x W/2` low-light binning separately once the interface includes output shape metadata or an explicit post-binning upsample/pad stage. Compare it against the preserve-shape path using the same bright/dark/mixed/threshold-boundary fixtures.",
+        "- Current golden-vector contract: packed RGB888 `0x00RRGGBB`, one output pixel per input pixel, with low-light represented by deterministic gain/lift at preserved shape.",
+    ])
 
     lines.extend(["", "## C-sim output", "", "```text", csim_output or "(no output)", "```"])
 
