@@ -32,6 +32,9 @@
 ### 3.1 문서/구조 정합
 
 - `docs/`와 실제 코드 경로가 계속 일치하도록 유지
+- `docs/README.md`를 문서 진입점으로 유지
+- `docs/C_SIM_QUICKSTART.md`에는 clone 후 바로 실행 가능한 명령만 둔다
+- `docs/SCENARIO.md`에는 현재 조도 변화 시나리오와 C-Sim 한계를 명시한다
 - 레거시 `docs/reference/`와 현재 메인라인 문서의 역할 구분 유지
 - RGB32 메인라인과 과거 grayscale/YUYV 기록이 섞이지 않도록 주석 정리
 

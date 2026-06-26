@@ -155,6 +155,10 @@ FPGA 전체를 다시 구성하는 대신, 일부 영역만 교체합니다.
 
 이 프로젝트를 이해할 때 가장 먼저 봐야 할 문서가 모여 있습니다.
 
+- [docs/README.md](docs/README.md): 문서 읽기 순서와 reference/historical 구분
+- [docs/C_SIM_QUICKSTART.md](docs/C_SIM_QUICKSTART.md): clone 후 C-Sim 실행 방법
+- [docs/SCENARIO.md](docs/SCENARIO.md): 현재 조도 변화 시나리오 설명
+- [docs/PONYTAIL_REVIEW.md](docs/PONYTAIL_REVIEW.md): Ponytail 관점 검수
 - [Architecture.md](docs/Architecture.md): 전체 구조와 데이터 흐름
 - [Research_Roadmap.md](docs/Research_Roadmap.md): 연구 목표, 단계, 진행 현황
 - [Analysis_Report.md](docs/Analysis_Report.md): 실험 결과와 분석

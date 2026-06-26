@@ -1,6 +1,6 @@
 # DFXISP HLS Verification Report
 
-Generated: 2026-06-26 05:30:50 UTC
+Generated: 2026-06-26 05:47:30 UTC
 Report: `reports/latest.md`
 
 ## Status
