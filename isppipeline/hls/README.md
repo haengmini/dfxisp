@@ -42,7 +42,7 @@ DFXISP C-sim smoke tests passed
 
 ## Generate and verify golden vectors
 
-`make golden` writes `tests/golden_vectors.csv` using a stdlib-only Python model that mirrors the documented C++ algorithm: GRBG Bayer input, clamped 3x3 demosaic, RAW12-to-RGB8 shift, and integer low-light gain/lift. C2 coverage includes the original 4x4 smoke set plus 8x8 and 16x16 bright/dark/mixed/AUTO threshold-boundary cases. `make verify` regenerates that CSV, runs C-sim, and bit-compares each packed `0x00RRGGBB` output against the golden values.
+`make golden` writes `tests/golden_vectors.csv` using a stdlib-only Python model that mirrors the documented C++ algorithm: GRBG Bayer input, clamped 3x3 demosaic, RAW12-to-RGB8 shift, and integer low-light gain/lift. C2 coverage now uses visible grid-style synthetic frames ordered as scenario frames: NORMAL x3, LOW_LIGHT x3, then NORMAL x1. The 8x8/16x16 values are test-frame resolutions, not filter or binning sizes. `make verify` regenerates that CSV, runs C-sim, and bit-compares each packed `0x00RRGGBB` output against the golden values.
 
 ```bash
 cd isppipeline/hls
@@ -53,9 +53,9 @@ Expected output:
 
 ```text
 python3 tools/gen_golden_vectors.py --out tests/golden_vectors.csv
-wrote tests/golden_vectors.csv (561 rows including header; 560 data rows; 8 cases)
+wrote tests/golden_vectors.csv (833 rows including header; 832 data rows; 7 cases)
 ./build/dfxisp_csim
-DFXISP golden vector compare passed (560 pixels)
+DFXISP golden vector compare passed (832 pixels)
 DFXISP C-sim smoke tests passed
 ```
 
@@ -74,7 +74,7 @@ Expected output:
 
 ```text
 python3 tools/gen_golden_vectors.py --out tests/golden_vectors.csv
-wrote tests/golden_vectors.csv (561 rows including header; 560 data rows; 8 cases)
+wrote tests/golden_vectors.csv (833 rows including header; 832 data rows; 7 cases)
 python3 tools/gen_verification_report.py --out reports/latest.md
 wrote /path/to/isppipeline/hls/reports/latest.md (golden=pass, csim=pass)
 ```

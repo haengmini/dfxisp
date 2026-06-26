@@ -16,10 +16,10 @@ from pathlib import Path
 BASE_W = 4
 BASE_H = 4
 BASE_RAW = [
-    64, 128, 80, 160,
-    96, 64, 120, 80,
-    70, 140, 90, 180,
-    100, 75, 130, 95,
+    220, 360, 260, 520,
+    300, 460, 340, 620,
+    420, 760, 480, 900,
+    540, 860, 620, 1040,
 ]
 
 DFXISP_MODE_NORMAL = 0
@@ -92,31 +92,51 @@ def constant_raw(width: int, height: int, value: int) -> list[int]:
     return [value for _ in range(width * height)]
 
 
-def gradient_raw(width: int, height: int, lo: int, hi: int) -> list[int]:
-    span = max(hi - lo, 0)
-    denom = max(width + height - 2, 1)
-    return [lo + (span * (x + y)) // denom for y in range(height) for x in range(width)]
+def grid_raw(width: int, height: int, levels: list[int], cell: int = 2, texture: int = 32) -> list[int]:
+    """Generate a visible illumination grid, not a flat black/white patch.
+
+    Each cell has a different base illumination.  A small deterministic texture is
+    added inside cells so the demosaic window sees realistic local variation while
+    the image still reads visually as a grid.
+    """
+    raw: list[int] = []
+    cells_x = max((width + cell - 1) // cell, 1)
+    for y in range(height):
+        for x in range(width):
+            cell_x = x // cell
+            cell_y = y // cell
+            base = levels[(cell_y * cells_x + cell_x) % len(levels)]
+            ripple = ((x % cell) * texture + (y % cell) * (texture // 2))
+            bayer_offset = 18 if ((x + y) & 1) else -10
+            raw.append(max(0, min(4095, base + ripple + bayer_offset)))
+    return raw
 
 
-def checker_raw(width: int, height: int, dark: int, bright: int) -> list[int]:
-    return [dark if ((x // 2) + (y // 2)) % 2 == 0 else bright for y in range(height) for x in range(width)]
-
-
-def threshold_raw(width: int, height: int, threshold: int, delta: int) -> list[int]:
-    # Keep the integer average exactly at, or just below, the AUTO threshold.
-    return constant_raw(width, height, max(0, min(4095, threshold + delta)))
+def threshold_grid_raw(width: int, height: int, threshold: int, delta: int) -> list[int]:
+    """Visible grid whose integer average is threshold + delta."""
+    offsets = [-96, -48, 0, 48, 96, 48, 0, -48]
+    vals: list[int] = []
+    for y in range(height):
+        for x in range(width):
+            vals.append(threshold + offsets[((x // 2) + 2 * (y // 2)) % len(offsets)])
+    target_sum = (threshold + delta) * width * height
+    diff = target_sum - sum(vals)
+    vals[-1] += diff
+    return [max(0, min(4095, v)) for v in vals]
 
 
 def golden_cases() -> list[tuple[str, int, int, int, int, list[int]]]:
+    # Scenario order: normal x3 -> low-light x3 -> normal x1.
+    # These are synthetic illumination-grid frames; 8x8/16x16 are test-frame
+    # resolutions, not filter or binning sizes.
     return [
-        ("normal_4x4", BASE_W, BASE_H, DFXISP_MODE_NORMAL, 90, BASE_RAW),
-        ("lowlight_4x4", BASE_W, BASE_H, DFXISP_MODE_LOW_LIGHT, 90, BASE_RAW),
-        ("auto_lowlight_4x4", BASE_W, BASE_H, DFXISP_MODE_AUTO, 120, BASE_RAW),
-        ("bright_normal_8x8", 8, 8, DFXISP_MODE_NORMAL, 512, gradient_raw(8, 8, 2600, 4095)),
-        ("dark_lowlight_8x8", 8, 8, DFXISP_MODE_LOW_LIGHT, 512, gradient_raw(8, 8, 16, 384)),
-        ("mixed_auto_16x16", 16, 16, DFXISP_MODE_AUTO, 1400, checker_raw(16, 16, 96, 2800)),
-        ("threshold_boundary_equal_8x8", 8, 8, DFXISP_MODE_AUTO, 512, threshold_raw(8, 8, 512, 0)),
-        ("threshold_boundary_below_8x8", 8, 8, DFXISP_MODE_AUTO, 512, threshold_raw(8, 8, 512, -1)),
+        ("seq1_bright_normal_grid_8x8", 8, 8, DFXISP_MODE_NORMAL, 512, grid_raw(8, 8, [1800, 2300, 2800, 3300, 3800, 3050, 2450, 3600])),
+        ("seq2_bright_normal_grid_8x8", 8, 8, DFXISP_MODE_NORMAL, 512, grid_raw(8, 8, [2100, 2550, 3000, 3450, 3900, 3250, 2700, 3650], texture=28)),
+        ("seq3_mixed_normal_grid_16x16", 16, 16, DFXISP_MODE_NORMAL, 1400, grid_raw(16, 16, [1450, 1800, 2200, 2600, 3050, 3400, 3750, 2450], cell=4, texture=36)),
+        ("seq4_dark_lowlight_grid_8x8", 8, 8, DFXISP_MODE_LOW_LIGHT, 512, grid_raw(8, 8, [180, 260, 380, 520, 700, 920, 620, 300], texture=24)),
+        ("seq5_dark_lowlight_grid_8x8", 8, 8, DFXISP_MODE_LOW_LIGHT, 512, grid_raw(8, 8, [240, 360, 500, 680, 860, 1040, 720, 420], texture=26)),
+        ("seq6_mixed_dark_lowlight_grid_16x16", 16, 16, DFXISP_MODE_LOW_LIGHT, 1400, grid_raw(16, 16, [220, 420, 760, 1180, 540, 980, 1320, 360], cell=4, texture=38)),
+        ("seq7_threshold_boundary_normal_grid_8x8", 8, 8, DFXISP_MODE_AUTO, 512, threshold_grid_raw(8, 8, 512, 0)),
     ]
 
 

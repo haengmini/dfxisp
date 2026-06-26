@@ -1,13 +1,13 @@
 # DFXISP HLS Verification Report
 
-Generated: 2026-06-26 05:11:07 UTC
+Generated: 2026-06-26 05:30:50 UTC
 Report: `reports/latest.md`
 
 ## Status
 
 | Check | Status | Evidence |
 |---|---:|---|
-| Golden vectors | PASS | `tests/golden_vectors.csv`; 560 data rows; 8 cases |
+| Golden vectors | PASS | `tests/golden_vectors.csv`; 832 data rows; 7 cases |
 | C-sim | PASS | `build/dfxisp_csim`; return code 0 |
 
 ## Makefile state
@@ -22,14 +22,13 @@ Report: `reports/latest.md`
 
 | Case | Mode | Threshold | Dimensions | Rows |
 |---|---:|---:|---:|---:|
-| normal_4x4 | 0 | 90 | 4x4 | 16 |
-| lowlight_4x4 | 1 | 90 | 4x4 | 16 |
-| auto_lowlight_4x4 | 2 | 120 | 4x4 | 16 |
-| bright_normal_8x8 | 0 | 512 | 8x8 | 64 |
-| dark_lowlight_8x8 | 1 | 512 | 8x8 | 64 |
-| mixed_auto_16x16 | 2 | 1400 | 16x16 | 256 |
-| threshold_boundary_equal_8x8 | 2 | 512 | 8x8 | 64 |
-| threshold_boundary_below_8x8 | 2 | 512 | 8x8 | 64 |
+| seq1_bright_normal_grid_8x8 | 0 | 512 | 8x8 | 64 |
+| seq2_bright_normal_grid_8x8 | 0 | 512 | 8x8 | 64 |
+| seq3_mixed_normal_grid_16x16 | 0 | 1400 | 16x16 | 256 |
+| seq4_dark_lowlight_grid_8x8 | 1 | 512 | 8x8 | 64 |
+| seq5_dark_lowlight_grid_8x8 | 1 | 512 | 8x8 | 64 |
+| seq6_mixed_dark_lowlight_grid_16x16 | 1 | 1400 | 16x16 | 256 |
+| seq7_threshold_boundary_normal_grid_8x8 | 2 | 512 | 8x8 | 64 |
 
 ## DPU-facing shape policy
 
@@ -42,6 +41,6 @@ Decision for this C2 verification set: keep the default HLS/C-sim output shape a
 ## C-sim output
 
 ```text
-DFXISP golden vector compare passed (560 pixels)
+DFXISP golden vector compare passed (832 pixels)
 DFXISP C-sim smoke tests passed
 ```
