@@ -2,12 +2,89 @@
 
 #include <cassert>
 #include <cstdint>
+#include <fstream>
 #include <iostream>
+#include <sstream>
+#include <string>
 #include <vector>
 
 static uint8_t red(uint32_t p) { return uint8_t((p >> 16) & 0xff); }
 static uint8_t green(uint32_t p) { return uint8_t((p >> 8) & 0xff); }
 static uint8_t blue(uint32_t p) { return uint8_t(p & 0xff); }
+
+struct GoldenCase {
+    std::string name;
+    int width = 0;
+    int height = 0;
+    int mode = 0;
+    uint16_t threshold = 0;
+    std::vector<uint16_t> raw;
+    std::vector<uint32_t> expected;
+};
+
+static void check_golden_vectors(const char* path) {
+    std::ifstream f(path);
+    if (!f) {
+        std::cout << "DFXISP golden vector compare skipped (" << path << " not found)\n";
+        return;
+    }
+
+    std::string line;
+    std::getline(f, line);  // header
+    std::vector<GoldenCase> cases;
+    while (std::getline(f, line)) {
+        if (line.empty()) continue;
+        std::stringstream ss(line);
+        std::vector<std::string> col;
+        std::string cell;
+        while (std::getline(ss, cell, ',')) col.push_back(cell);
+        assert(col.size() == 10);
+
+        const std::string& name = col[0];
+        const int width = std::stoi(col[1]);
+        const int height = std::stoi(col[2]);
+        const int mode = std::stoi(col[3]);
+        const auto threshold = static_cast<uint16_t>(std::stoul(col[4]));
+        const int index = std::stoi(col[5]);
+        const auto raw = static_cast<uint16_t>(std::stoul(col[8]));
+        const auto expected = static_cast<uint32_t>(std::stoul(col[9], nullptr, 0));
+
+        if (cases.empty() || cases.back().name != name) {
+            GoldenCase c;
+            c.name = name;
+            c.width = width;
+            c.height = height;
+            c.mode = mode;
+            c.threshold = threshold;
+            c.raw.assign(width * height, 0);
+            c.expected.assign(width * height, 0);
+            cases.push_back(c);
+        }
+
+        GoldenCase& c = cases.back();
+        assert(c.width == width && c.height == height && c.mode == mode && c.threshold == threshold);
+        assert(index >= 0 && index < c.width * c.height);
+        c.raw[index] = raw;
+        c.expected[index] = expected;
+    }
+
+    int checked = 0;
+    for (const GoldenCase& c : cases) {
+        std::vector<uint32_t> got(c.width * c.height, 0);
+        dfxisp_accel(c.raw.data(), got.data(), c.width, c.height, c.mode, c.threshold);
+        for (int i = 0; i < c.width * c.height; ++i) {
+            if (got[i] != c.expected[i]) {
+                std::cerr << "golden mismatch case=" << c.name << " index=" << i
+                          << " expected=0x" << std::hex << c.expected[i]
+                          << " got=0x" << got[i] << std::dec << "\n";
+                assert(got[i] == c.expected[i]);
+            }
+            ++checked;
+        }
+    }
+
+    std::cout << "DFXISP golden vector compare passed (" << checked << " pixels)\n";
+}
 
 int main() {
     constexpr int W = 4;
@@ -46,6 +123,8 @@ int main() {
     assert(red(bright_out[0]) == 255);
     assert(green(bright_out[0]) == 255);
     assert(blue(bright_out[0]) == 255);
+
+    check_golden_vectors("tests/golden_vectors.csv");
 
     std::cout << "DFXISP C-sim smoke tests passed\n";
     return 0;

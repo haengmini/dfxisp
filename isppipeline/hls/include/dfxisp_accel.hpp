@@ -8,7 +8,7 @@
 // - output: packed RGB888 in uint32_t, 0x00RRGGBB
 // Mode policy:
 // - NORMAL: lightweight Bayer-to-RGB path
-// - LOW_LIGHT: 2x2 local binning/gain-inspired brightening path
+// - LOW_LIGHT: normal demosaic plus gain/gamma-lift stage behind DFX RM boundary
 // - AUTO: scene checker selects LOW_LIGHT when average luminance is below threshold
 
 enum DfxIspMode : int {

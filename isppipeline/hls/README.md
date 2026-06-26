@@ -10,7 +10,7 @@ This scaffold creates the first deterministic C-simulation target for the DFX AI
 ```text
 pseudo-RAW Bayer GRBG uint16
   -> scene checker
-  -> normal or low-light ISP mode
+  -> normal pipeline or low-light DFX RM path
   -> packed RGB888 uint32
 ```
 
@@ -19,9 +19,11 @@ It is intentionally Ponytail-style: one small HLS top, stdlib-only C-sim, no Vit
 ## Files
 
 - `include/dfxisp_accel.hpp` — HLS top-level interface and mode enum
-- `src/dfxisp_accel.cpp` — demosaic + low-light gain/gamma-lift + auto checker
-- `tests/test_dfxisp_csim.cpp` — C-sim smoke tests
-- `Makefile` — local C-sim build with `g++`
+- `src/dfxisp_accel.cpp` — checker + 3x3-window demosaic pipeline + low-light RM boundary
+- `tests/test_dfxisp_csim.cpp` — C-sim smoke tests plus optional golden CSV RGB bit-compare
+- `tools/gen_golden_vectors.py` — stdlib-only deterministic Bayer/RGB golden vector generator
+- `scripts/vitis_hls.tcl` — Vitis HLS project scaffold for `dfxisp_accel`
+- `Makefile` — local C-sim build with `g++`, golden generation, and verify target
 
 ## Run C-sim locally
 
@@ -30,11 +32,52 @@ cd isppipeline/hls
 make csim
 ```
 
+Expected output without `tests/golden_vectors.csv`:
+
+```text
+DFXISP golden vector compare skipped (tests/golden_vectors.csv not found)
+DFXISP C-sim smoke tests passed
+```
+
+## Generate and verify golden vectors
+
+`make golden` writes `tests/golden_vectors.csv` using a stdlib-only Python model that mirrors the documented C++ algorithm: GRBG Bayer input, clamped 3x3 demosaic, RAW12-to-RGB8 shift, and integer low-light gain/lift. `make verify` regenerates that CSV, runs C-sim, and bit-compares each packed `0x00RRGGBB` output against the golden values.
+
+```bash
+cd isppipeline/hls
+make verify
+```
+
 Expected output:
 
 ```text
+python3 tools/gen_golden_vectors.py --out tests/golden_vectors.csv
+wrote tests/golden_vectors.csv (49 rows including header)
+./build/dfxisp_csim
+DFXISP golden vector compare passed (48 pixels)
 DFXISP C-sim smoke tests passed
 ```
+
+## Run Vitis HLS scaffold
+
+The TCL script defaults to the ZCU104 Zynq UltraScale+ part `xczu7ev-ffvc1156-2-e` and a 5.0 ns clock. Override the part/clock/flow if your board installation uses a different speed grade or target:
+
+```bash
+cd isppipeline/hls
+make hls                                    # default: DFXISP_HLS_FLOW=csim
+DFXISP_HLS_FLOW=csynth make hls             # run C-sim then synthesis
+DFXISP_HLS_PART=xczu7ev-ffvc1156-2-e \
+DFXISP_HLS_CLOCK=5.0 \
+DFXISP_HLS_FLOW=csynth make hls
+```
+
+You can also pass Tcl args directly:
+
+```bash
+vitis_hls -f scripts/vitis_hls.tcl -- -part xczu7ev-ffvc1156-2-e -clock 5.0 -flow csynth
+```
+
+If `vitis_hls` is not on `PATH`, `make hls` exits with a clear install/source message. Set `VITIS_HLS=/path/to/vitis_hls` to use a non-standard executable path.
 
 ## HLS top function
 
@@ -48,9 +91,30 @@ extern "C" void dfxisp_accel(
     uint16_t low_light_threshold);
 ```
 
+## Hardware/DFX structure
+
+`src/dfxisp_accel.cpp` is now split along the intended hardware boundaries while
+remaining stdlib-only for local C-sim:
+
+- `checker_select_low_light()` / `checker_scene_average()` are the static-region
+  scene checker blocks. In `AUTO`, they route the frame to the normal or low-light
+  path based on average RAW luminance and `low_light_threshold`.
+- `load_bayer_window3x3()` produces an explicit 3x3 Bayer neighborhood consumed by
+  `demosaic_grbg_window()`. Today it uses clamped memory reads for deterministic
+  C-sim; this boundary is intended to be replaced by a streaming line-buffer/window
+  producer for hardware without changing the demosaic pixel operator.
+- `normal_pipeline()` is the baseline static ISP path.
+- `low_light_reconfigurable_module()` is the explicit DFX reconfigurable-module
+  boundary candidate. In a Vivado DFX implementation, synthesize/package this
+  low-light stage as the RM-compatible block and keep `dfxisp_accel`, the checker,
+  and the normal pipeline in the static region. The function is marked `INLINE off`
+  with an HLS pragma so the hierarchy is visible to synthesis.
+
+No Vitis-specific headers are required for C-sim; only HLS pragmas are present and
+ignored by the local `g++` build.
+
 ## Next hardware steps
 
-1. Add Vitis HLS project TCL for ZCU104 target clock/part.
-2. Replace border-clamped reference demosaic with line-buffer/window implementation.
-3. Split low-light processing into a DFX reconfigurable module boundary.
-4. Generate golden vectors from Python ISP and compare RGB888/RGB32 output bitwise.
+1. Replace `load_bayer_window3x3()` clamped reads with a true streaming line buffer.
+2. Promote `low_light_reconfigurable_module()` into a standalone DFX RM packaging flow.
+3. Expand Python golden vector coverage beyond the current deterministic 4x4 GRBG smoke set.
