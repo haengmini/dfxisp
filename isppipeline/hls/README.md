@@ -22,8 +22,9 @@ It is intentionally Ponytail-style: one small HLS top, stdlib-only C-sim, no Vit
 - `src/dfxisp_accel.cpp` — checker + 3x3-window demosaic pipeline + low-light RM boundary
 - `tests/test_dfxisp_csim.cpp` — C-sim smoke tests plus optional golden CSV RGB bit-compare
 - `tools/gen_golden_vectors.py` — stdlib-only deterministic Bayer/RGB golden vector generator
+- `tools/gen_verification_report.py` — stdlib-only Markdown verifier/report generator
 - `scripts/vitis_hls.tcl` — Vitis HLS project scaffold for `dfxisp_accel`
-- `Makefile` — local C-sim build with `g++`, golden generation, and verify target
+- `Makefile` — local C-sim build with `g++`, golden generation, verify/report targets, and Vitis HLS dry-run report
 
 ## Run C-sim locally
 
@@ -58,9 +59,58 @@ DFXISP golden vector compare passed (48 pixels)
 DFXISP C-sim smoke tests passed
 ```
 
+## Generate compact verification report
+
+`make report` regenerates golden vectors, inspects `Makefile` state, runs the
+local C-sim binary, and writes `reports/latest.md` with golden/C-sim status.
+The report generator uses only the Python standard library.
+
+```bash
+cd isppipeline/hls
+make report
+```
+
+Expected output:
+
+```text
+python3 tools/gen_golden_vectors.py --out tests/golden_vectors.csv
+wrote tests/golden_vectors.csv (49 rows including header)
+python3 tools/gen_verification_report.py --out reports/latest.md
+wrote /path/to/isppipeline/hls/reports/latest.md (golden=pass, csim=pass)
+```
+
 ## Run Vitis HLS scaffold
 
 The TCL script defaults to the ZCU104 Zynq UltraScale+ part `xczu7ev-ffvc1156-2-e` and a 5.0 ns clock. Override the part/clock/flow if your board installation uses a different speed grade or target:
+
+Before invoking Vitis, `make hls-report` prints the exact top function, project directory, part, clock, source/testbench files, and expected report/export paths without requiring `vitis_hls` to be installed:
+
+```bash
+cd isppipeline/hls
+make hls-report
+```
+
+Expected output:
+
+```text
+DFXISP Vitis HLS dry-run report
+  top     : dfxisp_accel
+  project : build/vitis_hls/dfxisp_accel
+  part    : xczu7ev-ffvc1156-2-e
+  clock   : 5.0 ns
+  flow    : csim
+  tcl     : scripts/vitis_hls.tcl
+  sources : src/dfxisp_accel.cpp include/dfxisp_accel.hpp
+  testbench: tests/test_dfxisp_csim.cpp tests/golden_vectors.csv
+  expected outputs:
+    local csim binary : build/dfxisp_csim
+    golden vectors    : tests/golden_vectors.csv
+    HLS project       : build/vitis_hls/dfxisp_accel
+    csim log          : build/vitis_hls/dfxisp_accel/solution1/csim/report/dfxisp_accel_csim.log
+    synthesis report  : build/vitis_hls/dfxisp_accel/solution1/syn/report/dfxisp_accel_csynth.rpt (for csynth/cosim/export)
+    exported IP       : build/vitis_hls/dfxisp_accel/solution1/impl/export.zip (for export)
+  note: dry-run only; vitis_hls is not invoked.
+```
 
 ```bash
 cd isppipeline/hls
