@@ -1,0 +1,7 @@
+build/
+*.log
+*.jou
+*.str
+*.xclbin
+*.xo
+.autopilot/
