@@ -1,0 +1,10 @@
+# Agent/runtime-local files
+.hermes/
+
+# Build outputs
+build/
+isppipeline/hls/build/
+
+# Python cache
+__pycache__/
+*.py[cod]

@@ -11,9 +11,10 @@
 | 3 | [`SCENARIO.md`](SCENARIO.md) | 현재 조도 변화 시나리오와 golden-vector 의미 |
 | 4 | [`Architecture.md`](Architecture.md) | SW/HW 전체 구조 |
 | 5 | [`HW_SW_Interface.md`](HW_SW_Interface.md) | RGB32, pseudo-RAW, 보드 인터페이스 |
-| 6 | [`PONYTAIL_REVIEW.md`](PONYTAIL_REVIEW.md) | 현재 구현의 Ponytail 관점 검수 |
-| 7 | [`Research_Roadmap.md`](Research_Roadmap.md) | 연구 로드맵 |
-| 8 | [`Analysis_Report.md`](Analysis_Report.md) | 실험/분석 요약 |
+| 6 | [`HLS_SYNTH_COSIM.md`](HLS_SYNTH_COSIM.md) | Vitis HLS synthesis / RTL cosim 실행 절차 |
+| 7 | [`PONYTAIL_REVIEW.md`](PONYTAIL_REVIEW.md) | 현재 구현의 Ponytail 관점 검수 |
+| 8 | [`Research_Roadmap.md`](Research_Roadmap.md) | 연구 로드맵 |
+| 9 | [`Analysis_Report.md`](Analysis_Report.md) | 실험/분석 요약 |
 
 ## 현재 메인라인 기준
 
