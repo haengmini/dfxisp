@@ -1,0 +1,7 @@
+metric,static,reg_only,dfx_bin,dfx_fp,notes
+mean_luma,4.491,14.618,14.107,42.743,brightness lift (higher=brighter)
+edge_energy,0.439,0.710,0.374,0.315,global edge energy (macro-edge dominated)
+texture_hf,0.392,0.597,0.197,0.159,fine-texture HF energy (resolution proxy)
+hf_retention,1.000,1.526,0.504,0.406,texture_hf vs static (FP>Bin = feature preserve)
+flat_snr,4.467,19.754,29.657,91.484,denoise/SNR proxy (higher=cleaner)
+clip_rate,0.000,0.000,0.000,0.000,clipped fraction (lower better)

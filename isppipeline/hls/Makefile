@@ -12,11 +12,13 @@ BUILD_DIR := build
 CSIM_BIN := $(BUILD_DIR)/dfxisp_csim
 HLS_TCL := scripts/vitis_hls.tcl
 GOLDEN_CSV := tests/golden_vectors.csv
+RM_GOLDEN_CSV := tests/rm_golden_vectors.csv
+RM_CSIM_BIN := $(BUILD_DIR)/dfxisp_rm_csim
 REPORT_MD := reports/latest.md
 HLS_SRC := src/dfxisp_accel.cpp include/dfxisp_accel.hpp
 HLS_TB := tests/test_dfxisp_csim.cpp $(GOLDEN_CSV)
 
-.PHONY: all csim golden verify report hls-report hls clean
+.PHONY: all csim golden verify report hls-report hls rm-golden rm-csim rm-verify scheduler analysis sw-stage clean
 
 all: csim
 
@@ -62,6 +64,26 @@ hls:
 		exit 127; \
 	fi
 	DFXISP_HLS_PROJECT=$(DFXISP_HLS_PROJECT) DFXISP_HLS_PART=$(DFXISP_HLS_PART) DFXISP_HLS_CLOCK=$(DFXISP_HLS_CLOCK) DFXISP_HLS_FLOW=$(DFXISP_HLS_FLOW) $(VITIS_HLS) -f $(HLS_TCL)
+
+rm-golden:
+	$(PYTHON) tools/gen_rm_golden.py --out $(RM_GOLDEN_CSV)
+
+$(RM_CSIM_BIN): src/dfxisp_rm.cpp tests/test_rm_csim.cpp include/dfxisp_rm.hpp | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) src/dfxisp_rm.cpp tests/test_rm_csim.cpp -o $(RM_CSIM_BIN)
+
+rm-csim: $(RM_CSIM_BIN)
+	./$(RM_CSIM_BIN) $(RM_GOLDEN_CSV)
+
+rm-verify: rm-golden rm-csim
+
+scheduler: | $(BUILD_DIR)
+	$(PYTHON) tools/scheduler_sim.py --out results/scheduler.csv
+
+analysis: | $(BUILD_DIR)
+	$(PYTHON) tools/isp_variant_analysis.py --out results/isp_analysis.csv
+
+# Full software stage (no board): variants bit-exact + scheduler + ISP analysis.
+sw-stage: verify rm-verify scheduler analysis
 
 clean:
 	rm -rf $(BUILD_DIR)
