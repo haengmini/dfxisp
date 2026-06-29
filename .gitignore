@@ -1,0 +1,6 @@
+data/
+isppipeline/hls/data/
+isppipeline/hls/runs/
+isppipeline/hls/build/
+*_variant_work*
+*.pt
