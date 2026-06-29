@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """E2 — pseudo-RAW object-detection mAP harness for the 4 RM variants.
 
+NOTE: This is the original generic .npy + COCO-json scaffold. The results in the
+thesis were produced by `eval_map_coco.py` (RGGB16 .bin + ultralytics val with
+YOLO-format COCO-id labels), not this file. Kept as a COCO-json/COCOeval path.
+
 Pipeline (per variant):
   pseudo-RAW Bayer  --rm_model.variant_frame-->  RGB888  -->  detector  -->  COCO mAP
 
@@ -28,6 +32,18 @@ from pathlib import Path
 import rm_model as M
 
 VARIANTS = [M.VAR_STATIC, M.VAR_REG, M.VAR_BIN, M.VAR_FP]
+
+# Ultralytics COCO models output 80 contiguous class indices (0..79), but standard
+# COCO annotation JSONs use 91 category ids with gaps. Map the 80-class index to the
+# real COCO category id (e.g. YOLO 11 'stop sign' -> COCO id 13, not 12). Detections
+# whose label has no COCO id (e.g. custom/ExDark-only classes) must be remapped via
+# --remap upstream; here we assume a standard 80-class COCO detector.
+COCO80_TO_COCO91 = [
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+    22, 23, 24, 25, 27, 28, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44,
+    46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65,
+    67, 70, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90,
+]
 
 
 def _require(mod):
@@ -64,7 +80,7 @@ def isp_to_rgb(raw, w, h, variant):
 
 def run(dataset_dir: Path, ann_json: Path, model_name: str, limit: int):
     np = _require("numpy")
-    Image = _require("PIL").Image  # noqa
+    _require("PIL")  # ensure Pillow is installed (ultralytics needs it)
     from ultralytics import YOLO  # type: ignore
     from pycocotools.coco import COCO  # type: ignore
     from pycocotools.cocoeval import COCOeval  # type: ignore
@@ -86,9 +102,12 @@ def run(dataset_dir: Path, ann_json: Path, model_name: str, limit: int):
             pred = model.predict(rgb, verbose=False)[0]
             for b in pred.boxes:
                 x1, y1, x2, y2 = b.xyxy[0].tolist()
+                cls = int(b.cls[0])
+                if cls < 0 or cls >= len(COCO80_TO_COCO91):
+                    continue  # detector class outside the 80-class COCO map
                 dets.append({
                     "image_id": img_id,
-                    "category_id": int(b.cls[0]) + 1,  # map to COCO cat ids as needed
+                    "category_id": COCO80_TO_COCO91[cls],  # 80-class idx -> real COCO id
                     "bbox": [x1, y1, x2 - x1, y2 - y1],
                     "score": float(b.conf[0]),
                 })
