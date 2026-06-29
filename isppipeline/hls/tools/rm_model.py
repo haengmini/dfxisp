@@ -20,9 +20,12 @@ VARIANT_NAMES = {0: "static", 1: "reg_only", 2: "dfx_bin", 3: "dfx_fp"}
 
 # Fixed register/LUT parameters (deterministic constants).
 GAIN_NUM, GAIN_DEN, LIFT = 3, 2, 8          # reg gain: v*3/2 + 8
-KNEE, KNEE_LIFT = 128, 40                    # FP soft-knee (gentler lift, keep contrast)
-FP_EDGE_T = 6                                # FP edge gate threshold (green deviation, 8-bit)
-FP_ALPHA_NUM, FP_ALPHA_DEN = 1, 1           # FP local-contrast strength (on edges)
+KNEE, KNEE_LIFT = 128, 40                    # FP soft-knee lift applied to the BASE (low-freq)
+# FP redesign: base/detail decomposition. Lift base brightness, add detail back
+# (>=1 gain) so high frequencies are structurally preserved; green guides the gain.
+FP_NOISE_T = 2                               # green detail magnitude below this = flat (no boost)
+FP_DG_EDGE_NUM, FP_DG_EDGE_DEN = 3, 2        # detail gain on structure (boost 1.5x)
+FP_DG_FLAT_NUM, FP_DG_FLAT_DEN = 1, 1        # detail gain on flat (keep, no noise amp)
 
 
 def floordiv(a: int, b: int) -> int:
@@ -122,23 +125,25 @@ def variant_frame(raw, w, h, variant):
         return out
 
     if variant == VAR_FP:
-        # pass1: soft-knee tone
-        Rt = [_soft_knee(v) for v in R]
-        Gt = [_soft_knee(v) for v in G]
-        Bt = [_soft_knee(v) for v in B]
-        # pass2: green-gated local contrast
+        # base/detail decomposition: base=3x3 mean (low-freq), detail=px-base (high-freq).
+        # Lift base brightness (soft-knee on base) and add detail back with a
+        # green-guided gain (>=1) so features are preserved/sharpened while darks
+        # brighten. This structurally retains high frequencies (vs binning).
         for y in range(h):
             for x in range(w):
                 i = y * w + x
-                gmean = _cmean3x3(Gt, w, h, x, y)
-                edge = abs(Gt[i] - gmean)
-                # feature-preserving: restore local contrast ON edges, leave flat
-                # regions smooth (avoid amplifying noise).
-                anum = FP_ALPHA_NUM if edge > FP_EDGE_T else 0
-                rr = clamp_u8(Rt[i] + floordiv(anum * (Rt[i] - _cmean3x3(Rt, w, h, x, y)), FP_ALPHA_DEN))
-                gg = clamp_u8(Gt[i] + floordiv(anum * (Gt[i] - gmean), FP_ALPHA_DEN))
-                bb = clamp_u8(Bt[i] + floordiv(anum * (Bt[i] - _cmean3x3(Bt, w, h, x, y)), FP_ALPHA_DEN))
-                out[i] = pack_rgb(rr, gg, bb)
+                rb = _cmean3x3(R, w, h, x, y)
+                gb = _cmean3x3(G, w, h, x, y)
+                bb_ = _cmean3x3(B, w, h, x, y)
+                rd, gd, bd = R[i] - rb, G[i] - gb, B[i] - bb_
+                if abs(gd) <= FP_NOISE_T:
+                    num, den = FP_DG_FLAT_NUM, FP_DG_FLAT_DEN
+                else:
+                    num, den = FP_DG_EDGE_NUM, FP_DG_EDGE_DEN
+                rr = clamp_u8(_soft_knee(rb) + floordiv(num * rd, den))
+                gg = clamp_u8(_soft_knee(gb) + floordiv(num * gd, den))
+                bbv = clamp_u8(_soft_knee(bb_) + floordiv(num * bd, den))
+                out[i] = pack_rgb(rr, gg, bbv)
         return out
 
     raise ValueError(f"unknown variant {variant}")

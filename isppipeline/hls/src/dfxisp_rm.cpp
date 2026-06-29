@@ -8,8 +8,10 @@ namespace {
 // Fixed parameters (must match tools/rm_model.py).
 constexpr int GAIN_NUM = 3, GAIN_DEN = 2, LIFT = 8;
 constexpr int KNEE = 128, KNEE_LIFT = 40;
-constexpr int FP_EDGE_T = 6;
-constexpr int FP_ALPHA_NUM = 1, FP_ALPHA_DEN = 1;
+// FP redesign: base/detail decomposition with green-guided detail add-back.
+constexpr int FP_NOISE_T = 2;
+constexpr int FP_DG_EDGE_NUM = 3, FP_DG_EDGE_DEN = 2;
+constexpr int FP_DG_FLAT_NUM = 1, FP_DG_FLAT_DEN = 1;
 
 // Floor division identical to Python '//' for any signs (b > 0 here).
 static inline int idiv_floor(int a, int b) {
@@ -97,19 +99,22 @@ extern "C" void dfxisp_accel_variant(
         return;
     }
     if (variant == DFXISP_RM_DFX_FP) {
-        std::vector<int> Rt(n), Gt(n), Bt(n);
-        for (int i = 0; i < n; ++i) { Rt[i] = soft_knee(R[i]); Gt[i] = soft_knee(G[i]); Bt[i] = soft_knee(B[i]); }
+        // base/detail decomposition: lift base brightness, add detail back with
+        // green-guided gain (>=1) -> features preserved/sharpened while darks lift.
         for (int y = 0; y < height; ++y)
             for (int x = 0; x < width; ++x) {
                 int i = y * width + x;
-                int gmean = cmean3x3(Gt, width, height, x, y);
-                int edge = Gt[i] - gmean; if (edge < 0) edge = -edge;
-                // feature-preserving: restore contrast ON edges, leave flat smooth.
-                int anum = (edge > FP_EDGE_T) ? FP_ALPHA_NUM : 0;
-                int rr = clamp_u8(Rt[i] + idiv_floor(anum * (Rt[i] - cmean3x3(Rt, width, height, x, y)), FP_ALPHA_DEN));
-                int gg = clamp_u8(Gt[i] + idiv_floor(anum * (Gt[i] - gmean), FP_ALPHA_DEN));
-                int bb = clamp_u8(Bt[i] + idiv_floor(anum * (Bt[i] - cmean3x3(Bt, width, height, x, y)), FP_ALPHA_DEN));
-                rgb_out[i] = pack_rgb(rr, gg, bb);
+                int rb = cmean3x3(R, width, height, x, y);
+                int gb = cmean3x3(G, width, height, x, y);
+                int bb = cmean3x3(B, width, height, x, y);
+                int rd = R[i] - rb, gd = G[i] - gb, bd = B[i] - bb;
+                int agd = gd < 0 ? -gd : gd;
+                int num = (agd <= FP_NOISE_T) ? FP_DG_FLAT_NUM : FP_DG_EDGE_NUM;
+                int den = (agd <= FP_NOISE_T) ? FP_DG_FLAT_DEN : FP_DG_EDGE_DEN;
+                int rr = clamp_u8(soft_knee(rb) + idiv_floor(num * rd, den));
+                int gg = clamp_u8(soft_knee(gb) + idiv_floor(num * gd, den));
+                int bv = clamp_u8(soft_knee(bb) + idiv_floor(num * bd, den));
+                rgb_out[i] = pack_rgb(rr, gg, bv);
             }
         return;
     }
