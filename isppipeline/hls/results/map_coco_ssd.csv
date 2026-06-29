@@ -1,0 +1,2 @@
+metric,static,reg_only,dfx_bin,dfx_fp,unit,notes
+mAP_COCO_pseudoRAW,0.2001,0.1968,0.1930,0.1743,mAP@[.5:.95],model=ssdlite320_mobilenet_v3_large n=347

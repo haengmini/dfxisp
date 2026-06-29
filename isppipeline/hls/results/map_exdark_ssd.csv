@@ -1,0 +1,2 @@
+metric,static,reg_only,dfx_bin,dfx_fp,unit,notes
+mAP_ExDark_pseudoRAW,0.1052,0.1098,0.1063,0.0656,mAP@[.5:.95],model=ssdlite320_mobilenet_v3_large n=260
