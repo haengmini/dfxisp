@@ -4,3 +4,5 @@ isppipeline/hls/runs/
 isppipeline/hls/build/
 *_variant_work*
 *.pt
+__pycache__/
+*.pyc
