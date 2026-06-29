@@ -1,6 +1,6 @@
-# ISP variant analysis (proxy, no detector)
+# ISP variant 분석 (proxy, detector 없음)
 
-Synthetic dark scene 96x96, seed=11. Proxy for mAP hypothesis.
+합성 저조도 장면 96x96, seed=11. mAP 가설용 proxy.
 
 | metric | static | reg_only | dfx_bin | dfx_fp |
 |---|---|---|---|---|
