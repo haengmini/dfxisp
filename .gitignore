@@ -5,6 +5,14 @@
 build/
 isppipeline/hls/build/
 
+# Datasets / runs / large artifacts
+data/
+isppipeline/hls/data/
+isppipeline/hls/runs/
+*_variant_work*
+*.pt
+
 # Python cache
 __pycache__/
 *.py[cod]
+*.pyc

@@ -1,0 +1,5 @@
+variant,role,BRAM_18K,DSP,FF,LUT,target_ns,CP_ns,Fmax_MHz,notes
+normal,static_base_demosaic,3,14,3537,4654,5.0,3.650,273.97,DFX normal-mode = base demosaic pipeline
+reg_only,register_fastpath,3,14,3564,4780,5.0,3.650,273.97,gain/gamma soft-knee via AXI-Lite registers
+dfx_bin,RM_lowlight_bin,4,56,16183,18783,5.0,3.650,273.97,2x2 binning + integer bilinear upsample
+dfx_fp,RM_ablation_fp,4,47,24372,22216,5.0,3.650,273.97,green-guided base/detail add-back (ablation/negative case)
