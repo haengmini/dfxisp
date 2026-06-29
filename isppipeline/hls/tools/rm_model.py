@@ -99,6 +99,31 @@ def _cmean3x3(ch, w, h, x, y):
     return s // 9
 
 
+def _bin_bilinear(ch, w, h):
+    """2x2 bin (sum/4) + reg gain on the binned grid, then integer 2x bilinear
+    upsample to full res. Weights 9/3/3/1 over 16 (separable 3/4-1/4 phases).
+    Bit-exact mirror in src/dfxisp_rm.cpp."""
+    hw, ww = max(1, h // 2), max(1, w // 2)
+    B = [[0] * ww for _ in range(hw)]
+    for by in range(hw):
+        for bx in range(ww):
+            y0, y1 = 2 * by, min(2 * by + 1, h - 1)
+            x0, x1 = 2 * bx, min(2 * bx + 1, w - 1)
+            s = ch[y0 * w + x0] + ch[y0 * w + x1] + ch[y1 * w + x0] + ch[y1 * w + x1]
+            B[by][bx] = _reg_gain(s // 4)
+    out = [0] * (w * h)
+    for y in range(h):
+        by = min(y // 2, hw - 1)
+        nby = by - 1 if (y & 1) == 0 else by + 1
+        nby = 0 if nby < 0 else (hw - 1 if nby >= hw else nby)
+        for x in range(w):
+            bx = min(x // 2, ww - 1)
+            nbx = bx - 1 if (x & 1) == 0 else bx + 1
+            nbx = 0 if nbx < 0 else (ww - 1 if nbx >= ww else nbx)
+            out[y * w + x] = (9 * B[by][bx] + 3 * B[by][nbx] + 3 * B[nby][bx] + B[nby][nbx]) // 16
+    return out
+
+
 def variant_frame(raw, w, h, variant):
     R, G, B = demosaic_frame(raw, w, h)
     out = [0] * (w * h)
@@ -114,14 +139,14 @@ def variant_frame(raw, w, h, variant):
         return out
 
     if variant == VAR_BIN:
-        for y in range(h):
-            for x in range(w):
-                bx, by = x & ~1, y & ~1
-                idx = [(min(by + j, h - 1)) * w + min(bx + i, w - 1) for j in (0, 1) for i in (0, 1)]
-                rr = _reg_gain(sum(R[k] for k in idx) // 4)
-                gg = _reg_gain(sum(G[k] for k in idx) // 4)
-                bb = _reg_gain(sum(B[k] for k in idx) // 4)
-                out[y * w + x] = pack_rgb(rr, gg, bb)
+        # 2x2 binning (denoise) + gain, then integer 2x bilinear upsample (3/4-1/4
+        # phases) back to full res. Bilinear (not nearest) keeps mAP within the
+        # register-only guardrail in the low-light regime ([08-e2-map-results]).
+        Rb = _bin_bilinear(R, w, h)
+        Gb = _bin_bilinear(G, w, h)
+        Bb = _bin_bilinear(B, w, h)
+        for i in range(w * h):
+            out[i] = pack_rgb(Rb[i], Gb[i], Bb[i])
         return out
 
     if variant == VAR_FP:

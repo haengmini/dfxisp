@@ -104,13 +104,19 @@ def apply_variant(rgb, variant):
         return rgb.astype(np.uint8)
     if variant == 1:
         return reg_gain(rgb).astype(np.uint8)
-    if variant == 2:  # 2x2 binning + gain, replicate
+    if variant == 2:  # 2x2 binning (denoise) + gain, upsample back to full res
+        import os
+        mode = os.environ.get("DFXBIN_UPSAMPLE", "bilinear")  # nearest|bilinear
         h, w, _ = rgb.shape
         h2, w2 = h - h % 2, w - w % 2
         out = reg_gain(rgb.copy())  # border (odd last row/col) falls back to reg gain
         blk = rgb[:h2, :w2].reshape(h2 // 2, 2, w2 // 2, 2, 3)
-        binned = reg_gain(blk.sum(axis=(1, 3)) // 4)
-        up = np.repeat(np.repeat(binned, 2, axis=0), 2, axis=1)
+        binned = reg_gain(blk.sum(axis=(1, 3)) // 4).astype(np.uint8)  # (h2/2,w2/2,3)
+        if mode == "nearest":
+            up = np.repeat(np.repeat(binned, 2, axis=0), 2, axis=1)
+        else:
+            from PIL import Image
+            up = np.asarray(Image.fromarray(binned).resize((w2, h2), Image.BILINEAR))
         out[:h2, :w2] = up
         return np.clip(out, 0, 255).astype(np.uint8)
     if variant == 3:  # FP base/detail add-back, green-guided

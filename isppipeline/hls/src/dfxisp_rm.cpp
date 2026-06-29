@@ -85,17 +85,33 @@ extern "C" void dfxisp_accel_variant(
         return;
     }
     if (variant == DFXISP_RM_DFX_BIN) {
-        for (int y = 0; y < height; ++y)
-            for (int x = 0; x < width; ++x) {
-                int bx = x & ~1, by = y & ~1;
-                int sr = 0, sg = 0, sb = 0;
-                for (int j = 0; j < 2; ++j)
-                    for (int i = 0; i < 2; ++i) {
-                        int k = clampi(by + j, 0, height - 1) * width + clampi(bx + i, 0, width - 1);
-                        sr += R[k]; sg += G[k]; sb += B[k];
-                    }
-                rgb_out[y * width + x] = pack_rgb(reg_gain(sr / 4), reg_gain(sg / 4), reg_gain(sb / 4));
+        // 2x2 bin + gain, then integer 2x bilinear upsample (9/3/3/1 over 16).
+        const int hw = height / 2 > 0 ? height / 2 : 1;
+        const int ww = width / 2 > 0 ? width / 2 : 1;
+        std::vector<int> Rb(hw * ww), Gb(hw * ww), Bb(hw * ww);
+        for (int by = 0; by < hw; ++by)
+            for (int bx = 0; bx < ww; ++bx) {
+                int y0 = 2 * by, y1 = clampi(2 * by + 1, 0, height - 1);
+                int x0 = 2 * bx, x1 = clampi(2 * bx + 1, 0, width - 1);
+                int sr = R[y0 * width + x0] + R[y0 * width + x1] + R[y1 * width + x0] + R[y1 * width + x1];
+                int sg = G[y0 * width + x0] + G[y0 * width + x1] + G[y1 * width + x0] + G[y1 * width + x1];
+                int sb = B[y0 * width + x0] + B[y0 * width + x1] + B[y1 * width + x0] + B[y1 * width + x1];
+                Rb[by * ww + bx] = reg_gain(sr / 4);
+                Gb[by * ww + bx] = reg_gain(sg / 4);
+                Bb[by * ww + bx] = reg_gain(sb / 4);
             }
+        for (int y = 0; y < height; ++y) {
+            int by = clampi(y / 2, 0, hw - 1);
+            int nby = ((y & 1) == 0) ? by - 1 : by + 1; nby = clampi(nby, 0, hw - 1);
+            for (int x = 0; x < width; ++x) {
+                int bx = clampi(x / 2, 0, ww - 1);
+                int nbx = ((x & 1) == 0) ? bx - 1 : bx + 1; nbx = clampi(nbx, 0, ww - 1);
+                int rr = (9 * Rb[by * ww + bx] + 3 * Rb[by * ww + nbx] + 3 * Rb[nby * ww + bx] + Rb[nby * ww + nbx]) / 16;
+                int gg = (9 * Gb[by * ww + bx] + 3 * Gb[by * ww + nbx] + 3 * Gb[nby * ww + bx] + Gb[nby * ww + nbx]) / 16;
+                int bv = (9 * Bb[by * ww + bx] + 3 * Bb[by * ww + nbx] + 3 * Bb[nby * ww + bx] + Bb[nby * ww + nbx]) / 16;
+                rgb_out[y * width + x] = pack_rgb(rr, gg, bv);
+            }
+        }
         return;
     }
     if (variant == DFXISP_RM_DFX_FP) {
