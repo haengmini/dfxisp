@@ -1,68 +1,68 @@
-# Agent OS All-in-One Platform Loop + DFXISP HLS C-sim Worklog — 2026-06-25
+# Agent OS All-in-One 플랫폼 루프 + DFXISP HLS C-sim 작업로그 — 2026-06-25
 
-## Summary
+## 요약
 
 이 작업은 Google Drive 정본을 기준으로 수행했다. 로컬 `/opt/data`는 Drive 파일 검증/빌드용 staging cache로만 사용했다.
 
-## Drive Dashboard Fix
+## Drive 대시보드 수정
 
-Canonical dashboard file:
+정본 대시보드 파일:
 
 - `hq-dashboard.html`
 - Drive ID: `1AjhJOMeSnmMtrnMeRDIDH1v9VoK_RwT0`
-- Link: https://drive.google.com/file/d/1AjhJOMeSnmMtrnMeRDIDH1v9VoK_RwT0/view?usp=drivesdk
+- 링크: https://drive.google.com/file/d/1AjhJOMeSnmMtrnMeRDIDH1v9VoK_RwT0/view?usp=drivesdk
 
-Fix applied:
+적용한 수정:
 
-- JS syntax error in the `에이전트/agent` local-answer path was patched.
-- Re-downloaded the Drive file after update and verified with `node --check`.
+- `에이전트/agent` local-answer 경로의 JS 문법 오류를 패치.
+- 업데이트 후 Drive 파일을 재다운로드해 `node --check`로 검증.
 
-Verification:
+검증:
 
 ```text
 title Agent OS — Command Center
 node --check /tmp/drive_hq_redownload.js: PASS
 ```
 
-## Drive-first Loop Engineering
+## Drive-first 루프 엔지니어링
 
-Created and ran a Drive-first watchdog loop:
+Drive-first watchdog 루프를 생성·실행:
 
-- Local executable cache: `/opt/data/scripts/agent_os_drive_first_loop.py`
-- Wrapper: `/opt/data/scripts/agent_os_drive_first_loop.sh`
-- Drive script IDs:
+- 로컬 실행 캐시: `/opt/data/scripts/agent_os_drive_first_loop.py`
+- 래퍼: `/opt/data/scripts/agent_os_drive_first_loop.sh`
+- Drive 스크립트 ID:
   - `agent_os_drive_first_loop.py`: `1Sfg0bP0-F_w8d-HDXrlP-4VzgyObx7Wp`
   - `agent_os_drive_first_loop.sh`: `14JCv3jTp2G_A6JgTief9iov51ja28d2j`
 - Cron job: `agent-os-drive-first-loop`
-- Schedule: every 30 minutes
-- Delivery: local, script-only/no_agent
+- 주기: 30분마다
+- 전달: local, script-only/no_agent
 
-Loop checks:
+루프 점검 항목:
 
-1. Download canonical Drive `hq-dashboard.html` and run JS syntax check.
-2. Verify Drive DFXISP HLS C-sim folder contains required source files.
-3. Run local C-sim mirror: `make -C /opt/data/dfxisp_md/isppipeline/hls csim`.
-4. Upsert status artifacts into Drive `05-dashboard`:
+1. 정본 Drive `hq-dashboard.html`을 다운로드해 JS 문법 검사.
+2. Drive DFXISP HLS C-sim 폴더에 필요한 소스 파일이 있는지 확인.
+3. 로컬 C-sim 미러 실행: `make -C /opt/data/dfxisp_md/isppipeline/hls csim`.
+4. 상태 artifact를 Drive `05-dashboard`에 upsert:
    - `loop-status-latest.json`
    - `loop-status-latest.md`
 
-Latest loop result:
+최근 루프 결과:
 
 ```text
 Agent OS loop PASS — Drive status updated: https://drive.google.com/file/d/1qRVLAKN4bRCPazQuYnv_OhjngTbCH5z1/view?usp=drivesdk
 ```
 
-## DFXISP HLS C-sim / Hardware Scaffold
+## DFXISP HLS C-sim / 하드웨어 스캐폴드
 
-Canonical Drive folder:
+정본 Drive 폴더:
 
 - `Agent OS / DFXISP / hls-csim`
 - Drive folder ID: `1LbQkwIckkJpWBbR4c4ip2l5f_X3M-DML`
-- Link: https://drive.google.com/drive/folders/1LbQkwIckkJpWBbR4c4ip2l5f_X3M-DML
+- 링크: https://drive.google.com/drive/folders/1LbQkwIckkJpWBbR4c4ip2l5f_X3M-DML
 
-Uploaded files:
+업로드한 파일:
 
-| File | Drive ID |
+| 파일 | Drive ID |
 |---|---|
 | `README.md` | `1-wXNhlK4IsjOVh-zQvhS5CfdV1VVRSmT` |
 | `Makefile` | `1I5b1kD6oOhTw9ei535aU80A-WBTohzJv` |
@@ -71,11 +71,11 @@ Uploaded files:
 | `src/dfxisp_accel.cpp` | `17MqS_XkTrXKgexGnofhNqmqiMYYkTVv7` |
 | `tests/test_dfxisp_csim.cpp` | `1QYx2HyI7iVC_0VBC9k_S9ixk-0sNSxaM` |
 
-Local mirror/repo path:
+로컬 미러/repo 경로:
 
 - `/opt/data/dfxisp_md/isppipeline/hls/`
 
-Implemented hardware-facing top:
+구현한 하드웨어 대면 top:
 
 ```cpp
 extern "C" void dfxisp_accel(
@@ -87,13 +87,13 @@ extern "C" void dfxisp_accel(
     uint16_t low_light_threshold);
 ```
 
-Supported modes:
+지원 모드:
 
 - `DFXISP_MODE_NORMAL`
 - `DFXISP_MODE_LOW_LIGHT`
 - `DFXISP_MODE_AUTO`
 
-Current algorithm:
+현재 알고리즘:
 
 ```text
 pseudo-RAW Bayer GRBG uint16
@@ -104,32 +104,32 @@ pseudo-RAW Bayer GRBG uint16
   -> packed RGB888 uint32
 ```
 
-C-sim verification:
+C-sim 검증:
 
 ```text
 make -C isppipeline/hls csim
 DFXISP C-sim smoke tests passed
 ```
 
-Git local commit:
+Git 로컬 커밋:
 
 ```text
 c5b920d feat: add DFXISP HLS C-sim scaffold
 ```
 
-GitHub push status:
+GitHub push 상태:
 
 ```text
 blocked: GitHub HTTPS credentials unavailable in this environment
 fatal: could not read Username for 'https://github.com': No such device or address
 ```
 
-Drive canonical artifacts are already saved; GitHub push can be retried after GitHub auth is configured.
+Drive 정본 artifact는 이미 저장됨; GitHub auth 구성 후 push 재시도 가능.
 
-## Next Loop Targets
+## 다음 루프 목표
 
-1. Add Vitis HLS TCL for ZCU104 part/clock and export target.
-2. Replace reference demosaic with line-buffer/window HLS architecture.
-3. Introduce explicit DFX reconfigurable-module boundary for low-light path.
-4. Generate Python golden vectors and bit-compare RGB888/RGB32 output.
-5. Feed loop status into `hq-dashboard.html` visual cards instead of status-only artifacts.
+1. ZCU104 part/clock 및 export target용 Vitis HLS TCL 추가.
+2. 레퍼런스 demosaic을 line-buffer/window HLS 아키텍처로 교체.
+3. low-light 경로에 명시적 DFX reconfigurable-module 경계 도입.
+4. Python golden vector 생성 및 RGB888/RGB32 출력 bit-compare.
+5. 루프 상태를 status-only artifact 대신 `hq-dashboard.html` 시각 카드로 반영.
