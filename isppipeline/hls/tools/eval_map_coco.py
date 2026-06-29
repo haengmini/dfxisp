@@ -27,6 +27,10 @@ import numpy as np
 
 VARIANTS = [("static", 0), ("reg_only", 1), ("dfx_bin", 2), ("dfx_fp", 3)]
 
+# ExDark (12 classes, alphabetical) -> COCO80 id, so a COCO-pretrained detector
+# can be scored against ExDark ground truth.
+EXDARK_TO_COCO = {0: 1, 1: 8, 2: 39, 3: 5, 4: 2, 5: 15, 6: 56, 7: 41, 8: 16, 9: 3, 10: 0, 11: 60}
+
 # Parameters mirror rm_model.py
 GAIN_NUM, GAIN_DEN, LIFT = 3, 2, 8
 KNEE, KNEE_LIFT = 128, 40
@@ -124,7 +128,22 @@ def apply_variant(rgb, variant):
     raise ValueError(variant)
 
 
-def build_variant_images(root: Path, work: Path, limit: int):
+def _write_label(src: Path, dst: Path, remap):
+    if remap is None:
+        shutil.copy(src, dst); return
+    lines = []
+    for ln in src.read_text().splitlines():
+        p = ln.split()
+        if not p:
+            continue
+        c = int(p[0])
+        if c not in remap:
+            continue
+        lines.append(" ".join([str(remap[c])] + p[1:]))
+    dst.write_text("\n".join(lines) + ("\n" if lines else ""))
+
+
+def build_variant_images(root: Path, work: Path, limit: int, remap=None):
     from PIL import Image
     raw_dir = root / "raw_bin"; lab_dir = root / "labels"; img_dir = root / "images"
     stems = sorted(p.stem for p in raw_dir.glob("*.bin")
@@ -147,7 +166,7 @@ def build_variant_images(root: Path, work: Path, limit: int):
             Image.fromarray(out).save(work / name / "images" / f"{stem}.jpg", quality=95)
             lab = lab_dir / f"{stem}.txt"
             if lab.exists():
-                shutil.copy(lab, work / name / "labels" / f"{stem}.txt")
+                _write_label(lab, work / name / "labels" / f"{stem}.txt", remap)
         built += 1
     return built
 
@@ -160,10 +179,13 @@ def main() -> int:
     ap.add_argument("--model", default="yolov8n.pt")
     ap.add_argument("--out", default="results/map_real.csv")
     ap.add_argument("--tag", default="COCO")
+    ap.add_argument("--remap", choices=["none", "exdark"], default="none",
+                    help="remap GT class ids (exdark: 12-class -> COCO80)")
     args = ap.parse_args()
 
+    remap = EXDARK_TO_COCO if args.remap == "exdark" else None
     root = Path(args.root); work = Path(args.work)
-    n = build_variant_images(root, work, args.limit)
+    n = build_variant_images(root, work, args.limit, remap)
     print(f"built variant images for {n} frames")
 
     from ultralytics import YOLO
