@@ -1,0 +1,4 @@
+# DFXISP partial reconfiguration latency. model: PR_latency≈bitstream_size/ICAP_throughput.
+variant,bitstream_size,icap_throughput,pr_latency_model,pr_latency_measured,frame_budget_ms,within_dwell,notes
+dfx_bin,,,,, 33.3,,
+dfx_fp,,,,, 33.3,,

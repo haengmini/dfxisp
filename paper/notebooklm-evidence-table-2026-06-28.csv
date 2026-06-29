@@ -1,0 +1,15 @@
+﻿구분,적응 방식,저조도 블록,DFX 적용 여부,목적 및 측정 항목,Static,Reg-only,DFX-Bin,DFX-FP,출처
+설계 구성 및 변체 정의,None (고정),None (Standard),No,Minimal Baseline (기본 성능 기준 및 비교 기준점 확보),대상,N/A,N/A,N/A,[1-4]
+설계 구성 및 변체 정의,Fast Path (Gain/Gamma 레지스터 갱신),Resident or Bypass (구조 고정),No,DFX 없이 가능한 적응의 한계 및 순이득(Net Gain) 측정,N/A,대상,N/A,N/A,[1-4]
+설계 구성 및 변체 정의,Slow Path (Register + RM 교체),2x2 Binning RM,Yes,구조적 변경(Binning) 시 DFX 면적 효율성 및 SNR 향상 검증,N/A,N/A,대상,N/A,[1-4]
+설계 구성 및 변체 정의,Slow Path (Hybrid/RM 교체),Feature-preserving (Green-guided),Yes,Novelty 강화 핵심 후보 (Detection Feature 보존 및 mAP 최적화),N/A,N/A,N/A,대상,[1-4]
+알고리즘 성능 (ZCU104),N/A,N/A,N/A,객체 인식률: mAP (COCO) [pseudo-RAW],TODO(측정),TODO(측정),TODO(측정),TODO(측정),"[1, 3, 4]"
+알고리즘 성능 (ZCU104),N/A,N/A,N/A,객체 인식률: mAP (ExDark) [pseudo-RAW],TODO(측정),TODO(측정),TODO(측정),TODO(측정),"[1, 3, 4]"
+하드웨어 자원 (ZCU104),N/A,N/A,N/A,자원 사용량: LUT / FF / BRAM / DSP (개수/%),TODO(측정),TODO(측정),TODO(측정),TODO(측정),"[1, 3, 4]"
+전력 및 속도 (ZCU104),N/A,N/A,N/A,전력 소모량: Power Consumption (W),TODO(측정),TODO(측정),TODO(측정),TODO(측정),"[1, 3, 4]"
+전력 및 속도 (ZCU104),N/A,N/A,N/A,처리 속도: FPS / Throughput (1280x720),TODO(측정),TODO(측정),TODO(측정),TODO(측정),"[1, 3, 4]"
+지연 시간 및 DFX 지표,N/A,N/A,N/A,Register update latency,N/A,TODO(측정),TODO(측정),TODO(측정),"[1, 3]"
+지연 시간 및 DFX 지표,N/A,N/A,N/A,Partial bitstream size (KB/MB),N/A,N/A,TODO(측정),TODO(측정),"[1, 3, 4]"
+지연 시간 및 DFX 지표,N/A,N/A,N/A,PR latency (ms) [Budget: 33.3ms],N/A,N/A,TODO(측정),TODO(측정),"[1, 3, 4]"
+시스템 안정성,N/A,N/A,N/A,Switch count / Thrashing rate,N/A,TODO(측정),TODO(측정),TODO(측정),"[1, 3]"
+시스템 안정성,N/A,N/A,N/A,Bit-exact golden mismatch (검증 지표),TODO(측정),TODO(측정),TODO(측정),TODO(측정),"[1, 3]"

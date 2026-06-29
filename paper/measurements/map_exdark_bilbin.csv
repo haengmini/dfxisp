@@ -1,0 +1,2 @@
+metric,static,reg_only,dfx_bin,dfx_fp,unit,notes
+mAP_ExDark_bilbin_pseudoRAW,0.1492,0.1585,0.1576,0.0879,mAP@[.5:.95],model=yolov8n.pt n=260

@@ -1,71 +1,80 @@
 ---
 type: paper-outline
-title: "DFXISP 석사 학위논문 — Outline"
+title: "DFXISP 석사 학위논문 — Outline (방향 A 재편)"
 project: DFXISP
 target: 석사 학위논문 (제주대 전자공학과, 목표 2026.10)
 language: 한글 본문 + 영문 Abstract + 영어 기술용어
-status: drafting
+status: drafting (방향 A: resource/power 중심 재편 2026-06-29)
 created: 2026-06-26
-sources: "[[dfxisp-R1-theory-source-inventory-2026-06-23]] · [[dfxisp-A1-architecture-fpga-constraints-2026-06-23]]"
+updated: 2026-06-29
+sources: "[[dfxisp-R1-theory-source-inventory-2026-06-23]] · [[dfxisp-A1-architecture-fpga-constraints-2026-06-23]] · [[08-e2-map-results-2026-06-29]]"
 ---
 
-# DFXISP 학위논문 — 설계도 (Outline)
+# DFXISP 학위논문 — 설계도 (Outline, 방향 A)
 
-> 이 파일이 논문의 **단일 정본(무엇이 done인가)**. 본문은 `01-thesis-draft.md`, 참고문헌 `02-references.md`, 그림·표 `03-figures-tables.md`.
-> 원칙: 미검증 수치는 단정하지 않고 `TODO(측정)`로 표시(`[[MY]]` §6).
+> 정본(무엇이 done인가). 본문 `01-thesis-draft.md`, 참고문헌 `02-references.md`, 그림·표 `03-figures-tables.md`, RM 사양 `04-implementation-rm-spec.md`, 실험 `05-experiment-protocol.md`, 실측 `06~08`.
+> 원칙: 미검증 수치는 `TODO(측정)`. 예비 실측은 출처를 밝히고 단정하지 않음.
 
-## 제목 (draft)
-- 국문: **DFX 부분 재구성 기반 적응형 AI-ISP 설계 및 ZCU104 FPGA 구현**
-- 영문: *Design and FPGA Implementation of an Adaptive AI-ISP Using DFX Partial Reconfiguration on Zynq UltraScale+*
+## 재편 한 줄 요지 (방향 A)
+**task-adaptive mAP는 register-fast path가 확보한다(실측: real-low-light에서 register-only가 최고). DFX의 가치는 mAP 향상이 아니라, 구조적으로 크고 상호배타적인 블록을 "필요할 때만" 적재하여 얻는 자원/전력 절감이다.** 본 논문의 기여는 "무엇을 register로, 무엇을 DFX-RM으로 둘지를 mAP-guardrail 하에 자원/전력 기준으로 결정하는 방법론과 그 ZCU104 evidence"다.
+
+## 제목 (draft, 재편)
+- 국문: **ZCU104를 위한 Resource-Aware Register/DFX 분할 적응형 ISP: mAP는 레지스터로, 면적·전력은 부분재구성으로**
+- 영문: *Resource-Aware Register/DFX Partitioning for Adaptive ISP on Zynq UltraScale+: Register-Driven Accuracy, Reconfiguration-Driven Area/Power*
 
 ## 한 줄 기여 (thesis statement)
-머신비전용 ISP에서 normal↔low-light 적응의 대부분은 레지스터 스왑으로 충분하지만,
-**구조가 바뀌고 면적이 큰 저조도 프런트엔드(binning±denoise)를 DFX 부분재구성으로 시분할 교체**하면
-상호배타 경로에서 면적·전력 이득을 얻는다 — 이를 ZCU104에서 register-only 대비 실측한다.
+머신비전 ISP의 장면 적응을 register-fast path와 DFX-RM slow path로 계층화하되, **적응의 정확도(mAP) 기여는 register/LUT가 담당**하고 **DFX는 면적/전력이 큰 상호배타 구조 블록의 시분할 적재로 자원 효율을 담당**하도록 역할을 분리한다. 어떤 연산을 어느 계층에 둘지는 **mAP를 떨어뜨리지 않는다는 guardrail 하에 자원/전력/PR-latency 기준으로 결정**하며, ZCU104 evidence package로 검증한다.
 
-## 핵심 기여 4가지 (survey 근거 갱신)
-1. **하이브리드 적응 아키텍처 (Hybrid register/DFX adaptation):**
-   gain/gamma/threshold와 같이 빠른 전환이 요구되는 연산은 register/LUT 스왑으로 처리하고, 구조가 근본적으로 변하여 면적 부담이 크고 상호배타적인 저조도 ISP 프런트엔드는 DFX RM 교체 방식으로 설계를 분리함으로써 dynamic reconfiguration의 정당성을 확보함.
-2. **인식 특화 저조도 RM 설계 (Task-aware low-light RM):**
-   인간의 시각적 선호가 아닌 object detection 성능(mAP) 최적화를 타깃으로 2x2 Binning 및 Denoise를 수행하는 Low-light RM을 구성하며, Feature-Preserving (FP) low-light RM의 추가적인 포트폴리오를 제안함.
-3. **리소스 인지형 스케줄러 (DFX-aware scheduler):**
-   단순 mAP 이득만을 고려하는 기존 task-aware ISP 스케줄러와 달리, DPR 재구성 지연(latency), AXI stall/frame drain, switching count 및 전력/대역폭 비용을 종합적으로 고려하여 스케줄러 목적함수를 모델링함.
-4. **ZCU104 검증 패키지 (ZCU104 evidence package):**
-   ZCU104 FPGA 위에서 4종의 실험 variant (Static, Register-only, DFX-Bin, DFX-FP)에 대해 mAP, 리소스 사용량(LUT/FF/BRAM/DSP), Dynamic Power, PR latency 등을 종합 실측하여 DFX의 정량적 순이득을 입증함.
+## 핵심 기여 4가지 (재편)
+1. **Resource-aware register/DFX partitioning policy:** 적응 연산을 (a) register/LUT(빠름·mAP 담당)와 (b) DFX-RM(면적·전력 큰 구조 블록·자원 담당)으로 나누는 **결정 기준**을 제시. 단순 파라미터는 register, 구조가 바뀌고 상호배타이며 상시 상주 비용이 큰 블록만 DFX 후보.
+2. **mAP-guardrail RM screening (evidence-driven):** DFX-RM 후보(DFX-Bin binning, DFX-FP feature-preserving)를 **자원/전력 이득과 mAP guardrail로 선별**하는 절차. 예비 실측에서 detail-boost형 DFX-FP는 저조도 mAP를 떨어뜨려 **guardrail에서 탈락**함을 보이고(부정 결과를 방법론의 작동 증거로 활용), 자원이 정당화되는 후보(binning/denoise 계열, resident-bypass 등)를 제시.
+3. **DFX-aware scene scheduler:** PR latency·drain·switch·thrashing을 고려한 장면 단위 전환. register 전환(무중단)과 DFX 전환(장면 단위)을 비용에 맞게 분리.
+4. **ZCU104 resource/power evidence package:** static / register-only / DFX-Bin(/DFX-FP ablation)을 동일 파이프라인에서 비교, **1차 지표 = LUT/FF/BRAM/DSP·power·partial bitstream size·PR latency**, **mAP는 guardrail(≥ register-only)**. DFX가 normal 모드 fabric/전력을 register-only 대비 줄이는지를 정량화.
 
-## Abstract (draft — 채워질 자리)
-- 국문 초록: TODO(본문 확정 후). 배경→문제→제안(DFX 분리 적응)→방법(ZCU104)→결과(면적/전력/지연)→의의.
-- English Abstract: TODO.
+## 핵심 실측 근거 (방향 A의 출발점, [[08-e2-map-results]])
+- real-low-light(ExDark, n=260, yolov8n/s 동일 순서): **reg_only 최고, DFX-FP 최저**. → mAP는 register가 담당, detail-boost RM은 부적합.
+- COCO 전체(n=347): 저조도 처리는 정상조도에서 이득 없음 → **장면 적응 스위칭 필요**(기여 1/3).
+- ⇒ "DFX=mAP 향상"이 아니라 "DFX=자원/전력 절감 + register=mAP"로 역할 분리하는 것이 데이터와 정합.
 
-## 장(章) 구성
+## 장(章) 구성 (재편)
 ```
-1. 서론              배경·문제정의·동기·기여·논문구성
-2. 관련 연구          DFX/DPR · 적응형/AI-ISP · FPGA ISP 구현 · 차별점
-3. 제안 설계          파이프라인 · 적응 분리(register vs DFX) · RP 분할 · 모드 전환 · 스케줄러 모델
-4. 구현              ZCU104 · 툴체인 · HLS RM · 부분비트스트림 · 비교군
-5. 실험 및 평가        재구성지연 · 면적/전력 · 화질 · checker 안정성 · fps · mAP 정확도
-6. 결론              요약 · 한계 · 향후연구
+1. 서론          배경·문제(상시 상주 비용)·동기(register는 mAP, DFX는 자원)·기여·구성
+2. 관련 연구      적응형/AI-ISP(parameter vs module) · RAW low-light · FPGA ISP · DFX/DPR · 자원-인식 적응의 빈자리
+3. 제안 설계      register/DFX 분할 정책 · mAP-guardrail RM screening · RP 분할 · DFX-aware scheduler
+4. 구현          ZCU104 · register fast path · DFX-RM 후보 · 부분비트스트림 · 비교군
+5. 실험 및 평가    [1차] 자원/전력/PR latency/bitstream  · [guardrail] mAP(register-only 대비) · scheduler 안정성
+6. 결론          요약 · 한계(부정결과 포함) · 향후(denoise형 RM, real-RAW, 자원 모델)
 ```
 
 ## 진행 보드 (장별 상태)
 ```
-[ ] 1 서론        — 기여 4개로 업데이트 완료 / 본문 TODO
-[ ] 2 관련연구     — 8대 논문 비교표 및 차별점 추가 완료 / 서술 보강 TODO
-[ ] 3 제안설계     — 스케줄러 목적함수 및 4종 variant 설계 완료 / 그림 TODO
-[ ] 4 구현        — HLS C-sim scaffold 및 3-arm 구현 완료 / HLS 합성 TODO
-[ ] 5 실험·평가    — 비교 설계 O / 측정값 전부 TODO
-[ ] 6 결론        — TODO
+[~] 1 서론        — 재편 반영(register=mAP, DFX=자원) / 본문 다듬기
+[~] 2 관련연구     — 비교표 Tab2 / "자원-인식 적응" 축으로 재정렬
+[x] 3 제안설계     — 분할정책+RM screening+scheduler, Fig1~6 작도
+[~] 4 구현        — RM 사양(04) 재편(자원 관점) / csynth·DFX flow는 보드
+[~] 5 실험·평가    — 1차지표=자원/전력으로 전환; mAP guardrail 예비실측 반영 / 보드 측정 TODO
+[~] 6 결론        — 부정결과를 방법론 증거로 재서술
+범례: [x] 완료 · [~] 서술완결·실측대기 · [ ] 미착수
 ```
 
-## 해결된 질문 & 마감 스펙 (2026-06-26)
-1. **low-light RM 범위:** 2x2 Binning + Denoise(Mean filter)를 기본으로 하며, Edge guided local enhancement/Soft-knee를 지원하는 Feature-Preserving RM(`DFX-FP`)을 추가 variant로 설계함.
-2. **ZCU104 타깃 해상도 & fps:** 1920x1080 @ 30fps (프레임 예산 33.3 ms).
-3. **비교군 설계:** `Static`(고정), `Reg-only`(전체 회로 동시 탑재), `DFX-Bin`(기본 DFX), `DFX-FP`(피처 보존 DFX)의 4종 variant로 비교 실험 구조 확정.
+## 확정된 설계 결정 (2026-06-28~29)
+1. 해상도·fps: 개발 640×480 → 평가 1280×720@30fps (frame budget 33.3ms).
+2. 비교군: static / register-only / DFX-Bin / (DFX-FP는 ablation/부정사례).
+3. **1차 평가지표 = 자원/전력/PR-latency**, mAP는 guardrail. (방향 A 핵심 전환)
+4. **DFX 1순위 RM = DFX-Bin(2×2 binning + integer bilinear upsample).** detail-boost(DFX-FP)는 ablation. (결정 1) — bilinear 개선으로 ExDark mAP guardrail 통과(reg 대비 0.09pt, [[08-e2-map-results]]).
+5. **mAP guardrail Δ = register-only 대비 절대 1.0 mAP point(@[.5:.95], ≈ 상대 5%) 이내.** "무시 가능 저하"의 보편 기준. (결정 2)
+6. **자원 비교 main baseline = static all-resident** (normal+low-light 블록 상시 상주, DFX 없음). DFX-Bin이 이 대비 normal 모드 fabric/전력을 얼마나 줄이는지가 핵심 결과. (결정 3)
+7. metric 데이터: COCO/ExDark pseudo-RAW(확보), real-RAW(LOD/NOD)는 향후.
 
-## 일정 (역산, 목표 2026.10 제출)
+> **용어 주의:** mAP 변종의 `static`(= demosaic-only 파이프라인)과, 자원 baseline `static all-resident`(= 모든 블록 상주 HW 구성)는 다른 개념. 전자는 정확도 참조, 후자는 면적/전력 참조다.
+
+## 즉시 막힌 것 / 결정 필요
+(핵심 3개 결정 완료 — 2026-06-29. 남은 항목 없음. 다음은 구현/측정 단계.)
+
+## 일정 (역산, 목표 2026.10)
 ```
-~7월:  3장 제안설계 확정 + 그림 1·2·3, RM 범위 결정(Open Q1)
-~8월:  4장 구현 — binning RM HLS 프로토타입 + 부분비트스트림 생성
-~9월:  5장 실험 — register-only vs DFX 면적/전력/지연 측정, checker 안정화
-~10월: 1·2·6장 + Abstract 마감, 교정·제출
+~7월:  3장 분할정책/RM screening 확정 + Fig2/Fig3/자원 trade-off 그림틀
+~8월:  4장 구현 — register fast path + DFX-Bin/denoise RM HLS, csynth 자원수치
+~9월:  5장 실험 — ZCU104 자원/전력/PR latency 측정 + mAP guardrail 확인
+~10월: 1·2·6장 + Abstract 마감, 부정결과 서술 포함, 교정·제출
 ```

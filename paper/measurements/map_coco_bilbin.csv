@@ -1,0 +1,2 @@
+metric,static,reg_only,dfx_bin,dfx_fp,unit,notes
+mAP_COCO_bilbin_pseudoRAW,0.2984,0.2952,0.2839,0.2518,mAP@[.5:.95],model=yolov8n.pt n=347

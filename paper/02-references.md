@@ -3,7 +3,7 @@ type: paper-references
 title: "DFXISP 학위논문 — 참고문헌"
 project: DFXISP
 created: 2026-06-26
-note: "R1·A1 및 2026-06-26 AI-ISP 서베이에서 수집. BibTeX key는 정식화 완료."
+note: "R1·A1에서 수집. BibTeX key는 임시. 정식 인용정보(저자·연도·DOI)는 인용 확정 시 보강 — 현재 미검증 필드는 TODO."
 ---
 
 # 참고문헌 (Working Bibliography)
@@ -23,27 +23,37 @@ note: "R1·A1 및 2026-06-26 AI-ISP 서베이에서 수집. BibTeX key는 정식
 - **[dpr-rt]** "Internal DPR for real-time signal processing on FPGA" (ICAP+soft-core). https://www.researchgate.net/publication/228888498
 
 ## B. 적응형 / AI-ISP
-- **[adaptiveisp]** Y. Zhu et al., "AdaptiveISP: Learning an Adaptive Image Signal Processor for Object Detection," in *Advances in Neural Information Processing Systems (NeurIPS)*, 2024. arXiv:2410.22939.
-- **[dynamicisp]** M. Shin et al., "DynamicISP: Dynamically Controlled Image Signal Processor for Image Recognition," in *Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)*, 2023. arXiv:2211.01146.
-- **[darkisp]** X. Wang et al., "Dark-ISP: Enhancing RAW Image Processing for Low-Light Object Detection," in *Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)*, 2025. arXiv:2509.09183.
-- **[ta-isp]** J. Park et al., "Task-Aware Image Signal Processor for Advanced Visual Perception," *arXiv preprint arXiv:2509.13762*, 2025.
-- **[beyond-rgb]** H. Kim et al., "Beyond RGB: Adaptive Parallel Processing for RAW Object Detection," in *Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)*, 2025. arXiv:2503.13163.
-- **[simrod]** S. Lee et al., "SimROD: RAW Object Detection with Global and Local Enhancements," in *Proceedings of the AAAI Conference on Artificial Intelligence (AAAI)*, 2026. arXiv:2503.07101.
-- **[aodraw]** T. Nguyen et al., "Towards RAW Object Detection in Diverse Conditions," in *Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)*, 2025. arXiv:2411.15678.
-- **[pos-isp]** L. Zhao et al., "POS-ISP: Pipeline Optimization at the Sequence Level for Task-aware ISP," *arXiv preprint arXiv:2604.06938*, 2026.
-- **[seeindark]** W. Chen et al., "Learning to See in the Dark," in *Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)*, 2018.
+- **[adaptiveisp]** AdaptiveISP — 객체검출용 ISP pipeline/parameter RL 적응. NeurIPS 2024. https://arxiv.org/abs/2410.22939
+- **[dynamicisp]** DynamicISP — 인식용 동적 제어 ISP. ICCV 2023. https://arxiv.org/abs/2211.01146
+- **[ta-isp]** Task-Aware Image Signal Processor for Advanced Visual Perception — compact RAW-to-RGB task-aware representation. 2025. https://arxiv.org/abs/2509.13762
+- **[pos-isp]** POS-ISP — sequence-level task-aware ISP pipeline optimization. 2026. https://arxiv.org/abs/2604.06938
+- **[raw-or-cooked]** Raw or Cooked? Object Detection on RAW Images. 2023. https://arxiv.org/abs/2301.08965
+- **[beyond-rgb-ram]** Beyond RGB: Adaptive Parallel Processing for RAW Object Detection. ICCV 2025. https://arxiv.org/abs/2503.13163
+- **[simrod]** SimROD: A Simple Baseline for RAW Object Detection with Global and Local Enhancements. AAAI 2026. https://arxiv.org/abs/2503.07101
+- **[darkisp]** Dark-ISP — RAW 저조도 object detection용 lightweight self-adaptive ISP. ICCV 2025. https://arxiv.org/abs/2509.09183
+- **[genisp]** GenISP — Neural ISP for Low-Light Machine Cognition. CVPRW 2022. https://arxiv.org/abs/2205.03688
+- **[aodraw]** Towards RAW Object Detection in Diverse Conditions / AODRaw. CVPR 2025. https://arxiv.org/abs/2411.15678
+- **[seeindark]** Learning to See in the Dark (Chen et al., CVPR 2018). https://arxiv.org/abs/1805.01934
+- **[trash-to-treasure]** Trash to Treasure: Low-Light Object Detection via Decomposition-and-Aggregation. AAAI 2024. https://arxiv.org/abs/2309.03548
+- **[yola]** You Only Look Around: Learning Illumination-Invariant Feature for Low-light Object Detection. NeurIPS 2024. https://arxiv.org/abs/2410.18398
 - **[mdpi-aiisp]** MDPI Mathematics, "Energy-Efficient Zero-Shot AI-ISP for Real-Time Low-Light Enhancement." https://www.mdpi.com/2227-7390/14/8/1324
 - **[isp-npu]** "Integrating ISP and NPU" — 학습형 통합 파이프라인. https://medium.com/@jasonyang.algo/next-generation-imaging-integrating-isp-and-npu-...
 
 ## C. FPGA ISP / Edge 구현
-- **[hisp]** HISP — 전통+딥러닝 ISP를 FPGA에. (corpus)
-- **[hwllie]** "Hardware-Aware LLIE on Edge" — 저조도 향상 edge 구현. (corpus)
+- **[hisp]** HISP — 전통+딥러닝 ISP를 FPGA에. (corpus) TODO(정식 인용)
+- **[hwllie]** "Hardware-Aware LLIE on Edge" — 저조도 향상 edge 구현. (corpus) TODO(정식 인용)
+- **[vitis-vision-isp]** Xilinx Vitis Vision Library ISP Pipeline — FPGA/HLS ISP blocks. https://xilinx.github.io/Vitis_Libraries/vision/2022.1/overview.html#isp
+- **[kv260]** AMD/Xilinx Kria KV260 Vision AI Starter Kit — Zynq UltraScale+ edge vision platform. https://www.amd.com/en/products/system-on-modules/kria/k26/kv260-vision-starter-kit.html
+- **[fold-fpga]** FOLD: Low-Level Image Enhancement for Low-Light Object Detection Based on FPGA MPSoC. 2024. https://doi.org/10.3390/electronics13010230
+- **[fpga-retinex]** FPGA-based/low-cost Retinex low-light enhancement implementations. 2024. https://doi.org/10.1109/TCSII.2024.3361561
 
 ## D. 맥락 — 가속기·플랫폼
 - **[accel-survey]** arXiv, "AI and ML Accelerator Survey and Trends." https://arxiv.org/pdf/2210.04055
 - **[quadcam-fpga]** "Energy-Efficient Quad-Camera Visual System on FPGA" (ZU+ XCZU9EG). https://arxiv.org/pdf/2104.00192
-- **[kria-k26]** AMD Kria K26 (ZU+ MPSoC) 적응형 edge AI 모듈.
+- **[kria-k26]** AMD Kria K26 (ZU+ MPSoC) 적응형 edge AI 모듈. TODO(정식 자료 링크)
 
-## 내부 자료 (비공개)
+## 내부 자료 (비공개 — 인용 형태 결정 필요)
 - repo: `Research/FPGA/ISP/DFXISP/{PROJECT.md, README.md, AI_README.md, isppipeline/}`
 - corpus: Notion "문서 허브" 논문 DB
+
+> TODO: 학위논문 인용양식(IEEE 또는 학교 규정) 확정 후 BibTeX 변환. 현재는 URL·식별자 보존이 목적.

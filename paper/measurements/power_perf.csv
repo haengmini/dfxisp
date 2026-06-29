@@ -1,0 +1,8 @@
+# DFXISP power & performance — ZCU104 board. 720p30 기준.
+metric,static,reg_only,dfx_bin,dfx_fp,unit,notes
+power,,,,,W,측정방식(PMBus 등) 기록
+fps,,,,,fps,@1280x720
+throughput,,,,,MP/s,
+register_update_latency,N/A,,,,us/ms,
+pr_latency,N/A,N/A,,,ms,drain+ICAP 포함
+frame_stall_during_pr,N/A,N/A,,,frames,

@@ -1,0 +1,2 @@
+metric,static,reg_only,dfx_bin,dfx_fp,unit,notes
+mAP_COCO_darkK_pseudoRAW,0.3565,0.3619,0.3693,0.3179,mAP@[.5:.95],"darkest 40 frames, yolov8n.pt"

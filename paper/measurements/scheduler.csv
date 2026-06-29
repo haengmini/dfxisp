@@ -1,0 +1,5 @@
+metric,baseline_checker,plus_hysteresis,plus_temporal,plus_min_dwell,unit,notes
+mode_mismatch_rate,0.054,0.021,0.140,0.140,ratio,lower better
+switch_count_per_1k,86.000,28.000,4.000,4.000,count/1k frames,lower better
+thrashing_rate,0.884,0.571,0.000,0.000,ratio,reversals<=10f
+skipped_invalid_frames,344,112,16,16,count,PR_INVALID=4/switch

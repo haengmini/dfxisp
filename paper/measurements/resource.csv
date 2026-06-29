@@ -1,0 +1,9 @@
+# DFXISP resource (Vivado implementation) — ZCU104. 빈 셀은 측정 후 채움. 단위: count / %.
+metric,static,reg_only,dfx_bin,dfx_fp,unit,notes
+LUT,,,,,count/%,
+FF,,,,,count/%,
+BRAM,,,,,count/%,
+DSP,,,,,count/%,
+partial_bitstream_size,N/A,N/A,,,KB/MB,DFX variant만
+Fmax,,,,,MHz,
+timing_met,,,,,yes/no,WNS 기록

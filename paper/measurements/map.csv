@@ -1,0 +1,6 @@
+# DFXISP machine-vision accuracy — pseudo-RAW (예비 실측). bit_exact=RM golden(GRBG). DFX-Bin=bilinear.
+metric,static,reg_only,dfx_bin,dfx_fp,unit,notes
+mAP_COCO_n347_bilbin,0.2984,0.2952,0.2839,0.2518,mAP@[.5:.95],"DFX-Bin bilinear"
+mAP_ExDark_n260_bilbin,0.1492,0.1585,0.1576,0.0879,mAP@[.5:.95],"저조도;DFX-Bin guardrail PASS(0.09pt)"
+mAP_ExDark_n260_nearest,0.1492,0.1585,0.1420,0.0879,mAP@[.5:.95],"개선전(nearest) 참고"
+bit_exact_mismatch,0,0,0,0,pixels,RM golden 2816px 0 mismatch
