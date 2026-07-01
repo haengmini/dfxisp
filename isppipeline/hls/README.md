@@ -1,183 +1,134 @@
 # DFXISP HLS C-sim 스캐폴드
 
-Drive-우선 정본 위치: Agent OS / 06-production / DFXISP / hls-csim.
-로컬 저장소 경로: `isppipeline/hls/`.
+로컬 저장소 경로: `isppipeline/hls/`. 정본 아키텍처 문서: 저장소 루트 `RESEARCH.md`.
 
-## 목표
+## 목표 (reset 2026-07-01)
 
-이 스캐폴드는 DFX AI-ISP 하드웨어 경로의 첫 결정적(deterministic) C-시뮬레이션
-대상을 만든다:
+이 스캐폴드는 **shared baseline ISP core + 상호배타 tone RM slot** 구조의 첫
+결정적(deterministic) C-시뮬레이션 대상이다. tone RM slot이 shared baseline core를
+**감싸는(wrap)** 형태다:
 
 ```text
-pseudo-RAW Bayer GRBG uint16
-  -> scene checker
-  -> normal pipeline 또는 low-light DFX RM path
-  -> packed RGB888 uint32
+NORMAL:
+  pseudo-RAW Bayer GRBG uint16
+    -> checker (mode 결정)
+    -> RM_NORMAL_TONE (identity bypass)
+    -> baseline ISP core (demosaic + BLC + AWB + CCM, gain/gamma 없음)
+    -> packed RGB888 uint32  (H x W)
+
+LOW_LIGHT:
+  pseudo-RAW Bayer GRBG uint16
+    -> checker (mode 결정)
+    -> RM_LOW_LIGHT_TONE.front : 2x2 RAW binning (precision loss 전, RESEARCH §4.2)
+    -> baseline ISP core (demosaic + BLC + AWB + CCM, gain/gamma 없음)
+    -> RM_LOW_LIGHT_TONE.back  : low-light gain + gamma-4.0 tone
+    -> packed RGB888 uint32  (H/2 x W/2, Policy A 형상변경)
 ```
 
+C-sim이 증명하는 불변식(RESEARCH.md §8.2):
+
+- 프레임마다 **정확히 하나의 tone RM**만 선택(mutually exclusive).
+- gain/gamma는 **tone RM에만** 존재하고 baseline core에는 중복되지 않음.
+- 출력 메타데이터가 mode·선택 RM·출력 형상을 보고.
+
 의도적으로 Ponytail 스타일이다: 작은 HLS top 하나, stdlib만 쓰는 C-sim, 로컬 smoke
-테스트에 Vitis 의존성 없음, 그리고 Vitis HLS/Vitis flow를 위해 HLS pragma는 보존.
+테스트에 Vitis 의존성 없음, Vitis HLS/Vitis flow용 HLS pragma는 보존.
 
 ## 파일
 
-- `include/dfxisp_accel.hpp` — HLS top-level 인터페이스와 mode enum
-- `src/dfxisp_accel.cpp` — checker + 3x3-window demosaic pipeline + low-light RM 경계
-- `tests/test_dfxisp_csim.cpp` — C-sim smoke 테스트 + 선택적 golden CSV RGB bit-compare
-- `tools/gen_golden_vectors.py` — stdlib만 쓰는 결정적 Bayer/RGB golden vector 생성기
-- `tools/gen_verification_report.py` — stdlib만 쓰는 Markdown 검증/리포트 생성기
+- `include/dfxisp_accel.hpp` — HLS top 인터페이스, mode/selected-RM enum, `DfxIspResult` 메타데이터
+- `src/dfxisp_accel.cpp` — checker + baseline core(demosaic/BLC/AWB/CCM) + RM_NORMAL_TONE(identity) + RM_LOW_LIGHT_TONE(2x2 bin + gain + gamma-4.0)
+- `tests/test_dfxisp_csim.cpp` — C-sim smoke 테스트 + golden CSV bit-compare + 아키텍처 불변식 검사
+- `tools/gen_golden_vectors.py` — stdlib-only 결정적 golden 생성기(`src/dfxisp_accel.cpp` bit-exact 미러)
+- `tools/gen_verification_report.py` — stdlib-only Markdown 검증/리포트 생성기
 - `scripts/vitis_hls.tcl` — `dfxisp_accel`용 Vitis HLS 프로젝트 스캐폴드
-- `Makefile` — `g++` 로컬 C-sim 빌드, golden 생성, verify/report 타깃, Vitis HLS dry-run 리포트
+- `Makefile` — g++ 로컬 C-sim, golden 생성, verify/report, Vitis HLS dry-run 리포트
 
-## 로컬에서 C-sim 실행
+> 실험 arm(§7)·ablation(§12 Task 5)은 `src/dfxisp_rm.cpp`·`tools/rm_model.py`
+> (static / reg_only / dfx_bin / dfx_fp)에 별도로 있다. 현재 스캐폴드의 과거
+> post-RGB8 gain/lift 경로는 그 dfx 변종 세트로 이관되어 ablation으로만 남는다.
 
-```bash
-cd isppipeline/hls
-make csim
-```
-
-`tests/golden_vectors.csv`가 없을 때 예상 출력:
-
-```text
-DFXISP golden vector compare skipped (tests/golden_vectors.csv not found)
-DFXISP C-sim smoke tests passed
-```
-
-## Golden vector 생성·검증
-
-`make golden`은 문서화된 C++ 알고리즘을 그대로 반영하는 stdlib-only Python 모델로
-`tests/golden_vectors.csv`를 만든다: GRBG Bayer 입력, clamped 3x3 demosaic,
-RAW12→RGB8 shift, 정수 low-light gain/lift. C2 커버리지는 이제 시나리오 프레임 순서로
-정렬된 가시적 grid-style 합성 프레임을 사용한다: NORMAL x3, LOW_LIGHT x3, 그 다음
-NORMAL x1. 8x8/16x16 값은 필터나 binning 크기가 아니라 테스트 프레임 해상도다.
-`make verify`는 그 CSV를 재생성하고, C-sim을 실행하며, packed `0x00RRGGBB` 출력을
-golden 값과 bit 단위로 비교한다.
+## 로컬 C-sim 실행
 
 ```bash
 cd isppipeline/hls
-make verify
+make csim      # smoke 테스트
+make verify    # golden 재생성 + packed RGB888 bit 단위 비교
+make report    # reports/latest.md 갱신 (아키텍처 gate 표 포함)
 ```
 
-예상 출력:
+`make verify` 예상 출력:
 
 ```text
 python3 tools/gen_golden_vectors.py --out tests/golden_vectors.csv
-wrote tests/golden_vectors.csv (833 rows including header; 832 data rows; 7 cases)
+wrote tests/golden_vectors.csv (1498 rows including header; 1497 data rows; 9 cases)
 ./build/dfxisp_csim
-DFXISP golden vector compare passed (832 pixels)
+DFXISP golden vector compare passed (566 pixels)
 DFXISP C-sim smoke tests passed
 ```
 
-## 간결 검증 리포트 생성
+## Golden vector 형식
 
-`make report`는 golden vector를 재생성하고, `Makefile` 상태를 점검하고, 로컬 C-sim
-바이너리를 실행한 뒤 golden/C-sim 상태를 담은 `reports/latest.md`를 작성한다. 리포트
-생성기는 Python 표준 라이브러리만 사용한다.
-
-```bash
-cd isppipeline/hls
-make report
-```
-
-예상 출력:
-
-```text
-python3 tools/gen_golden_vectors.py --out tests/golden_vectors.csv
-wrote tests/golden_vectors.csv (833 rows including header; 832 data rows; 7 cases)
-python3 tools/gen_verification_report.py --out reports/latest.md
-wrote /path/to/isppipeline/hls/reports/latest.md (golden=pass, csim=pass)
-```
+CSV는 케이스별 메타데이터(mode·threshold·출력 형상·선택 RM)와 입력 RAW 행(`kind=raw`),
+기대 출력 행(`kind=rgb`)을 함께 담는다. Policy A(저조도 H/2×W/2)로 인해 입력 픽셀 수와
+출력 픽셀 수가 다르므로 두 종류의 행을 분리한다. 커버리지: bright/dark/mixed/
+threshold-boundary/bright-recovery/odd-dimension.
 
 ## Vitis HLS 스캐폴드 실행
 
-이 TCL 스크립트는 기본값으로 ZCU104 Zynq UltraScale+ 파트 `xczu7ev-ffvc1156-2-e`와
-5.0 ns 클럭을 사용한다. 보드 설치가 다른 speed grade나 타깃을 쓰면 part/clock/flow를
-재정의하면 된다:
-
-Vitis 호출 전에 `make hls-report`는 `vitis_hls` 설치 없이도 정확한 top 함수,
-프로젝트 디렉터리, 파트, 클럭, source/testbench 파일, 예상 report/export 경로를
-출력한다:
+기본값은 ZCU104 파트 `xczu7ev-ffvc1156-2-e`, 5.0 ns 클럭. 설치가 다르면 재정의한다.
+`make hls-report`는 `vitis_hls` 설치 없이 top/project/part/clock/소스/예상 출력 경로를 출력한다.
 
 ```bash
 cd isppipeline/hls
-make hls-report
-```
-
-예상 출력:
-
-```text
-DFXISP Vitis HLS dry-run report
-  top     : dfxisp_accel
-  project : build/vitis_hls/dfxisp_accel
-  part    : xczu7ev-ffvc1156-2-e
-  clock   : 5.0 ns
-  flow    : csim
-  tcl     : scripts/vitis_hls.tcl
-  sources : src/dfxisp_accel.cpp include/dfxisp_accel.hpp
-  testbench: tests/test_dfxisp_csim.cpp tests/golden_vectors.csv
-  expected outputs:
-    local csim binary : build/dfxisp_csim
-    golden vectors    : tests/golden_vectors.csv
-    HLS project       : build/vitis_hls/dfxisp_accel
-    csim log          : build/vitis_hls/dfxisp_accel/solution1/csim/report/dfxisp_accel_csim.log
-    synthesis report  : build/vitis_hls/dfxisp_accel/solution1/syn/report/dfxisp_accel_csynth.rpt (for csynth/cosim/export)
-    exported IP       : build/vitis_hls/dfxisp_accel/solution1/impl/export.zip (for export)
-  note: dry-run only; vitis_hls is not invoked.
-```
-
-```bash
-cd isppipeline/hls
-make hls                                    # 기본: DFXISP_HLS_FLOW=csim
-DFXISP_HLS_FLOW=csynth make hls             # C-sim 후 synthesis 실행
+make hls-report                              # dry-run
+make hls                                     # 기본 DFXISP_HLS_FLOW=csim
 DFXISP_HLS_PART=xczu7ev-ffvc1156-2-e \
 DFXISP_HLS_CLOCK=5.0 \
-DFXISP_HLS_FLOW=csynth make hls
+DFXISP_HLS_FLOW=csynth make hls              # C-sim 후 synthesis
 ```
 
-Tcl 인자를 직접 넘길 수도 있다:
-
-```bash
-vitis_hls -f scripts/vitis_hls.tcl -- -part xczu7ev-ffvc1156-2-e -clock 5.0 -flow csynth
-```
-
-`vitis_hls`가 `PATH`에 없으면 `make hls`는 명확한 설치/source 안내 메시지와 함께
-종료한다. 비표준 실행 경로를 쓰려면 `VITIS_HLS=/path/to/vitis_hls`를 설정하라.
+`vitis_hls`가 `PATH`에 없으면 `make hls`는 안내 메시지와 함께 종료한다.
+비표준 경로는 `VITIS_HLS=/path/to/vitis_hls`로 지정한다.
 
 ## HLS top 함수
 
 ```cpp
+struct DfxIspResult { int out_width, out_height, selected_mode, selected_rm; };
+
 extern "C" void dfxisp_accel(
     const uint16_t* raw_bayer,
-    uint32_t* rgb_out,
+    uint32_t* rgb_out,             // capacity >= width*height
     int width,
     int height,
-    int mode,
-    uint16_t low_light_threshold);
+    int mode,                      // NORMAL / LOW_LIGHT / AUTO
+    uint16_t dark_pixel_threshold, // AUTO: dark 픽셀 비율 > 40% 이면 LOW_LIGHT
+    DfxIspResult* result);         // 선택된 mode / RM / 출력 형상
 ```
 
 ## 하드웨어/DFX 구조
 
-`src/dfxisp_accel.cpp`는 로컬 C-sim을 위해 stdlib-only를 유지하면서도 의도한 하드웨어
+`src/dfxisp_accel.cpp`는 로컬 C-sim을 위해 stdlib-only를 유지하면서도 의도한 static/RM
 경계를 따라 분할되어 있다:
 
-- `checker_select_low_light()` / `checker_scene_average()`는 static-region scene
-  checker 블록이다. `AUTO`에서는 평균 RAW 휘도와 `low_light_threshold`에 따라 프레임을
-  normal 경로 또는 low-light 경로로 라우팅한다.
-- `load_bayer_window3x3()`는 `demosaic_grbg_window()`가 소비하는 명시적 3x3 Bayer
-  이웃을 만든다. 현재는 결정적 C-sim을 위해 clamped 메모리 읽기를 쓴다; 이 경계는
-  demosaic 픽셀 연산자를 바꾸지 않고 하드웨어용 streaming line-buffer/window
-  producer로 교체하도록 의도되었다.
-- `normal_pipeline()`은 baseline static ISP 경로다.
-- `low_light_reconfigurable_module()`은 명시적 DFX reconfigurable-module 경계
-  후보다. Vivado DFX 구현에서는 이 low-light 단계를 RM-호환 블록으로 합성/패키징하고
-  `dfxisp_accel`, checker, normal pipeline은 static region에 둔다. 이 함수는 HLS
-  pragma로 `INLINE off` 표시되어 hierarchy가 synthesis에 보이도록 한다.
+- `checker_select_mode()` — static-region scene checker. `AUTO`에서 dark-pixel 비율로
+  NORMAL/LOW_LIGHT를 결정. 장면 단위 히스테리시스는 시퀀스 스케줄러(RESEARCH §5.2) 담당이며
+  단일 프레임 C-sim entry에는 없다.
+- `baseline_isp_core_pixel()` — **shared static** baseline core. demosaic(GRBG 3x3) +
+  BLC + AWB(Q8 채널 게인) + CCM(identity placeholder). **gain/gamma 없음.**
+- `run_normal()` — RM_NORMAL_TONE = identity bypass. baseline core를 full-res로 실행.
+- `run_low_light()` — **RM_LOW_LIGHT_TONE**(DFX reconfigurable module 후보). RAW 2x2
+  binning(front) → baseline core → low-light gain + gamma-4.0(back). Vivado DFX 구현에서는
+  이 tone RM slot을 RM-호환 블록으로 패키징하고, checker·baseline core·controller는 static
+  region에 둔다.
+- `gamma4()` — γ=4.0을 정수 4제곱근 `floor((255^3·v)^(1/4))`로 정확히 실현(Python `isqrt`와
+  bit-exact). HW에서는 256-엔트리 LUT로 대체 가능.
 
-C-sim에는 Vitis 전용 헤더가 필요 없다; HLS pragma만 존재하며 로컬 `g++` 빌드에서는
-무시된다.
+C-sim에는 Vitis 전용 헤더가 필요 없다; HLS pragma만 존재하며 로컬 g++ 빌드에서는 무시된다.
 
 ## 다음 하드웨어 단계
 
-1. `load_bayer_window3x3()`의 clamped 읽기를 진짜 streaming line buffer로 교체.
-2. `low_light_reconfigurable_module()`을 독립 DFX RM 패키징 flow로 승격.
-3. 현재 C2의 4x4/8x8/16x16 bright/dark/mixed/threshold-boundary 집합을 넘어 fixture
-   필요가 늘어나면 Python golden vector 커버리지를 확장.
+1. `run_low_light()`의 정적 scratch binning 버퍼를 진짜 streaming line buffer로 교체.
+2. RM_LOW_LIGHT_TONE / RM_NORMAL_TONE을 독립 DFX RM slot 패키징 flow로 승격(§8.3 gate).
+3. Policy B(형상보존 upsample/pad)는 DPU가 고정 H×W ABI를 요구할 때만 추가(§4.3).
+4. Arm 2(register-only)·Arm 3(DFX) 자원/전력/PR-latency 비교(§7).

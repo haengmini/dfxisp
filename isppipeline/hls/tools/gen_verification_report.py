@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Generate a compact local DFXISP HLS verification report.
 
-The report is intentionally stdlib-only.  It inspects Makefile state, validates
-``tests/golden_vectors.csv`` shape/content, runs the local C-sim binary when it
-exists, and writes Markdown to ``reports/latest.md`` by default.
+Stdlib-only. Inspects Makefile state, validates the new ``tests/golden_vectors.csv``
+(shared baseline core + mutually exclusive tone RM slot), runs the local C-sim
+binary when it exists, and writes Markdown to ``reports/latest.md`` by default.
+
+The golden CSV carries per-case metadata (mode, selected RM, output shape) plus
+input RAW rows (kind=raw) and expected output rows (kind=rgb).
 """
 
 from __future__ import annotations
@@ -17,15 +20,28 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+DFXISP_MODE_LOW_LIGHT = 1
+DFXISP_RM_NORMAL_TONE = 0
+DFXISP_RM_LOW_LIGHT_TONE = 1
+RM_NAME = {0: "RM_NORMAL_TONE", 1: "RM_LOW_LIGHT_TONE"}
 
-@dataclass(frozen=True)
+EXPECTED_HEADER = ["case", "in_w", "in_h", "mode", "threshold",
+                   "out_w", "out_h", "sel_mode", "sel_rm", "kind", "idx", "val"]
+
+
+@dataclass
 class GoldenCase:
     name: str
-    width: int
-    height: int
+    in_w: int
+    in_h: int
     mode: int
     threshold: int
-    rows: int
+    out_w: int
+    out_h: int
+    sel_mode: int
+    sel_rm: int
+    raw_rows: int = 0
+    rgb_rows: int = 0
 
 
 def parse_makefile(path: Path) -> tuple[dict[str, str], list[str]]:
@@ -33,10 +49,8 @@ def parse_makefile(path: Path) -> tuple[dict[str, str], list[str]]:
     targets: list[str] = []
     assign_re = re.compile(r"^([A-Za-z0-9_]+)\s*(?::=|\?=|=)\s*(.*)$")
     target_re = re.compile(r"^([A-Za-z0-9_.-]+)\s*:")
-
     if not path.exists():
         return variables, targets
-
     for raw in path.read_text(encoding="utf-8").splitlines():
         line = raw.strip()
         if not line or line.startswith("#") or raw.startswith("\t"):
@@ -52,7 +66,6 @@ def parse_makefile(path: Path) -> tuple[dict[str, str], list[str]]:
 
 
 def expand_make_value(value: str, variables: dict[str, str]) -> str:
-    # Small, non-recursive Make variable expansion loop for simple $(NAME) refs.
     pattern = re.compile(r"\$\(([^)]+)\)")
     result = value
     for _ in range(8):
@@ -65,58 +78,64 @@ def expand_make_value(value: str, variables: dict[str, str]) -> str:
 
 def analyze_golden(path: Path) -> tuple[str, list[str], list[GoldenCase], int]:
     notes: list[str] = []
-    cases: dict[tuple[str, int, int, int, int], int] = {}
+    cases: dict[str, GoldenCase] = {}
     total_rows = 0
-
     if not path.exists():
         return "missing", [f"{path} not found"], [], 0
-
     try:
         with path.open(newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
-            expected_header = ["case", "width", "height", "mode", "threshold", "index", "x", "y", "raw", "expected_rgb_hex"]
-            if reader.fieldnames != expected_header:
+            if reader.fieldnames != EXPECTED_HEADER:
                 notes.append(f"unexpected CSV header: {reader.fieldnames}")
             for row in reader:
                 total_rows += 1
                 name = row["case"]
-                width = int(row["width"])
-                height = int(row["height"])
-                mode = int(row["mode"])
-                threshold = int(row["threshold"])
-                index = int(row["index"])
-                int(row["x"])
-                int(row["y"])
-                raw = int(row["raw"])
-                rgb = int(row["expected_rgb_hex"], 16)
-                if not (0 <= index < width * height):
-                    notes.append(f"{name}: index {index} outside {width}x{height}")
-                if not (0 <= raw <= 4095):
-                    notes.append(f"{name}: RAW value {raw} outside RAW12 range")
-                if not (0 <= rgb <= 0xFFFFFF):
-                    notes.append(f"{name}: RGB value 0x{rgb:x} outside RGB888 range")
-                key = (name, width, height, mode, threshold)
-                cases[key] = cases.get(key, 0) + 1
-    except Exception as exc:  # Keep report useful on malformed local files.
+                c = cases.get(name)
+                if c is None:
+                    c = GoldenCase(name, int(row["in_w"]), int(row["in_h"]), int(row["mode"]),
+                                   int(row["threshold"]), int(row["out_w"]), int(row["out_h"]),
+                                   int(row["sel_mode"]), int(row["sel_rm"]))
+                    cases[name] = c
+                kind = row["kind"]
+                if kind == "raw":
+                    c.raw_rows += 1
+                    if not (0 <= int(row["val"]) <= 4095):
+                        notes.append(f"{name}: RAW {row['val']} outside RAW12 range")
+                else:
+                    c.rgb_rows += 1
+                    if not (0 <= int(row["val"], 16) <= 0xFFFFFF):
+                        notes.append(f"{name}: RGB {row['val']} outside RGB888 range")
+    except Exception as exc:
         return "fail", [f"failed to parse {path}: {exc}"], [], total_rows
 
-    golden_cases = [GoldenCase(*key, rows=count) for key, count in cases.items()]
-    for case in golden_cases:
-        expected = case.width * case.height
-        if case.rows != expected:
-            notes.append(f"{case.name}: {case.rows} rows, expected {expected}")
+    golden = list(cases.values())
+    for c in golden:
+        if c.raw_rows != c.in_w * c.in_h:
+            notes.append(f"{c.name}: {c.raw_rows} raw rows, expected {c.in_w * c.in_h}")
+        if c.rgb_rows != c.out_w * c.out_h:
+            notes.append(f"{c.name}: {c.rgb_rows} rgb rows, expected {c.out_w * c.out_h}")
+        # Policy A: low-light halves shape; normal preserves shape.
+        if c.sel_rm == DFXISP_RM_LOW_LIGHT_TONE:
+            if (c.out_w, c.out_h) != (max(1, c.in_w // 2), max(1, c.in_h // 2)):
+                notes.append(f"{c.name}: low-light output shape {c.out_w}x{c.out_h} not H/2 x W/2")
+        elif (c.out_w, c.out_h) != (c.in_w, c.in_h):
+            notes.append(f"{c.name}: normal output shape {c.out_w}x{c.out_h} != in shape")
+        # mutual exclusion: selected RM must agree with resolved mode.
+        want = DFXISP_RM_LOW_LIGHT_TONE if c.sel_mode == DFXISP_MODE_LOW_LIGHT else DFXISP_RM_NORMAL_TONE
+        if c.sel_rm != want:
+            notes.append(f"{c.name}: selected RM {c.sel_rm} inconsistent with mode {c.sel_mode}")
 
-    names = {case.name for case in golden_cases}
-    sizes = {(case.width, case.height) for case in golden_cases}
-    for required_size in [(8, 8), (16, 16)]:
-        if required_size not in sizes:
-            notes.append(f"missing required {required_size[0]}x{required_size[1]} golden-vector coverage")
-    for required_label in ["bright", "dark", "mixed", "threshold_boundary"]:
-        if not any(required_label in name for name in names):
-            notes.append(f"missing required {required_label} golden-vector coverage")
+    names = {c.name for c in golden}
+    for required in ["bright", "dark", "recovery", "odd_dimension"]:
+        if not any(required in n for n in names):
+            notes.append(f"missing required '{required}' golden-vector coverage")
+    if not any(c.sel_rm == DFXISP_RM_LOW_LIGHT_TONE for c in golden):
+        notes.append("no low-light tone RM case present")
+    if not any(c.sel_rm == DFXISP_RM_NORMAL_TONE for c in golden):
+        notes.append("no normal tone RM case present")
 
     status = "pass" if total_rows > 0 and not notes else "fail"
-    return status, notes, golden_cases, total_rows
+    return status, notes, golden, total_rows
 
 
 def run_csim(binary: Path) -> tuple[str, str, int | None]:
@@ -124,10 +143,15 @@ def run_csim(binary: Path) -> tuple[str, str, int | None]:
         return "missing", f"{binary} not found", None
     if not os.access(binary, os.X_OK):
         return "fail", f"{binary} is not executable", None
-    proc = subprocess.run([str(binary)], cwd=binary.parent.parent, text=True, capture_output=True, check=False)
+    proc = subprocess.run([str(binary)], cwd=binary.parent.parent, text=True,
+                          capture_output=True, check=False)
     output = (proc.stdout + proc.stderr).strip()
     status = "pass" if proc.returncode == 0 else "fail"
     return status, output, proc.returncode
+
+
+def gate(ok: bool) -> str:
+    return "PASS" if ok else "FAIL"
 
 
 def write_report(root: Path, out: Path) -> None:
@@ -141,6 +165,17 @@ def write_report(root: Path, out: Path) -> None:
     golden_status, golden_notes, golden_cases, total_rows = analyze_golden(golden_path)
     csim_status, csim_output, csim_returncode = run_csim(csim_path)
 
+    # Architecture gates (RESEARCH.md §12 Task 4) hold when the golden structure is
+    # clean AND the bit-exact C-sim (which asserts mode/RM/shape metadata) passes.
+    structural_ok = golden_status == "pass"
+    csim_ok = csim_status == "pass"
+    has_normal = any(c.sel_rm == DFXISP_RM_NORMAL_TONE for c in golden_cases)
+    has_low = any(c.sel_rm == DFXISP_RM_LOW_LIGHT_TONE for c in golden_cases)
+    low_shapes_ok = all(
+        (c.out_w, c.out_h) == (max(1, c.in_w // 2), max(1, c.in_h // 2))
+        for c in golden_cases if c.sel_rm == DFXISP_RM_LOW_LIGHT_TONE
+    )
+
     generated = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     rel_out = out.relative_to(root) if out.is_relative_to(root) else out
     lines: list[str] = [
@@ -149,12 +184,27 @@ def write_report(root: Path, out: Path) -> None:
         f"Generated: {generated}",
         f"Report: `{rel_out}`",
         "",
+        "Architecture: shared baseline ISP core + mutually exclusive tone RM slot "
+        "(RM_NORMAL_TONE identity / RM_LOW_LIGHT_TONE = 2x2 binning + gain + gamma-4.0). "
+        "See `RESEARCH.md`.",
+        "",
         "## Status",
         "",
         "| Check | Status | Evidence |",
         "|---|---:|---|",
         f"| Golden vectors | {golden_status.upper()} | `{golden_rel}`; {total_rows} data rows; {len(golden_cases)} cases |",
         f"| C-sim | {csim_status.upper()} | `{csim_rel}`; return code {csim_returncode if csim_returncode is not None else 'n/a'} |",
+        "",
+        "## Architecture gates",
+        "",
+        "| Gate | Status |",
+        "|---|---:|",
+        f"| Shared baseline core (bit-exact) | {gate(structural_ok and csim_ok)} |",
+        f"| RM_NORMAL_TONE / identity present | {gate(has_normal and csim_ok)} |",
+        f"| RM_LOW_LIGHT_TONE present | {gate(has_low and csim_ok)} |",
+        f"| Mutually exclusive RM selection | {gate(structural_ok and csim_ok)} |",
+        f"| No duplicate gain/gamma (tone RM only) | {gate(structural_ok and csim_ok)} |",
+        f"| Output shape policy: LOW_LIGHT H/2 x W/2 (Policy A), NORMAL H x W | {gate(low_shapes_ok and structural_ok)} |",
         "",
         "## Makefile state",
         "",
@@ -166,25 +216,15 @@ def write_report(root: Path, out: Path) -> None:
         "",
         "## Golden vector cases",
         "",
-        "| Case | Mode | Threshold | Dimensions | Rows |",
-        "|---|---:|---:|---:|---:|",
+        "| Case | Mode | Sel mode | Selected RM | In | Out |",
+        "|---|---:|---:|---|---:|---:|",
     ]
     if golden_cases:
-        for case in golden_cases:
-            lines.append(f"| {case.name} | {case.mode} | {case.threshold} | {case.width}x{case.height} | {case.rows} |")
+        for c in golden_cases:
+            lines.append(f"| {c.name} | {c.mode} | {c.sel_mode} | {RM_NAME.get(c.sel_rm, c.sel_rm)} "
+                         f"| {c.in_w}x{c.in_h} | {c.out_w}x{c.out_h} |")
     else:
-        lines.append("| n/a | n/a | n/a | n/a | 0 |")
-
-    lines.extend([
-        "",
-        "## DPU-facing shape policy",
-        "",
-        "Decision for this C2 verification set: keep the default HLS/C-sim output shape at `H x W` for NORMAL, LOW_LIGHT, and AUTO outputs. This preserves a fixed-size DPU-facing ABI while the H/2 x W/2 low-light binning path remains an explicit ablation/future RM variant rather than the default golden-vector contract.",
-        "",
-        "- Rationale: current `dfxisp_accel` signature exposes one output buffer without output-width/output-height metadata, so H/2 emission would make bit-exact comparison ambiguous and would force downstream resize/pad policy before DPU integration.",
-        "- Ablation policy: evaluate `H/2 x W/2` low-light binning separately once the interface includes output shape metadata or an explicit post-binning upsample/pad stage. Compare it against the preserve-shape path using the same bright/dark/mixed/threshold-boundary fixtures.",
-        "- Current golden-vector contract: packed RGB888 `0x00RRGGBB`, one output pixel per input pixel, with low-light represented by deterministic gain/lift at preserved shape.",
-    ])
+        lines.append("| n/a | n/a | n/a | n/a | n/a | n/a |")
 
     lines.extend(["", "## C-sim output", "", "```text", csim_output or "(no output)", "```"])
 
@@ -199,10 +239,11 @@ def write_report(root: Path, out: Path) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--root", default=Path(__file__).resolve().parents[1], type=Path, help="HLS root directory")
-    parser.add_argument("--out", default=None, help="output Markdown path (default: <root>/reports/latest.md)")
+    parser.add_argument("--root", default=Path(__file__).resolve().parents[1], type=Path,
+                        help="HLS root directory")
+    parser.add_argument("--out", default=None,
+                        help="output Markdown path (default: <root>/reports/latest.md)")
     args = parser.parse_args()
-
     root = args.root.resolve()
     out = Path(args.out).resolve() if args.out else root / "reports" / "latest.md"
     write_report(root, out)
