@@ -193,21 +193,25 @@ SW 트랙(0~3)은 보드 없이 지금 수행 가능. HW 트랙(4~6)은 Vivado/�
 
 ```text
 [x] Stage 0  SW golden + baseline core 정합 (C-sim bit-exact, gate 6종)
-[ ] Stage 1  checker + 히스테리시스 시퀀스        (SW, 지금 가능)
-[ ] Stage 2  tone RM 산술 + 이미지 지표           (SW, 지금 가능)
-[ ] Stage 3  정확도 mAP arm/조건표 A~G            (SW, 지금 가능)
+[x] Stage 1  checker + 히스테리시스 시퀀스        (실행완료 → scheduler_sweep, 27경우)
+[x] Stage 2  tone RM 산술 + 이미지 지표           (실행완료 → image_metrics ExDark/COCO)
+[x] Stage 3  정확도 mAP arm/조건표 A~G            (실행완료 → 2 detector, none 최고)
 [ ] Stage 4  HLS 합성 + C/RTL Co-sim              (Vivado 필요)
 [ ] Stage 5  DFX PR 컨트롤러 + 전환 RTL sim       (Vivado 필요)
 [ ] Stage 6  보드 실장 + DPU end-to-end            (보드 필요)
 범례: [x] 완료 · [ ] 미착수
 ```
 
+> SW 트랙(Stage 1~3) 실측 결과·해석은 `results/stage1-3-results-2026-07-02.md`.
+> 핵심 발견: **모든 조건에서 none(무처리)이 mAP 최고** → 현 tone RM은 mAP guardrail 탈락,
+> DFX 정당화는 자원/전력(Stage 4~6)이어야 함. 설계 수정 (a)normal RM=register gain,
+> (b)low-light RM 완화/denoise·Policy B, (c)checker dark-level 재보정 → 재측정.
+
 ## 즉시 다음 (우선순위)
 
-1. **Stage 1** — `scheduler_sim.py`로 히스테리시스 시퀀스 + 전환 지연.
-2. **Stage 3** — 조건표 A~G를 새 경로로 재측정(6.1 표), detector 순서 불변성 재확인.
-3. **Stage 2** — tone RM 파라미터 확정 + Policy A/B 결정.
-4. **Stage 4 준비** — streaming line buffer 리팩터(cosim 전제) 후 csynth·cosim.
+1. **설계 수정 반영** — (a)(b)(c) 후 Stage 3 재측정 → guardrail 재판정.
+2. **Stage 4 준비** — streaming line buffer 리팩터(cosim 전제) 후 csynth·cosim.
+3. **HW 트랙(Stage 4~6)** — 자원/전력/PR로 DFX 순이득 정량화(방향 A의 실제 축).
 
 ## 주의 (지어내지 않기)
 

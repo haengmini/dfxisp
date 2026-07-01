@@ -1,0 +1,5 @@
+dataset,arm,n,out_shape,Y_mean,Y_std,Y_min,Y_max,saturation_pct,dark_ratio_before,dark_ratio_after,gain_gamma_dup
+ExDark,none,98,778x606,14.0,30.7,0.0,242.1,1.87,0.919,0.919,False
+ExDark,normal,98,778x606,11.0,28.9,0.0,236.0,0.72,0.919,0.932,False
+ExDark,lowlight,98,389x303,25.5,49.1,0.0,251.5,2.61,0.919,0.842,False
+ExDark,adaptive,98,mixed,25.5,49.1,0.0,251.5,2.61,0.919,0.842,False

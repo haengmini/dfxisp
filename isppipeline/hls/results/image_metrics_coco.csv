@@ -1,0 +1,5 @@
+dataset,arm,n,out_shape,Y_mean,Y_std,Y_min,Y_max,saturation_pct,dark_ratio_before,dark_ratio_after,gain_gamma_dup
+COCO,none,113,577x494,64.2,54.4,0.0,244.0,6.29,0.544,0.544,False
+COCO,normal,113,577x494,54.7,54.2,0.0,238.9,1.44,0.544,0.611,False
+COCO,lowlight,113,288x247,120.7,78.2,0.0,253.7,11.25,0.544,0.302,False
+COCO,adaptive,113,mixed,103.7,75.8,0.0,251.0,6.92,0.544,0.346,False

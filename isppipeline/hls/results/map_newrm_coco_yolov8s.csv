@@ -1,0 +1,5 @@
+dataset,arm,mAP_50_95,mAP_50,model,n
+COCO,none,0.4280,0.6105,yolov8s.pt,80
+COCO,normal,0.3775,0.5244,yolov8s.pt,80
+COCO,lowlight,0.3402,0.4590,yolov8s.pt,80
+COCO,adaptive,0.3486,0.4717,yolov8s.pt,80

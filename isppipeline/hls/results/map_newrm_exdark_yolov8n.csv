@@ -1,0 +1,5 @@
+dataset,arm,mAP_50_95,mAP_50,model,n
+ExDark,none,0.1561,0.3064,yolov8n.pt,71
+ExDark,normal,0.0680,0.1490,yolov8n.pt,71
+ExDark,lowlight,0.0554,0.1342,yolov8n.pt,71
+ExDark,adaptive,0.0554,0.1342,yolov8n.pt,71
