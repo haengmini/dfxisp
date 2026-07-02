@@ -55,6 +55,7 @@ LOW_LIGHT RM: binning + gain + gamma
 
 - `README.md` — 프로젝트 한 페이지 요약
 - `RESEARCH.md` — 연구 정본: 배경, 아키텍처, RM 명세, 실험/검증 계획
+- `SPEC.md` — 시스템 사양서: 입력 데이터셋 → checker → tone RM → baseline core → RGB32 출력 → 평가 (포맷·산술·인터페이스·파라미터)
 
 이전 문서들은 아래 archive로 보존했다.
 
