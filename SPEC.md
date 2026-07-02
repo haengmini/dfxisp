@@ -257,8 +257,8 @@ Arm3(DFX가 tone RM slot 교체). ablation: post-RGB8 gain/lift, dfx_bin, dfx_fp
 | L1.5 | C-synthesis(실제 Vitis HLS) | `DFXISP_HLS_FLOW=csynth` | ✅ 실측(§10) |
 | L2 | C/RTL Co-sim (합성 RTL==C TB) | `DFXISP_HLS_FLOW=cosim` | 🟡 RTL 실행 성공(7/7 트랜잭션), 자동 bit-exact 비교는 툴 하네스 SIGSEGV로 미완주(`results/stage4-hw-synthesis-2026-07-02.md` §6b) |
 | L3 | RTL wrapper sim (AXI-Stream) | Vivado xsim | ⬜ |
-| L4 | DFX 멀티프레임 전환 sim | RTL TB | ⬜ |
-| L5 | 보드 HIL (실제 PR) | ZCU104 | ⬜ |
+| **L4** | **DFX 구현·pr_verify(fabric-only, non-project batch flow)** | **Vivado 2024.1** | **✅ pr_verify PASS, 실제 partial bitstream 생성**(`results/stage5-dfx-implementation-2026-07-02.md`) |
+| L5 | 보드 HIL (실제 PR, PS/DDR 통합, 전력·PR latency 실측) | ZCU104 | ⬜ 유일하게 남은 단계 |
 
 **아키텍처 gate(전부 PASS, `reports/latest.md`):** baseline core bit-exact / RM_NORMAL_TONE /
 RM_LOW_LIGHT_TONE / 상호배타 RM 선택 / gain·gamma 중복 없음 / 형상정책(LOW_LIGHT H/2×W/2).
@@ -278,18 +278,22 @@ RM_LOW_LIGHT_TONE / 상호배타 RM 선택 / gain·gamma 중복 없음 / 형상�
 
 ## 10. 성능 / 자원 (Stage 4 실측, 2026-07-02 — Vitis HLS 2024.1 C-synthesis)
 
-**실측 완료(C-synthesis, xczu7ev, 5.0ns target).** 현재 unified top(`dfxisp_accel`, 두 tone
-RM 모두 상주·런타임 mode 선택, DFX 없음)은 **Arm2(register-only)에 해당**. Arm1(정적
-baseline만)·Arm3(DFX 분리)은 아직 별도 top 분리·PR 플로어플랜이 필요해 TODO.
-상세: `results/stage4-hw-synthesis-2026-07-02.md`, `reports/csynth/dfxisp_accel_ver1_csynth.rpt`.
+**실측 완료(C-synthesis + 실제 Vivado DFX 구현, xczu7ev, 2024.1).** unified top
+(`dfxisp_accel`, 두 tone RM 모두 상주·런타임 mode 선택, DFX 없음)은 **Arm2(register-only)**.
+RM_NORMAL_TONE/RM_LOW_LIGHT_TONE을 실제 Reconfigurable Partition으로 구현·**pr_verify
+PASS**·partial bitstream 생성까지 완료해 **Arm3(DFX) fabric-only 실측**을 확보(PS/DDR
+미통합, 절대 전력·PR latency(ms)는 보드 전용). Arm1(정적 baseline-only)은 여전히 TODO.
+상세: `results/stage4-hw-synthesis-2026-07-02.md`(csynth), `results/stage5-dfx-implementation-2026-07-02.md`(DFX 구현).
 
-| 지표 | Arm1(static) | **Arm2(register-only, 실측)** | Arm3(DFX) |
+| 지표 | Arm1(static) | **Arm2(register-only, 실측)** | **Arm3(DFX, 실측)** |
 |---|---|---|---|
-| LUT / FF / BRAM / DSP | TODO | **11,217 / 7,008 / 8 / 30** | TODO |
-| Fmax @5.0ns | TODO | **273.97 MHz**(critical path 3.650ns) | TODO |
-| partial bitstream size | — | — | TODO |
-| 재구성 지연(ms) | — | — | TODO |
-| 정상모드 전력(W) | TODO | TODO | TODO |
+| LUT / FF / BRAM / DSP | TODO | **11,217 / 7,008 / 8 / 30** | static+RM1 routed: LUT 3,948/BRAM 1.5tile/DSP 12(§Stage5) |
+| Fmax @5.0ns | TODO | **273.97 MHz**(critical path 3.650ns) | TODO(제약 미인가 fabric-only 패스, WNS 미측정) |
+| pr_verify | — | — | **✅ PASS**(config 간 static 완전 동일 확인) |
+| full bitstream size | — | — | **19,311,211 bytes ≈ 19.3 MB** |
+| partial bitstream size | — | — | **686,664 bytes ≈ 671 KB**(두 RM 동일, pblock 프레임 수로 결정) |
+| 재구성 지연(ms) | — | — | TODO(보드 ICAP 실측 필요) |
+| 정상모드 전력(W) | TODO | TODO | TODO(보드 실측 필요) |
 
 Arm2 인스턴스 분해(unified top 내부, DFX 순이득 추정의 참조점):
 
@@ -312,7 +316,7 @@ bitstream)이 필요.
 
 | top | BRAM | DSP | FF | LUT | Fmax |
 |---|---|---|---|---|---|
-| `rm_normal_tone_top` | 4 | 12 | 3,593 | 5,038 | 273.97 MHz |
+| `rm_normal_tone_top` | 4 | 12 | 3,797 | 5,202 | 273.97 MHz |
 | `rm_low_light_tone_top` | 7 | 15 | 4,732 | 7,167 | 273.97 MHz |
 
 > **참고(사전 최적화 이력):** 최초 csynth에서 `gamma2()`가 런타임 정수 sqrt(반복 나눗셈)를

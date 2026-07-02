@@ -166,10 +166,10 @@ unified top의 sub-instance 수치(§4.2, run_normal 1BRAM/12DSP/1785FF/3108LUT,
 - [x] 두 RM IP 패키징(export, `ip_catalog` 포맷) — Vivado IP Integrator에 바로 임포트
       가능한 IP-XACT 산출. `rm_normal_tone_top`: 159KB, `rm_low_light_tone_top`: 198KB,
       0 errors. Vivado DFX Block Design의 직접 전제조건 완료.
-- [ ] Vivado DFX Block Design(PS+AXI interconnect+ICAP+DFX wizard), RP 플로어플랜(Pblock),
-      `pr_verify`, partial bitstream 생성 — **이 시점부터가 실제 "보드 이전 최종 단계"**.
-      본 세션은 여기까지 진행(범위: Block Design·플로어플랜은 RP 크기/배치 등 설계 판단이
-      필요해 사용자 검토와 함께 별도 세션에서 진행 권장).
+- [x] **Vivado DFX 구현(fabric-only) 완료** — RP 플로어플랜, config1/config2 구현,
+      **pr_verify PASS**, full/partial bitstream 생성. 상세:
+      `results/stage5-dfx-implementation-2026-07-02.md`. PS/AXI interconnect/ICAP 통합과
+      전력·PR latency 실측은 실제 ZCU104 보드에서만 가능 — **이것이 유일하게 남은 단계**.
 
 ### IP 패키징 재현
 ```bash

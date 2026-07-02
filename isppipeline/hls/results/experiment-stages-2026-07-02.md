@@ -148,7 +148,7 @@ SW 트랙(0~3)은 보드 없이 지금 수행 가능. HW 트랙(4~6)은 Vivado/�
 
 ---
 
-## Stage 5 — DFX(PR) 컨트롤러 + 동적 전환 RTL sim  ⬜(Vivado 필요)
+## Stage 5 — DFX(PR) 구현 + pr_verify  ✅(fabric-only 실측 완료, 2026-07-02)
 
 **대응(구):** Phase 2 DFX(PR) 컨트롤러 및 동적 스위칭 + Phase 4.5 DFX 멀티프레임 sim.
 
@@ -170,6 +170,14 @@ SW 트랙(0~3)은 보드 없이 지금 수행 가능. HW 트랙(4~6)은 Vivado/�
 - **측정 항목:** partial bitstream size(RM별), **재구성 지연(cycle→ms)** = bitstream ÷ ICAP
   대역폭, 전환 감지 지연, WNS.
 - **산출물:** `results/pr_latency_newrm.csv`, DFX FSM 파형/로그, partial bitstream 크기표.
+
+### 실측 결과 (2026-07-02, fabric-only)
+non-project batch Tcl DFX flow(AMD UG909)로 static+RM_NORMAL_TONE(config1)/
+static+RM_LOW_LIGHT_TONE(config2) 구현. **pr_verify PASS**(static 영역 완전 동일 확인).
+Full bitstream 19,311,211 bytes, partial bitstream 686,664 bytes(두 RM 동일 — pblock
+프레임 수로 결정, 실제 로직량과 무관). 상세: `results/stage5-dfx-implementation-2026-07-02.md`.
+**미측정(보드 전용):** F1~F5 멀티프레임 drain/전환 시나리오(PS/ICAP 통합 필요), 재구성
+지연(ms), WNS(타이밍 제약 미적용 fabric-only 패스), 전력.
 
 ---
 
@@ -197,24 +205,32 @@ SW 트랙(0~3)은 보드 없이 지금 수행 가능. HW 트랙(4~6)은 Vivado/�
 [x] Stage 1  checker + 히스테리시스 시퀀스        (실행완료 → scheduler_sweep, 27경우)
 [x] Stage 2  tone RM 산술 + 이미지 지표           (실행완료 → image_metrics ExDark/COCO)
 [x] Stage 3  정확도 mAP arm/조건표 A~G            (실행완료 → 2 detector, none 최고)
-[ ] Stage 4  HLS 합성 + C/RTL Co-sim              (Vivado 필요)
-[ ] Stage 5  DFX PR 컨트롤러 + 전환 RTL sim       (Vivado 필요)
-[ ] Stage 6  보드 실장 + DPU end-to-end            (보드 필요)
+[x] Stage 4  HLS 합성 + C/RTL Co-sim              (csynth 실측 완료; cosim은 RTL 실행 성공,
+                                                    자동 비교는 툴 하네스 한계로 미완주)
+[x] Stage 5  DFX PR 구현 + pr_verify              (fabric-only 실측 완료, pr_verify PASS)
+[ ] Stage 6  보드 실장 + DPU end-to-end            (보드 필요 — 유일하게 남은 단계)
 범례: [x] 완료 · [ ] 미착수
 ```
 
 > SW 트랙(Stage 1~3) 실측 결과·해석은 `results/stage1-3-results-2026-07-02.md`.
-> 핵심 발견: **모든 조건에서 none(무처리)이 mAP 최고** → 현 tone RM은 mAP guardrail 탈락,
-> DFX 정당화는 자원/전력(Stage 4~6)이어야 함. 설계 수정 (a)normal RM=register gain,
-> (b)low-light RM 완화/denoise·Policy B, (c)checker dark-level 재보정 → 재측정.
+> HW 트랙(Stage 4~5) 실측은 `results/stage4-hw-synthesis-2026-07-02.md`,
+> `results/stage5-dfx-implementation-2026-07-02.md`.
+> 핵심 발견(SW): **모든 조건에서 none(무처리)이 mAP 최고** → 현 tone RM은 mAP guardrail
+> 탈락, DFX 정당화는 자원/전력이어야 함(방향 A 강화).
+> 핵심 발견(HW): gamma를 런타임 sqrt→ROM LUT로 바꿔 자원 -88%/-78%; **pr_verify PASS**로
+> RM_NORMAL_TONE↔RM_LOW_LIGHT_TONE 실제 DFX 전환 가능함을 실측 확인;
+> full bitstream 19.3MB, partial 671KB(양 RM 동일 — pblock 프레임 수 결정).
 
 ## 즉시 다음 (우선순위)
 
-1. **설계 수정 반영** — (a)(b)(c) 후 Stage 3 재측정 → guardrail 재판정.
-2. **Stage 4 준비** — streaming line buffer 리팩터(cosim 전제) 후 csynth·cosim.
-3. **HW 트랙(Stage 4~6)** — 자원/전력/PR로 DFX 순이득 정량화(방향 A의 실제 축).
+1. **보드 단계(Stage 6)** — 실제 ZCU104: PS/DDR 통합, ICAP 재구성 지연(ms), 절대 전력(W),
+   DPU end-to-end. 이 시점부터는 물리 보드 없이는 진행 불가.
+2. **(선택) SW 설계 수정** — (a)normal RM=register gain, (b)low-light RM 완화/denoise,
+   (c)checker dark-level 재보정 후 Stage 3 재측정 → mAP guardrail 재판정.
+3. **(선택) L2 cosim 완주** — post-check SIGSEGV 원인(struct-pointer 인터페이스 추정)
+   해소 또는 인터페이스 재설계.
 
 ## 주의 (지어내지 않기)
 
-- Stage 4~6의 자원/전력/PR/cosim 수치는 Vivado/보드 없이는 `TODO(측정)`.
+- Stage 6(보드) 수치는 실물 보드 없이는 `TODO(측정)`(재구성 지연·전력·DPU 정확도).
 - 구 08/11 mAP는 ablation arm(구 variant) 기준 — 새 서사에 그대로 인용 금지, Stage 3 재측정으로 대체.

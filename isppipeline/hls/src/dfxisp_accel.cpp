@@ -328,17 +328,31 @@ static void run_low_light(const uint16_t* raw, uint32_t* rgb_out, int width, int
 // so behavior/bit-exactness is identical; these are synthesis-only entry points
 // (csynth "synth" flow, no testbench) and are not exercised by make verify.
 // -----------------------------------------------------------------------------
+// Port list matches rm_low_light_tone_top exactly (same arg types/order/count)
+// so the two are valid DFX candidates for the same Reconfigurable Partition
+// slot -- DFX requires identical port lists across RM implementations of one
+// RP (RESEARCH.md §2.3 "동일 downstream 인터페이스 계약"). out_width/out_height
+// always equal width/height here since RM_NORMAL_TONE preserves shape (H x W).
 extern "C" void rm_normal_tone_top(
-    const uint16_t* raw_bayer, uint32_t* rgb_out, int width, int height) {
+    const uint16_t* raw_bayer, uint32_t* rgb_out, int width, int height,
+    int* out_width, int* out_height) {
 #pragma HLS INTERFACE m_axi port=raw_bayer offset=slave bundle=gmem0 depth=2048
 #pragma HLS INTERFACE m_axi port=rgb_out offset=slave bundle=gmem1 depth=2048
 #pragma HLS INTERFACE s_axilite port=raw_bayer bundle=control
 #pragma HLS INTERFACE s_axilite port=rgb_out bundle=control
 #pragma HLS INTERFACE s_axilite port=width bundle=control
 #pragma HLS INTERFACE s_axilite port=height bundle=control
+#pragma HLS INTERFACE s_axilite port=out_width bundle=control
+#pragma HLS INTERFACE s_axilite port=out_height bundle=control
 #pragma HLS INTERFACE s_axilite port=return bundle=control
-    if (!raw_bayer || !rgb_out || width <= 0 || height <= 0) return;
+    if (!raw_bayer || !rgb_out || width <= 0 || height <= 0) {
+        if (out_width) *out_width = 0;
+        if (out_height) *out_height = 0;
+        return;
+    }
     run_normal(raw_bayer, rgb_out, width, height);
+    if (out_width) *out_width = width;
+    if (out_height) *out_height = height;
 }
 
 extern "C" void rm_low_light_tone_top(

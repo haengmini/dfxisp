@@ -3,7 +3,7 @@
 ================================================================
 == Vitis HLS Report for 'rm_normal_tone_top'
 ================================================================
-* Date:           Thu Jul  2 16:30:46 2026
+* Date:           Thu Jul  2 16:39:29 2026
 
 * Version:        2024.1 (Build 5069499 on May 21 2024)
 * Project:        proj_rm_normal_tone_top
@@ -34,12 +34,12 @@
 
     + Detail: 
         * Instance: 
-        +--------------------------------------------+----------------------------------+---------+----------+----------+-----------+-----+----------+---------+
-        |                                            |                                  |  Latency (cycles)  |  Latency (absolute)  |    Interval    | Pipeline|
-        |                  Instance                  |              Module              |   min   |    max   |    min   |    max    | min |    max   |   Type  |
-        +--------------------------------------------+----------------------------------+---------+----------+----------+-----------+-----+----------+---------+
-        |grp_p_anonymous_namespace_run_normal_fu_90  |p_anonymous_namespace_run_normal  |      171|  18662427|  0.855 us|  93.312 ms|  171|  18662427|       no|
-        +--------------------------------------------+----------------------------------+---------+----------+----------+-----------+-----+----------+---------+
+        +---------------------------------------------+----------------------------------+---------+----------+----------+-----------+-----+----------+---------+
+        |                                             |                                  |  Latency (cycles)  |  Latency (absolute)  |    Interval    | Pipeline|
+        |                   Instance                  |              Module              |   min   |    max   |    min   |    max    | min |    max   |   Type  |
+        +---------------------------------------------+----------------------------------+---------+----------+----------+-----------+-----+----------+---------+
+        |grp_p_anonymous_namespace_run_normal_fu_138  |p_anonymous_namespace_run_normal  |      171|  18662427|  0.855 us|  93.312 ms|  171|  18662427|       no|
+        +---------------------------------------------+----------------------------------+---------+----------+----------+-----------+-----+----------+---------+
 
         * Loop: 
         N/A
@@ -56,12 +56,12 @@
 |DSP              |        -|     -|       -|       -|    -|
 |Expression       |        -|     -|       0|      82|    -|
 |FIFO             |        -|     -|       -|       -|    -|
-|Instance         |        4|    12|    3398|    4891|    0|
+|Instance         |        4|    12|    3474|    5019|    0|
 |Memory           |        -|     -|       -|       -|    -|
-|Multiplexer      |        -|     -|       0|      65|    -|
-|Register         |        -|     -|     195|       -|    -|
+|Multiplexer      |        -|     -|       0|     101|    -|
+|Register         |        -|     -|     323|       -|    -|
 +-----------------+---------+------+--------+--------+-----+
-|Total            |        4|    12|    3593|    5038|    0|
+|Total            |        4|    12|    3797|    5202|    0|
 +-----------------+---------+------+--------+--------+-----+
 |Available        |      624|  1728|  460800|  230400|   96|
 +-----------------+---------+------+--------+--------+-----+
@@ -70,16 +70,16 @@
 
 + Detail: 
     * Instance: 
-    +--------------------------------------------+----------------------------------+---------+----+------+------+-----+
-    |                  Instance                  |              Module              | BRAM_18K| DSP|  FF  |  LUT | URAM|
-    +--------------------------------------------+----------------------------------+---------+----+------+------+-----+
-    |control_s_axi_U                             |control_s_axi                     |        0|   0|   252|   424|    0|
-    |gmem0_m_axi_U                               |gmem0_m_axi                       |        1|   0|   696|   734|    0|
-    |gmem1_m_axi_U                               |gmem1_m_axi                       |        2|   0|   665|   625|    0|
-    |grp_p_anonymous_namespace_run_normal_fu_90  |p_anonymous_namespace_run_normal  |        1|  12|  1785|  3108|    0|
-    +--------------------------------------------+----------------------------------+---------+----+------+------+-----+
-    |Total                                       |                                  |        4|  12|  3398|  4891|    0|
-    +--------------------------------------------+----------------------------------+---------+----+------+------+-----+
+    +---------------------------------------------+----------------------------------+---------+----+------+------+-----+
+    |                   Instance                  |              Module              | BRAM_18K| DSP|  FF  |  LUT | URAM|
+    +---------------------------------------------+----------------------------------+---------+----+------+------+-----+
+    |control_s_axi_U                              |control_s_axi                     |        0|   0|   328|   552|    0|
+    |gmem0_m_axi_U                                |gmem0_m_axi                       |        1|   0|   696|   734|    0|
+    |gmem1_m_axi_U                                |gmem1_m_axi                       |        2|   0|   665|   625|    0|
+    |grp_p_anonymous_namespace_run_normal_fu_138  |p_anonymous_namespace_run_normal  |        1|  12|  1785|  3108|    0|
+    +---------------------------------------------+----------------------------------+---------+----+------+------+-----+
+    |Total                                        |                                  |        4|  12|  3474|  5019|    0|
+    +---------------------------------------------+----------------------------------+---------+----+------+------+-----+
 
     * DSP: 
     N/A
@@ -95,41 +95,49 @@
     |          Variable Name          | Operation| DSP| FF| LUT| Bitwidth P0| Bitwidth P1|
     +---------------------------------+----------+----+---+----+------------+------------+
     |ap_block_state3_on_subcall_done  |       and|   0|  0|   2|           1|           1|
-    |icmp_ln340_1_fu_118_p2           |      icmp|   0|  0|  39|          32|           1|
-    |icmp_ln340_fu_112_p2             |      icmp|   0|  0|  39|          32|           1|
-    |or_ln340_fu_124_p2               |        or|   0|  0|   2|           1|           1|
+    |icmp_ln348_1_fu_166_p2           |      icmp|   0|  0|  39|          32|           1|
+    |icmp_ln348_fu_160_p2             |      icmp|   0|  0|  39|          32|           1|
+    |or_ln348_fu_172_p2               |        or|   0|  0|   2|           1|           1|
     +---------------------------------+----------+----+---+----+------------+------------+
     |Total                            |          |   0|  0|  82|          66|           4|
     +---------------------------------+----------+----+---+----+------------+------------+
 
     * Multiplexer: 
-    +---------------+----+-----------+-----+-----------+
-    |      Name     | LUT| Input Size| Bits| Total Bits|
-    +---------------+----+-----------+-----+-----------+
-    |ap_NS_fsm      |  20|          4|    1|          4|
-    |gmem0_ARVALID  |   9|          2|    1|          2|
-    |gmem0_RREADY   |   9|          2|    1|          2|
-    |gmem1_AWVALID  |   9|          2|    1|          2|
-    |gmem1_BREADY   |   9|          2|    1|          2|
-    |gmem1_WVALID   |   9|          2|    1|          2|
-    +---------------+----+-----------+-----+-----------+
-    |Total          |  65|         14|    6|         14|
-    +---------------+----+-----------+-----+-----------+
+    +--------------------------------------+----+-----------+-----+-----------+
+    |                 Name                 | LUT| Input Size| Bits| Total Bits|
+    +--------------------------------------+----+-----------+-----+-----------+
+    |ap_NS_fsm                             |  20|          4|    1|          4|
+    |ap_phi_mux_storemerge1_phi_fu_118_p4  |   9|          2|   32|         64|
+    |ap_phi_mux_storemerge_phi_fu_130_p4   |   9|          2|   32|         64|
+    |gmem0_ARVALID                         |   9|          2|    1|          2|
+    |gmem0_RREADY                          |   9|          2|    1|          2|
+    |gmem1_AWVALID                         |   9|          2|    1|          2|
+    |gmem1_BREADY                          |   9|          2|    1|          2|
+    |gmem1_WVALID                          |   9|          2|    1|          2|
+    |storemerge1_reg_114                   |   9|          2|   32|         64|
+    |storemerge_reg_126                    |   9|          2|   32|         64|
+    +--------------------------------------+----+-----------+-----+-----------+
+    |Total                                 | 101|         22|  134|        270|
+    +--------------------------------------+----+-----------+-----+-----------+
 
     * Register: 
-    +---------------------------------------------------------+----+----+-----+-----------+
-    |                           Name                          | FF | LUT| Bits| Const Bits|
-    +---------------------------------------------------------+----+----+-----+-----------+
-    |ap_CS_fsm                                                |   3|   0|    3|          0|
-    |grp_p_anonymous_namespace_run_normal_fu_90_ap_start_reg  |   1|   0|    1|          0|
-    |or_ln340_reg_150                                         |   1|   0|    1|          0|
-    |raw_bayer_read_reg_135                                   |  64|   0|   64|          0|
-    |rgb_out_read_reg_130                                     |  64|   0|   64|          0|
-    |trunc_ln331_1_reg_145                                    |  31|   0|   31|          0|
-    |trunc_ln331_reg_140                                      |  31|   0|   31|          0|
-    +---------------------------------------------------------+----+----+-----+-----------+
-    |Total                                                    | 195|   0|  195|          0|
-    +---------------------------------------------------------+----+----+-----+-----------+
+    +----------------------------------------------------------+----+----+-----+-----------+
+    |                           Name                           | FF | LUT| Bits| Const Bits|
+    +----------------------------------------------------------+----+----+-----+-----------+
+    |ap_CS_fsm                                                 |   3|   0|    3|          0|
+    |grp_p_anonymous_namespace_run_normal_fu_138_ap_start_reg  |   1|   0|    1|          0|
+    |height_read_reg_178                                       |  32|   0|   32|          0|
+    |or_ln348_reg_208                                          |   1|   0|    1|          0|
+    |raw_bayer_read_reg_193                                    |  64|   0|   64|          0|
+    |rgb_out_read_reg_188                                      |  64|   0|   64|          0|
+    |storemerge1_reg_114                                       |  32|   0|   32|          0|
+    |storemerge_reg_126                                        |  32|   0|   32|          0|
+    |trunc_ln336_1_reg_203                                     |  31|   0|   31|          0|
+    |trunc_ln336_reg_198                                       |  31|   0|   31|          0|
+    |width_read_reg_183                                        |  32|   0|   32|          0|
+    +----------------------------------------------------------+----+----+-----+-----------+
+    |Total                                                     | 323|   0|  323|          0|
+    +----------------------------------------------------------+----+----+-----+-----------+
 
 
 
@@ -140,23 +148,23 @@
 +-----------------------+-----+-----+------------+--------------------+--------------+
 |       RTL Ports       | Dir | Bits|  Protocol  |    Source Object   |    C Type    |
 +-----------------------+-----+-----+------------+--------------------+--------------+
-|s_axi_control_AWVALID  |   in|    1|       s_axi|             control|        scalar|
-|s_axi_control_AWREADY  |  out|    1|       s_axi|             control|        scalar|
-|s_axi_control_AWADDR   |   in|    6|       s_axi|             control|        scalar|
-|s_axi_control_WVALID   |   in|    1|       s_axi|             control|        scalar|
-|s_axi_control_WREADY   |  out|    1|       s_axi|             control|        scalar|
-|s_axi_control_WDATA    |   in|   32|       s_axi|             control|        scalar|
-|s_axi_control_WSTRB    |   in|    4|       s_axi|             control|        scalar|
-|s_axi_control_ARVALID  |   in|    1|       s_axi|             control|        scalar|
-|s_axi_control_ARREADY  |  out|    1|       s_axi|             control|        scalar|
-|s_axi_control_ARADDR   |   in|    6|       s_axi|             control|        scalar|
-|s_axi_control_RVALID   |  out|    1|       s_axi|             control|        scalar|
-|s_axi_control_RREADY   |   in|    1|       s_axi|             control|        scalar|
-|s_axi_control_RDATA    |  out|   32|       s_axi|             control|        scalar|
-|s_axi_control_RRESP    |  out|    2|       s_axi|             control|        scalar|
-|s_axi_control_BVALID   |  out|    1|       s_axi|             control|        scalar|
-|s_axi_control_BREADY   |   in|    1|       s_axi|             control|        scalar|
-|s_axi_control_BRESP    |  out|    2|       s_axi|             control|        scalar|
+|s_axi_control_AWVALID  |   in|    1|       s_axi|             control|       pointer|
+|s_axi_control_AWREADY  |  out|    1|       s_axi|             control|       pointer|
+|s_axi_control_AWADDR   |   in|    7|       s_axi|             control|       pointer|
+|s_axi_control_WVALID   |   in|    1|       s_axi|             control|       pointer|
+|s_axi_control_WREADY   |  out|    1|       s_axi|             control|       pointer|
+|s_axi_control_WDATA    |   in|   32|       s_axi|             control|       pointer|
+|s_axi_control_WSTRB    |   in|    4|       s_axi|             control|       pointer|
+|s_axi_control_ARVALID  |   in|    1|       s_axi|             control|       pointer|
+|s_axi_control_ARREADY  |  out|    1|       s_axi|             control|       pointer|
+|s_axi_control_ARADDR   |   in|    7|       s_axi|             control|       pointer|
+|s_axi_control_RVALID   |  out|    1|       s_axi|             control|       pointer|
+|s_axi_control_RREADY   |   in|    1|       s_axi|             control|       pointer|
+|s_axi_control_RDATA    |  out|   32|       s_axi|             control|       pointer|
+|s_axi_control_RRESP    |  out|    2|       s_axi|             control|       pointer|
+|s_axi_control_BVALID   |  out|    1|       s_axi|             control|       pointer|
+|s_axi_control_BREADY   |   in|    1|       s_axi|             control|       pointer|
+|s_axi_control_BRESP    |  out|    2|       s_axi|             control|       pointer|
 |ap_clk                 |   in|    1|  ap_ctrl_hs|  rm_normal_tone_top|  return value|
 |ap_rst_n               |   in|    1|  ap_ctrl_hs|  rm_normal_tone_top|  return value|
 |interrupt              |  out|    1|  ap_ctrl_hs|  rm_normal_tone_top|  return value|
