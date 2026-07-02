@@ -139,10 +139,33 @@ Vivado GUI 기반 수동 파형 비교, 또는 인터페이스 재설계(`DfxIsp
 포트로 분리)가 후속 후보. `src/dfxisp_accel.cpp`의 `depth=` pragma는 값 자체가 합성 RTL
 동작에 영향을 주지 않으므로(cosim 검증 전용 힌트) csynth 결과(§4)는 이 이슈와 무관하게 유효.
 
+## 6c. Stage 5 준비 — RM 개별 top 분리 합성 (실측)
+
+DFX RM 패키징의 전제조건(HLS README "다음 하드웨어 단계" #2)을 진행: `RM_NORMAL_TONE`/
+`RM_LOW_LIGHT_TONE`을 **독립 top 함수**(`rm_normal_tone_top`, `rm_low_light_tone_top`)로
+노출해 각각 별도 C-synthesis(`flow=synth`, no tb). 동일 translation unit 내부 함수를
+재사용하므로 동작은 `dfxisp_accel()`과 동일(별도 golden 불필요, 순수 합성 전용 entry).
+
+| top | 역할 | BRAM | DSP | FF | LUT | Fmax |
+|---|---|---|---|---|---|---|
+| `rm_normal_tone_top` | RM_NORMAL_TONE(자체 AXI 포함) | 4 | 12 | 3,593 | 5,038 | 273.97 MHz |
+| `rm_low_light_tone_top` | RM_LOW_LIGHT_TONE(자체 AXI 포함) | 7 | 15 | 4,732 | 7,167 | 273.97 MHz |
+
+unified top의 sub-instance 수치(§4.2, run_normal 1BRAM/12DSP/1785FF/3108LUT, run_low_light
+4BRAM/15DSP/2784FF/5073LUT)보다 큰 이유: 독립 top은 **자체 m_axi/s_axilite 인프라**를 포함
+(unified top에서는 두 RM이 gmem0/gmem1/control을 공유). **실제 DFX partial bitstream 크기
+추정에는 독립 top 수치가 더 현실적**(RM 하나가 재구성 가능 IP로 패키징될 때의 실제 풋프린트에
+가까움). 산출물: `reports/csynth/rm_{normal,low_light}_tone_top_csynth.rpt`,
+`results/resource_csynth_rm_standalone_2026-07-02.csv`.
+
 ## 7. 다음 (Stage 4 잔여 / Stage 5)
-- [x] C-synthesis 실측 자원/타이밍 — §4.
+- [x] C-synthesis 실측 자원/타이밍(unified top) — §4.
+- [x] RM 개별 top 분리 합성(실측) — §6c.
 - [~] C/RTL Co-sim (L2 gate) — RTL 실행 성공 확인, 자동 bit-exact 비교는 툴 하네스 문제로
       미완주(§6b). 인터페이스 재설계 또는 Vivado 수동 검증 필요.
+- [ ] Vivado DFX Block Design(PS+AXI interconnect+ICAP+DFX wizard), RP 플로어플랜(Pblock),
+      `pr_verify`, partial bitstream 생성 — **이 시점부터가 실제 "보드 이전 최종 단계"**.
+      본 세션은 여기까지 진행(범위: Block Design GUI/XDC 작업이 커서 별도 세션 필요).
 - [ ] RM_NORMAL_TONE / RM_LOW_LIGHT_TONE을 **개별 HLS top으로 분리 합성**하여 Arm1(static
       all-resident)·Arm2(register-only, 현재 unified top과 유사)·Arm3(DFX) 자원 비교의
       실제 partial-bitstream 후보 크기 산정.

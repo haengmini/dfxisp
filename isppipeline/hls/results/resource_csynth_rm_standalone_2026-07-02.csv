@@ -1,0 +1,3 @@
+top,role,BRAM_18K,DSP,FF,LUT,Fmax_MHz,notes
+rm_normal_tone_top,RM_NORMAL_TONE standalone (own AXI infra),4,12,3593,5038,273.97,"gain1.25x+gamma2.0 over baseline_core12, full-res"
+rm_low_light_tone_top,RM_LOW_LIGHT_TONE standalone (own AXI infra),7,15,4732,7167,273.97,"2x2 bin+baseline_core12+gain2.0x+gamma2.0, H/2xW/2"

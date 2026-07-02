@@ -306,6 +306,15 @@ Arm2 인스턴스 분해(unified top 내부, DFX 순이득 추정의 참조점):
 확정에는 정적 baseline-only top 분리 합성과 Vivado DFX 플로어플랜(PR/pr_verify/partial
 bitstream)이 필요.
 
+**RM 독립 top 실측(Stage 5 준비, 2026-07-02):** `RM_NORMAL_TONE`/`RM_LOW_LIGHT_TONE`을
+각자 자체 AXI 인프라를 가진 독립 top으로 분리 합성(DFX partial bitstream 크기의 더 현실적
+추정치):
+
+| top | BRAM | DSP | FF | LUT | Fmax |
+|---|---|---|---|---|---|
+| `rm_normal_tone_top` | 4 | 12 | 3,593 | 5,038 | 273.97 MHz |
+| `rm_low_light_tone_top` | 7 | 15 | 4,732 | 7,167 | 273.97 MHz |
+
 > **참고(사전 최적화 이력):** 최초 csynth에서 `gamma2()`가 런타임 정수 sqrt(반복 나눗셈)를
 > 써서 자원이 5배 이상 부풀었음(합계 FF 58,655/LUT 52,053). 256-엔트리 ROM LUT로 교체해
 > 위 수치로 개선(FF -88%, LUT -78%). 상세 §Stage4 문서.
