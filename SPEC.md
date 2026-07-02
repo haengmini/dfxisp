@@ -121,14 +121,16 @@ AUTO       -> dark_ratio = count(dark) / (W*H)
   히스테리시스 밴드, min-dwell)는 스케줄러(`tools/scheduler_sim.py`/`scheduler_sweep.py`)가 담당.
   권장 파라미터(실측): narrow 밴드 + temporal_N=3 (mismatch 0.015, thrashing 0).
 
-### 3.2 ② Baseline ISP core (shared, static, mode 무관) — ver1
+### 3.2 ② Baseline ISP core (shared code path, mode-specific BLC) — ver1
 **gain/gamma 없음.** 보정을 **12-bit RAW 도메인에서 수행**하고 최종 `>>4`는 tone에서 한다
-(ver1 핵심: precision 보존). 픽셀당:
+(ver1 핵심: precision 보존). WB/CCM은 두 모드가 완전히 같은 함수(`apply_blc_wb12`)를
+공유하지만, **BLC 오프셋은 모드별로 다르다**(2026-07-03, §11.9의 root-cause 결과 반영).
+픽셀당:
 
 ```text
 1. demosaic (RGGB) -> R,G,B 12-bit (0..4095)     # HW/C-sim: >>4 안 함(여기선 유지)
-2. BLC   : v = clip(v - 256, 0, 4095)            # 12-bit black-level (16<<4)
-3. WB    : R = clip(R * 286 / 256, 0, 4095)      # Q8 채널 white balance(color)
+2. BLC   : v = clip(v - blc_offset, 0, 4095)     # normal: 256(16<<4) / low-light: 128(8<<4, 완화)
+3. WB    : R = clip(R * 286 / 256, 0, 4095)      # Q8 채널 white balance(color), 모드 무관
            G = clip(G * 256 / 256, 0, 4095)
            B = clip(B * 307 / 256, 0, 4095)
 4. CCM   : identity                              # 구조 유지, 색변환 없음
@@ -151,7 +153,8 @@ gamma2(v8) = floor(sqrt(255 * v8)) = isqrt(255*v8)     # γ=2.0, 정수 exact, b
 ```text
 front (RAW):  2x2 RAW binning-demosaic, 융합(fused) — R=top-left, G=avg(top-right,
               bottom-left), B=bottom-right  -> (W/2, H/2) R,G,B triple
-core       :  apply_blc_wb12(front 출력)                        # 위 §3.2, demosaic 재실행 없음
+core       :  apply_blc_wb12(front 출력, blc_offset=128)        # 위 §3.2, demosaic 재실행 없음,
+                                                                  # BLC만 완화(2026-07-03)
 back (tone):  gain **2.0×**(2/1) + gamma2.0
 출력 형상   :  H/2 × W/2   (bin_dim(d) = max(1, d/2))
 ```
@@ -159,6 +162,12 @@ back (tone):  gain **2.0×**(2/1) + gamma2.0
 그 값을 다시 Bayer인 것처럼 demosaic — 색 정보가 이미 파괴된 뒤라 사실상 흑백에 가까운
 출력이 나오는 버그였다(adversarial review로 발견). 채널별 정체성을 보존하는 위 방식으로
 수정(`tools/isp_pipeline_ver1.py`의 `_bin_demosaic_rggb16`과 bit-exact 일치).
+
+**주의(2026-07-03 수정, BLC 완화):** root-cause ablation(§11.6)에서 저조도 mAP 손실의
+~70%가 BLC(WB 아님)에서 발생함을 확인 — low-light 경로의 BLC 오프셋을 256(16<<4)에서
+**128(8<<4)로 절반 완화**. ExDark mAP 0.0586→0.1043(+78%, normal을 처음으로 상회),
+COCO도 안전(0.2647→0.2857). HW 자원/타이밍은 상수값만 바뀌어 **완전히 불변**. 상세:
+`results/blc-fix-resynthesis-2026-07-03.md`.
 
 ### 3.4 데이터 흐름 순서 결정 (ver1)
 ver1(2026-07-02): 보정(BLC/WB)을 **demosaic 직후 12-bit에서** 수행(선형이라 RAW-domain과 동치,
@@ -173,7 +182,8 @@ tone RM(core 뒤)에 둔다(RESEARCH §4.2). de-dup 불변식 유지(gain/gamma�
 |---|---|---|---|
 | checker | DARK_Y (SW) | 50 | Y<50 = dark 픽셀 |
 | checker | DARK_RATIO | **0.80**(재보정 2026-07-02, 구 0.40) | AUTO→LOW_LIGHT 임계 |
-| baseline core | BLC_OFFSET12 | 256 (=16<<4) | 12-bit black-level |
+| baseline core | BLC_OFFSET12 | 256 (=16<<4), normal only | 12-bit black-level |
+| baseline core | BLC_OFFSET12_LOWLIGHT | **128 (=8<<4)**, low-light only (2026-07-03) | 완화된 black-level |
 | baseline core | AWB_R / G / B | 286 / 256 / 307 | Q8(/256) white balance |
 | baseline core | CCM | identity(256) | placeholder |
 | normal tone | GAIN_NORMAL | 5/4 (1.25×) | 노출 게인 (ver1 추가) |
@@ -297,14 +307,14 @@ Reconfigurable Partition으로 재구현·**pr_verify PASS**·partial bitstream 
 보드 전용). Arm1(정적 baseline-only)은 여전히 TODO.
 상세: `results/stage4-hw-synthesis-2026-07-02.md`(csynth), `results/stage5-dfx-implementation-2026-07-02.md`(DFX 구현).
 
-| 지표 | Arm1(static) | **Arm2(register-only, 실측)** | **Arm3(DFX, 실측)** |
+| 지표 | Arm1(static) | **Arm2(register-only, 실측)** | **Arm3(DFX, 실측 — BLC fix+pblock fix 반영 최종, 2026-07-03)** |
 |---|---|---|---|
-| LUT / FF / BRAM / DSP | TODO | **8,264 / 5,536 / 9 / 24** | config1(static+RM_NORMAL) routed: LUT 3,953/BRAM 1.5tile/DSP 12; config2(static+RM_LOW_LIGHT) routed: LUT 2,922/BRAM 3.5tile/DSP 8(§Stage5) |
-| Fmax @5.0ns | TODO | **273.97 MHz**(critical path 3.650ns, 수정 전후 동일) | **200MHz 제약 만족**(WNS config1 +0.619ns/config2 +1.930ns, 2026-07-03 실측; 환산 max Fmax 228.3/325.7MHz — 두 RM이 다름, `results/dfx-vivado-considerations-2026-07-03.md` §6) |
-| pr_verify | — | — | **✅ PASS**(config 간 static 완전 동일 확인, partition pin 15개) |
-| full bitstream size | — | — | **19,311,211 bytes ≈ 19.3 MB**(수정 전후 byte 단위 동일) |
-| partial bitstream size | — | — | **686,664 bytes ≈ 671 KB**(두 RM 동일, pblock 프레임 수로 결정, 수정 전후 동일) |
-| 재구성 지연(ms) | — | — | 이론적 분해 peak 1.72ms/전형 6.87ms(`results/pr-latency-breakdown-2026-07-02.md`); 드라이버/FSM 포함 실측은 TODO(보드) |
+| LUT / FF / BRAM / DSP | TODO | **8,264 / 5,536 / 9 / 24**(BLC fix 반영해도 자원 불변) | config1(static+RM_NORMAL) routed: LUT 3,972/BRAM 1.5tile/DSP 12; config2(static+RM_LOW_LIGHT) routed: LUT 2,927/BRAM 3.5tile/DSP 8(`results/blc-fix-resynthesis-2026-07-03.md`) |
+| Fmax @5.0ns | TODO | **273.97 MHz**(critical path 3.650ns, 수정 전후 동일) | 기존 pblock(X0Y0:X1Y0)에서 **200MHz 제약 만족** 확인(WNS config1 +0.619ns/config2 +1.930ns, 2026-07-03; `results/dfx-vivado-considerations-2026-07-03.md` §6) — **신규 pblock(X1Y0:X2Y0)에서는 아직 타이밍 제약 재검증 TODO** |
+| pr_verify | — | — | **✅ PASS**(BLC fix+pblock fix 동시 반영 후에도 static 완전 동일; partition pin **3개** — 구 floorplan의 15개와 다름, 원인 미조사) |
+| full bitstream size | — | — | **19,311,211 bytes ≈ 19.3 MB**(불변) |
+| partial bitstream size | — | — | **1,447,424 bytes ≈ 1.38 MB**(신규 pblock, 구 686,664B 대비 **2.11배** — pblock 용량 2배 확장의 직접적 대가, `results/blc-fix-resynthesis-2026-07-03.md` §5) |
+| 재구성 지연(ms) | — | — | 신규 bitstream 기준 재계산: peak **3.618ms**/전형 **14.473ms**(구 1.72/6.87ms의 2.11배); 드라이버/FSM 포함 실측은 TODO(보드) |
 | 정상모드 전력(W) | TODO | TODO | TODO(보드 실측 필요) |
 
 Arm2 인스턴스 분해(unified top 내부, DFX 순이득 추정의 참조점, 재합성 후):
@@ -396,6 +406,16 @@ Arm2 인스턴스 분해(unified top 내부, DFX 순이득 추정의 참조점, 
    판정으로 어제의 PRDONE 한계 우회, trigger→완료 1.716ms 실측 — 스펙 유도
    추정과 교차검증 일치), pblock 재floorplan(X1Y0:X2Y0으로 용량 2배: LUT
    8,640→19,200). 상세: `results/phase0-2-execution-2026-07-03.md`.
+10. **BLC 완화 정본 반영 + 전체 재합성(같은 날 후속):** 9번의 ablation 승자(BLC
+    완화)를 `src/dfxisp_accel.cpp`/`gen_golden_vectors.py`/`isp_pipeline_ver1.py`
+    정본에 반영(`apply_blc_wb12`에 `blc_offset` 매개변수 추가, low-light만
+    128, normal은 256 불변). 표준 표본(n=71/80) 재측정: ExDark lowlight
+    0.0586→**0.1043**(+78%, **처음으로 normal을 상회**), COCO 0.2647→0.2857(+8%,
+    무해). HLS csynth 3종 전부 자원 불변(상수 하나만 바뀐 순수 파라미터 변경).
+    Vivado DFX를 9번의 pblock fix와 함께 재구현: pr_verify PASS 유지하지만
+    **partial bitstream이 2.11배 커짐**(686,664B→1,447,424B) — pblock 용량 2배
+    확장의 직접적 대가(재구성 지연도 2.11배: peak 1.72ms→3.62ms). 상세:
+    `results/blc-fix-resynthesis-2026-07-03.md`.
 
 ---
 

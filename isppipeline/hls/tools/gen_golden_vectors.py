@@ -53,8 +53,12 @@ DFXISP_MODE_AUTO = 2
 DFXISP_RM_NORMAL_TONE = 0
 DFXISP_RM_LOW_LIGHT_TONE = 1
 
-# shared baseline-core params (mode independent, 12-bit RAW domain)
-BLC_OFFSET12 = 16 << 4          # black level 16 (8-bit) -> 256 (12-bit)
+# shared baseline-core params (12-bit RAW domain)
+BLC_OFFSET12 = 16 << 4           # black level 16 (8-bit) -> 256 (12-bit), normal mode
+# Low-light-only BLC relaxation (2026-07-03, root-cause ablation -- see
+# src/dfxisp_accel.cpp header comment / results/phase0-2-execution-2026-07-03.md):
+# full BLC_OFFSET12 clips too much signal in already-low-SNR dark scenes.
+BLC_OFFSET12_LOWLIGHT = 8 << 4    # black level 8 (8-bit) -> 128 (12-bit)
 RAW12_MAX = 4095
 AWB_R, AWB_G, AWB_B = 286, 256, 307
 # tone RM params
@@ -106,13 +110,15 @@ def demosaic_rggb12(raw: list[int], w: int, h: int, x: int, y: int) -> tuple[int
     return min(rr, RAW12_MAX), min(gg, RAW12_MAX), min(bb, RAW12_MAX)
 
 
-def apply_blc_wb12(dr: int, dg: int, db: int) -> tuple[int, int, int]:
+def apply_blc_wb12(dr: int, dg: int, db: int, blc_offset: int = BLC_OFFSET12) -> tuple[int, int, int]:
     """Shared baseline ISP core (ver1): BLC + WB + CCM in 12-bit. No gain/gamma.
     Consumes an already-demosaiced R,G,B triple (full Bayer demosaic for normal,
-    or the low-light binning-demosaic -- see run_frame LOW_LIGHT branch)."""
-    dr = clamp(dr - BLC_OFFSET12, 0, RAW12_MAX)          # BLC (subtract first)
-    dg = clamp(dg - BLC_OFFSET12, 0, RAW12_MAX)
-    db = clamp(db - BLC_OFFSET12, 0, RAW12_MAX)
+    or the low-light binning-demosaic -- see run_frame LOW_LIGHT branch). WB/CCM
+    are identical between modes; `blc_offset` is the one mode-specific parameter
+    (BLC_OFFSET12_LOWLIGHT for low-light, see comment above)."""
+    dr = clamp(dr - blc_offset, 0, RAW12_MAX)            # BLC (subtract first)
+    dg = clamp(dg - blc_offset, 0, RAW12_MAX)
+    db = clamp(db - blc_offset, 0, RAW12_MAX)
     r = clamp(dr * AWB_R // 256, 0, RAW12_MAX)           # WB per channel (Q8)
     g = clamp(dg * AWB_G // 256, 0, RAW12_MAX)
     b = clamp(db * AWB_B // 256, 0, RAW12_MAX)           # CCM identity
@@ -122,7 +128,7 @@ def apply_blc_wb12(dr: int, dg: int, db: int) -> tuple[int, int, int]:
 def baseline_core12(raw: list[int], w: int, h: int, x: int, y: int) -> tuple[int, int, int]:
     """Normal-path baseline core: full Bayer demosaic -> apply_blc_wb12."""
     dr, dg, db = demosaic_rggb12(raw, w, h, x, y)
-    return apply_blc_wb12(dr, dg, db)
+    return apply_blc_wb12(dr, dg, db, BLC_OFFSET12)
 
 
 def bin_demosaic_rggb12(raw: list[int], w: int, h: int, bx: int, by: int) -> tuple[int, int, int]:
@@ -180,7 +186,7 @@ def run_frame(raw: list[int], w: int, h: int, mode: int, dark_threshold: int):
     for y in range(bh):
         for x in range(bw):
             dr, dg, db = bin_demosaic_rggb12(raw, w, h, x, y)
-            r12, g12, b12 = apply_blc_wb12(dr, dg, db)
+            r12, g12, b12 = apply_blc_wb12(dr, dg, db, BLC_OFFSET12_LOWLIGHT)
             out.append(pack_rgb(tone(r12, GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN),
                                 tone(g12, GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN),
                                 tone(b12, GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN)))

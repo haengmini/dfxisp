@@ -16,8 +16,9 @@
 
 Arms (same interface as ver0 newrm_pipeline for the eval harness):
   none      : plain demosaic only (reference, identical to ver0)
-  normal    : RAW BLC+WB+gain(1.25x) -> demosaic -> CCM -> gamma 2.2   -> H x W
-  lowlight  : 2x2 RAW bin -> BLC+WB+gain(2.0x) -> demosaic -> CCM -> gamma 2.5 -> H/2 x W/2
+  normal    : RAW BLC(16)+WB+gain(1.25x) -> demosaic -> CCM -> gamma 2.2   -> H x W
+  lowlight  : 2x2 RAW bin -> BLC(8, relaxed 2026-07-03)+WB+gain(2.0x) -> demosaic
+              -> CCM -> gamma 2.5 -> H/2 x W/2
   adaptive  : checker (Y<50, ratio>0.80, recalibrated 2026-07-02) picks normal
               vs lowlight per frame
 """
@@ -27,7 +28,13 @@ import numpy as np
 
 # ---- parameters (ver1) ------------------------------------------------------
 SHIFT = 8                          # raw_bin 16-bit -> 8-bit domain (>>8 = /256)
-BLK_RAW = 16 << SHIFT              # black level in RAW16 domain (= 8-bit 16)
+BLK_RAW = 16 << SHIFT              # black level in RAW16 domain (= 8-bit 16), normal mode
+# Low-light-only BLC relaxation (2026-07-03, root-cause ablation -- see
+# src/dfxisp_accel.cpp header / results/phase0-2-execution-2026-07-03.md):
+# splitting the earlier "BLC/WB" ablation bucket showed BLC (not WB) is the
+# actual driver of low-light mAP loss; halving it recovered ExDark mAP from
+# 0.062 to 0.150 (exceeding 'normal'), with no COCO regression.
+BLK_RAW_LOWLIGHT = 8 << SHIFT      # black level in RAW16 domain (= 8-bit 8), low-light mode
 AWB_R, AWB_G, AWB_B = 286, 256, 307    # Q8 per-channel white balance (color)
 GAIN_NORMAL_NUM, GAIN_NORMAL_DEN = 5, 4     # normal exposure gain 1.25x (NEW vs ver0)
 GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN = 2, 1  # low-light exposure gain 2.0x
@@ -87,9 +94,9 @@ def _bin_demosaic_rggb16(bayer16, w, h):
     return np.stack([R, G, B], -1)   # int32, RAW16 domain
 
 
-def _blc_wb_gain(rgb16, gnum, gden):
+def _blc_wb_gain(rgb16, gnum, gden, blk_raw=BLK_RAW):
     """RAW-domain corrections (before >>8): BLC -> WB(Q8) -> exposure gain."""
-    x = np.clip(rgb16 - BLK_RAW, 0, None)                 # BLC (subtract first)
+    x = np.clip(rgb16 - blk_raw, 0, None)                 # BLC (subtract first)
     x[..., 0] = x[..., 0] * AWB_R // 256                  # WB per channel (Q8)
     x[..., 1] = x[..., 1] * AWB_G // 256
     x[..., 2] = x[..., 2] * AWB_B // 256
@@ -119,8 +126,8 @@ def run_arm(bayer16, w, h, arm):
                             GAIN_NORMAL_NUM, GAIN_NORMAL_DEN)
         return _LUT_NORMAL[rgb8]                                   # CCM identity -> gamma 2.2
     if arm == "lowlight":
-        rgb8 = _blc_wb_gain(_bin_demosaic_rggb16(bayer16, w, h),  # 2x2 RAW bin -> BLC+WB+gain 2.0x
-                            GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN)
+        rgb8 = _blc_wb_gain(_bin_demosaic_rggb16(bayer16, w, h),  # 2x2 RAW bin -> relaxed BLC+WB+gain 2.0x
+                            GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN, BLK_RAW_LOWLIGHT)
         return _LUT_LOWLIGHT[rgb8]                                 # gamma 2.5 (milder)
     if arm == "adaptive":
         if dark_ratio(demosaic_rggb(bayer16, w, h)) > DARK_RATIO:

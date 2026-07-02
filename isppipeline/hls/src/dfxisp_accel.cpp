@@ -4,7 +4,20 @@
 
 // =============================================================================
 // File   : isppipeline/hls/src/dfxisp_accel.cpp
-// Updated: 2026-07-02 (adversarial-review fixes)
+// Updated: 2026-07-03 (low-light BLC relaxation, see below); 2026-07-02 (adversarial-review fixes)
+// 2026-07-03 change: root-cause ablation (results/lowlight-rm-map-rootcause-2026-07-02.md,
+//   results/phase0-2-execution-2026-07-03.md) isolated WHICH part of the shared
+//   baseline core actually costs low-light mAP on ExDark. Splitting the earlier
+//   "BLC/WB" bucket into separate BLC-only, WB-only, and WB-skip variants
+//   showed the black-level offset -- not the white-balance gain -- is the
+//   driver: relaxing BLC alone (16 -> 8, 8-bit terms) recovered ExDark mAP
+//   from 0.062 to 0.150 (exceeding the 'normal' arm by 42%), while WB
+//   relaxation/skip did nothing (+7%/-0.5%). COCO stayed neutral-to-positive
+//   (+5%) so the change is safe outside its target condition too. Applied
+//   here as a low-light-only BLC offset via a new `blc_offset` parameter on
+//   `apply_blc_wb12()` -- WB/CCM stay identical between modes (still the
+//   literal same code path), only the low-light call site now passes
+//   `BLC_OFFSET12_LOWLIGHT` instead of the shared `BLC_OFFSET12`.
 // Function: DFXISP core C-sim — shared baseline ISP core + mutually exclusive
 //           tone RM slot. Integer-only; bit-exact mirror of gen_golden_vectors.py.
 // Goal   : Two corrections found by an adversarial review of the branch diff
@@ -59,8 +72,12 @@
 
 namespace {
 
-// --- shared baseline-core parameters (mode independent, 12-bit RAW domain) ---
-constexpr int BLC_OFFSET12 = 16 << 4;   // black level 16 (8-bit) -> 256 (12-bit)
+// --- shared baseline-core parameters (12-bit RAW domain) ---
+constexpr int BLC_OFFSET12 = 16 << 4;   // black level 16 (8-bit) -> 256 (12-bit), normal mode
+// Low-light-only BLC relaxation (2026-07-03, root-cause ablation): the full
+// BLC_OFFSET12 clips too much real signal in already-low-SNR dark scenes.
+// Half offset -- WB/CCM unchanged, still the same apply_blc_wb12() code path.
+constexpr int BLC_OFFSET12_LOWLIGHT = 8 << 4;   // black level 8 (8-bit) -> 128 (12-bit)
 constexpr int RAW12_MAX = 4095;
 constexpr int AWB_R = 286;              // Q8 per-channel white balance (color)
 constexpr int AWB_G = 256;
@@ -182,13 +199,16 @@ static void demosaic_rggb12(const uint16_t* raw, int width, int height, int x, i
 // gamma. Returns 12-bit R,G,B (tone stage does >>4 + gamma). Consumes
 // already-demosaiced R,G,B triples -- callers supply them either from a full
 // Bayer demosaic (normal path) or from the low-light binning-demosaic (which
-// IS the demosaic step for the binned grid; no second pass here).
+// IS the demosaic step for the binned grid; no second pass here). WB/CCM are
+// identical between modes (still one code path); `blc_offset` is the one
+// mode-specific parameter (see BLC_OFFSET12_LOWLIGHT comment above).
 // ---------------------------------------------------------------------------
-static inline void apply_blc_wb12(int dr, int dg, int db, int& r12, int& g12, int& b12) {
+static inline void apply_blc_wb12(int dr, int dg, int db, int blc_offset,
+                                  int& r12, int& g12, int& b12) {
 #pragma HLS INLINE
-    dr = clamp_i(dr - BLC_OFFSET12, 0, RAW12_MAX);                 // BLC (subtract first)
-    dg = clamp_i(dg - BLC_OFFSET12, 0, RAW12_MAX);
-    db = clamp_i(db - BLC_OFFSET12, 0, RAW12_MAX);
+    dr = clamp_i(dr - blc_offset, 0, RAW12_MAX);                   // BLC (subtract first)
+    dg = clamp_i(dg - blc_offset, 0, RAW12_MAX);
+    db = clamp_i(db - blc_offset, 0, RAW12_MAX);
     r12 = clamp_i(dr * AWB_R / 256, 0, RAW12_MAX);                 // WB per channel (Q8)
     g12 = clamp_i(dg * AWB_G / 256, 0, RAW12_MAX);
     b12 = clamp_i(db * AWB_B / 256, 0, RAW12_MAX);                 // CCM identity (no gain/gamma)
@@ -199,7 +219,7 @@ static void baseline_core12(const uint16_t* raw, int width, int height, int x, i
 #pragma HLS INLINE
     int dr, dg, db;
     demosaic_rggb12(raw, width, height, x, y, dr, dg, db);         // demosaic (12-bit)
-    apply_blc_wb12(dr, dg, db, r12, g12, b12);
+    apply_blc_wb12(dr, dg, db, BLC_OFFSET12, r12, g12, b12);
 }
 
 // tone RM: exposure gain (12-bit) -> >>4 to 8-bit -> gamma 2.0. Mode-specific gain.
@@ -282,7 +302,8 @@ static void run_low_light(const uint16_t* raw, uint32_t* rgb_out, int width, int
 #pragma HLS PIPELINE II=1
 #pragma HLS LOOP_TRIPCOUNT min=2 max=960
             int r12, g12, b12;
-            apply_blc_wb12(row_r[x], row_g[x], row_b[x], r12, g12, b12);       // shared core
+            apply_blc_wb12(row_r[x], row_g[x], row_b[x],
+                           BLC_OFFSET12_LOWLIGHT, r12, g12, b12);    // relaxed BLC (2026-07-03)
             const uint8_t r = tone(r12, GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN);  // gain 2.0x + gamma
             const uint8_t g = tone(g12, GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN);
             const uint8_t b = tone(b12, GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN);
