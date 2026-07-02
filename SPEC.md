@@ -388,6 +388,14 @@ Arm2 인스턴스 분해(unified top 내부, DFX 순이득 추정의 참조점, 
    위 두 문서를 실행 가능한 단계별 전략으로 재구성한 문서:
    `results/improvement-strategy-2026-07-03.md`(유일한 진짜 blocking item은 PR
    컨트롤러 부재 — 이것만 해결하면 나머지는 병렬 진행 가능).
+9. **Phase 0~2 즉시 실행(같은 날 후속):** 6개 항목 전부 실행 완료 —
+   golden-model 독립 교차검증 게이트(`make verify`에 통합), pblock 클럭 리전
+   편중 원인 확정(X0 컬럼 Y0~Y3 = PS 매크로, SLICE 0개), 저조도 WB/BLC 분리
+   ablation(**BLC 완화가 진짜 승자** — ExDark mAP 0.062→0.150, normal을 42%
+   상회, COCO 무해), PR 컨트롤러 1차 FSM 설계+시뮬레이션(word-count 기반 완료
+   판정으로 어제의 PRDONE 한계 우회, trigger→완료 1.716ms 실측 — 스펙 유도
+   추정과 교차검증 일치), pblock 재floorplan(X1Y0:X2Y0으로 용량 2배: LUT
+   8,640→19,200). 상세: `results/phase0-2-execution-2026-07-03.md`.
 
 ---
 

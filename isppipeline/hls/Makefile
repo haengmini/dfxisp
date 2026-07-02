@@ -18,7 +18,7 @@ REPORT_MD := reports/latest.md
 HLS_SRC := src/dfxisp_accel.cpp include/dfxisp_accel.hpp
 HLS_TB := tests/test_dfxisp_csim.cpp $(GOLDEN_CSV)
 
-.PHONY: all csim golden verify report hls-report hls rm-golden rm-csim rm-verify scheduler analysis sw-stage clean
+.PHONY: all csim golden verify cross-check report hls-report hls rm-golden rm-csim rm-verify scheduler analysis sw-stage clean
 
 all: csim
 
@@ -34,7 +34,15 @@ csim: $(CSIM_BIN)
 golden:
 	$(PYTHON) tools/gen_golden_vectors.py --out $(GOLDEN_CSV)
 
-verify: golden csim
+# Independent third-reference gate (improvement-strategy-2026-07-03.md Phase 0.1):
+# fuzzes gen_golden_vectors.py's binning-demosaic against isp_pipeline_ver1.py's
+# independently-authored implementation of the same algorithm. Catches the class
+# of bug that bit-exact C-sim/golden comparison structurally cannot (both sides
+# mirroring the same mistake) -- see SPEC.md §11.5/§11.8.
+cross-check:
+	cd tools && $(PYTHON) verify_binning_cross_check.py
+
+verify: golden csim cross-check
 
 report: golden $(CSIM_BIN)
 	$(PYTHON) tools/gen_verification_report.py --out $(REPORT_MD)

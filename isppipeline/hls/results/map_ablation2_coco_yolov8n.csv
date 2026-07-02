@@ -1,0 +1,12 @@
+pipeline,dataset,arm,mAP_50_95,mAP_50,model,n
+ablation,COCO,none,0.2480,0.3514,yolov8n.pt,39
+ablation,COCO,normal,0.2476,0.3712,yolov8n.pt,39
+ablation,COCO,lowlight,0.2089,0.3054,yolov8n.pt,39
+ablation,COCO,ll_bin_only,0.2190,0.3169,yolov8n.pt,39
+ablation,COCO,ll_bin_radiometric,0.2149,0.3187,yolov8n.pt,39
+ablation,COCO,ll_bin_gain,0.2054,0.3056,yolov8n.pt,39
+ablation,COCO,ll_bin_full,0.2089,0.3054,yolov8n.pt,39
+ablation,COCO,ll_fullres_tone,0.2392,0.3684,yolov8n.pt,39
+ablation,COCO,ll_wb_relaxed,0.1963,0.3002,yolov8n.pt,39
+ablation,COCO,ll_blc_relaxed,0.2194,0.3141,yolov8n.pt,39
+ablation,COCO,ll_wb_skip,0.2008,0.3138,yolov8n.pt,39

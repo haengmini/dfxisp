@@ -1,0 +1,12 @@
+pipeline,dataset,arm,mAP_50_95,mAP_50,model,n
+ablation,ExDark,none,0.2201,0.3586,yolov8n.pt,31
+ablation,ExDark,normal,0.1053,0.1949,yolov8n.pt,31
+ablation,ExDark,lowlight,0.0619,0.1369,yolov8n.pt,31
+ablation,ExDark,ll_bin_only,0.2171,0.3662,yolov8n.pt,31
+ablation,ExDark,ll_bin_radiometric,0.1094,0.1840,yolov8n.pt,31
+ablation,ExDark,ll_bin_gain,0.0842,0.1960,yolov8n.pt,31
+ablation,ExDark,ll_bin_full,0.0619,0.1369,yolov8n.pt,31
+ablation,ExDark,ll_fullres_tone,0.0751,0.1605,yolov8n.pt,31
+ablation,ExDark,ll_wb_relaxed,0.0664,0.1440,yolov8n.pt,31
+ablation,ExDark,ll_blc_relaxed,0.1495,0.2724,yolov8n.pt,31
+ablation,ExDark,ll_wb_skip,0.0616,0.1341,yolov8n.pt,31
