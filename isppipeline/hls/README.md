@@ -102,7 +102,7 @@ extern "C" void dfxisp_accel(
     int width,
     int height,
     int mode,                      // NORMAL / LOW_LIGHT / AUTO
-    uint16_t dark_pixel_threshold, // AUTO: dark 픽셀 비율 > 40% 이면 LOW_LIGHT
+    uint16_t dark_pixel_threshold, // AUTO: dark 픽셀 비율 > 80%(재보정 2026-07-02) 이면 LOW_LIGHT
     DfxIspResult* result);         // 선택된 mode / RM / 출력 형상
 ```
 

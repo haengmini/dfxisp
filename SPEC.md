@@ -109,9 +109,13 @@ LOW_LIGHT  -> selected_mode = LOW_LIGHT
 AUTO       -> dark_ratio = count(dark) / (W*H)
               HW/C-sim: dark = (raw < dark_pixel_threshold)          # RAW 도메인
               SW eval : dark = (Y < 50),  Y = (R + 2G + B) / 4        # 8-bit 휘도
-              selected_mode = LOW_LIGHT  if  dark_ratio > 0.40  else NORMAL
-              (정수 비교: dark_count*100 > 40*(W*H))
+              selected_mode = LOW_LIGHT  if  dark_ratio > 0.80  else NORMAL
+              (정수 비교: dark_count*100 > 80*(W*H))
 ```
+- **임계 재보정(2026-07-02, ver2):** 기존 0.40은 Youden's J 관점에서 사실상 미분류(ExDark
+  recall=1.00이지만 COCO false-trigger=0.80 — 정상조도도 거의 다 저조도로 오판). 실측
+  데이터셋(`data/{coco_val,exdark_val}`)에서 임계를 스윕한 결과 **0.80이 근사 최적**
+  (recall=0.90, false-trigger=0.11, J=0.79; J-max는 0.83에서 0.80). 상세: `results/experiment_ver2_2026-07-02.md`.
 - **히스테리시스(시퀀스 레벨):** 단일 프레임 entry에는 없음. 장면 단위 안정화(N 안정프레임,
   히스테리시스 밴드, min-dwell)는 스케줄러(`tools/scheduler_sim.py`/`scheduler_sweep.py`)가 담당.
   권장 파라미터(실측): narrow 밴드 + temporal_N=3 (mismatch 0.015, thrashing 0).
@@ -162,7 +166,7 @@ tone RM(core 뒤)에 둔다(RESEARCH §4.2). de-dup 불변식 유지(gain/gamma�
 | 스테이지 | 파라미터 | 값 | 비고 |
 |---|---|---|---|
 | checker | DARK_Y (SW) | 50 | Y<50 = dark 픽셀 |
-| checker | DARK_RATIO | 0.40 | AUTO→LOW_LIGHT 임계 |
+| checker | DARK_RATIO | **0.80**(재보정 2026-07-02, 구 0.40) | AUTO→LOW_LIGHT 임계 |
 | baseline core | BLC_OFFSET12 | 256 (=16<<4) | 12-bit black-level |
 | baseline core | AWB_R / G / B | 286 / 256 / 307 | Q8(/256) white balance |
 | baseline core | CCM | identity(256) | placeholder |

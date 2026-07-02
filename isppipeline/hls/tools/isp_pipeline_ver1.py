@@ -18,7 +18,8 @@ Arms (same interface as ver0 newrm_pipeline for the eval harness):
   none      : plain demosaic only (reference, identical to ver0)
   normal    : RAW BLC+WB+gain(1.25x) -> demosaic -> CCM -> gamma 2.2   -> H x W
   lowlight  : 2x2 RAW bin -> BLC+WB+gain(2.0x) -> demosaic -> CCM -> gamma 2.5 -> H/2 x W/2
-  adaptive  : checker (Y<50, ratio>0.40) picks normal vs lowlight per frame
+  adaptive  : checker (Y<50, ratio>0.80, recalibrated 2026-07-02) picks normal
+              vs lowlight per frame
 """
 from __future__ import annotations
 
@@ -33,7 +34,11 @@ GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN = 2, 1  # low-light exposure gain 2.0x
 GAMMA_NORMAL = 2.2                 # normal tone curve (NEW vs ver0: ver0 had none)
 GAMMA_LOWLIGHT = 2.5               # low-light tone curve (milder than ver0 gamma-4.0)
 DARK_Y = 50                        # checker dark-pixel luminance threshold
-DARK_RATIO = 0.40                  # checker: dark_ratio > 0.40 -> low-light
+# Recalibrated 2026-07-02 from measured dataset separation (Youden's J sweep
+# over data/{coco_val,exdark_val}): old 0.40 gave ExDark recall=1.00 but COCO
+# false-trigger=0.80; 0.80 gives recall=0.90, false-trigger=0.11 (J~=0.79,
+# near the J-max at 0.83). See results/experiment_ver2_2026-07-02.md.
+DARK_RATIO = 0.80                  # checker: dark_ratio > 0.80 -> low-light
 
 
 def _gamma_lut(g: float) -> np.ndarray:

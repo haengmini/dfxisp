@@ -138,7 +138,7 @@ int main() {
     assert(rad.selected_mode == DFXISP_MODE_LOW_LIGHT);
     assert(rad.selected_rm == DFXISP_RM_LOW_LIGHT_TONE);
 
-    // AUTO on a bright frame stays normal (identity tone RM).
+    // AUTO on a bright frame stays normal (RM_NORMAL_TONE = gain 1.25x + gamma2.0).
     uint16_t bright[W * H];
     for (int i = 0; i < W * H; ++i) bright[i] = 3000;
     uint32_t abright[W * H] = {};
@@ -146,6 +146,30 @@ int main() {
     dfxisp_accel(bright, abright, W, H, DFXISP_MODE_AUTO, 512, &rab);
     assert(rab.selected_mode == DFXISP_MODE_NORMAL);
     assert(rab.selected_rm == DFXISP_RM_NORMAL_TONE);
+
+    // Checker recalibration (2026-07-02): DARK_RATIO_PCT 40 -> 80. 75% dark must
+    // stay NORMAL, 86% dark must trigger LOW_LIGHT (regression for the new gate).
+    {
+        uint16_t r75[W * H];
+        int i = 0;
+        for (; i < (W * H * 75) / 100; ++i) r75[i] = 200;   // 48/64 = 75% dark
+        for (; i < W * H; ++i) r75[i] = 3000;
+        uint32_t out75[W * H] = {};
+        DfxIspResult res75{};
+        dfxisp_accel(r75, out75, W, H, DFXISP_MODE_AUTO, 512, &res75);
+        assert(res75.selected_mode == DFXISP_MODE_NORMAL);   // 75% <= 80% -> NORMAL
+        assert(res75.selected_rm == DFXISP_RM_NORMAL_TONE);
+
+        uint16_t r86[W * H];
+        i = 0;
+        for (; i < (W * H * 86) / 100; ++i) r86[i] = 200;    // 55/64 ~= 86% dark
+        for (; i < W * H; ++i) r86[i] = 3000;
+        uint32_t out86[W * H] = {};
+        DfxIspResult res86{};
+        dfxisp_accel(r86, out86, W, H, DFXISP_MODE_AUTO, 512, &res86);
+        assert(res86.selected_mode == DFXISP_MODE_LOW_LIGHT);  // 86% > 80% -> LOW_LIGHT
+        assert(res86.selected_rm == DFXISP_RM_LOW_LIGHT_TONE);
+    }
 
     // Saturation: gain + gamma2.0 tone never overflows RGB8.
     uint16_t sat[W * H];

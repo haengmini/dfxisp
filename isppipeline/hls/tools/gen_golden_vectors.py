@@ -48,7 +48,10 @@ AWB_R, AWB_G, AWB_B = 286, 256, 307
 # tone RM params
 GAIN_NORMAL_NUM, GAIN_NORMAL_DEN = 5, 4        # normal 1.25x
 GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN = 2, 1    # low-light 2.0x
-DARK_RATIO_PCT = 40                            # AUTO -> LOW_LIGHT when dark pixels > 40%
+# Recalibrated 2026-07-02 from measured dataset separation (Youden's J sweep):
+# old 40% gave ExDark recall=1.00 but COCO false-trigger=0.80; 80% gives
+# recall=0.90, false-trigger=0.11 (near-optimal J=0.79).
+DARK_RATIO_PCT = 80                            # AUTO -> LOW_LIGHT when dark pixels > 80%
 
 
 def clamp(v: int, lo: int, hi: int) -> int:
@@ -170,6 +173,16 @@ def grid_raw(w: int, h: int, levels: list[int], cell: int = 2, texture: int = 32
     return raw
 
 
+def boundary_ratio_raw(w: int, h: int, dark_count: int, dark_val: int = 200,
+                       bright_val: int = 3000) -> list[int]:
+    """Exactly dark_count pixels below a typical dark_pixel_threshold, rest bright.
+    Used to test the DARK_RATIO_PCT boundary precisely (checker counts raw<threshold
+    irrespective of position, so exact per-pixel layout does not matter here)."""
+    n = w * h
+    dark_count = max(0, min(n, dark_count))
+    return [dark_val] * dark_count + [bright_val] * (n - dark_count)
+
+
 def golden_cases():
     # bright normal x3 -> dark low-light x3 -> bright recovery x1, + threshold + odd-dim.
     return [
@@ -191,6 +204,12 @@ def golden_cases():
          grid_raw(8, 8, [120, 180, 240, 300, 360, 300, 240, 180], texture=16)),
         ("odd_dimension_lowlight_7x5", 7, 5, DFXISP_MODE_LOW_LIGHT, 512,
          grid_raw(7, 5, [200, 320, 480, 660, 900, 620, 380, 260], texture=22)),
+        # DARK_RATIO_PCT boundary regression (recalibrated 40% -> 80%, 2026-07-02):
+        # 75% dark must stay NORMAL, 86% dark must trigger LOW_LIGHT.
+        ("auto_boundary_ratio_75_8x8", 8, 8, DFXISP_MODE_AUTO, 512,
+         boundary_ratio_raw(8, 8, dark_count=48)),   # 48/64 = 75% -> NOT > 80% -> NORMAL
+        ("auto_boundary_ratio_86_8x8", 8, 8, DFXISP_MODE_AUTO, 512,
+         boundary_ratio_raw(8, 8, dark_count=55)),   # 55/64 = 85.9% -> > 80% -> LOW_LIGHT
     ]
 
 

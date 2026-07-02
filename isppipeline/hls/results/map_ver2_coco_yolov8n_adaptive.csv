@@ -1,0 +1,2 @@
+pipeline,dataset,arm,mAP_50_95,mAP_50,model,n
+ver1,COCO,adaptive,0.2752,0.4021,yolov8n.pt,80

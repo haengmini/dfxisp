@@ -55,7 +55,8 @@ SW 트랙(0~3)은 보드 없이 지금 수행 가능. HW 트랙(4~6)은 Vivado/�
   전환을 SW 시뮬레이션으로 검증(RESEARCH §5).
 - **구성/방법:**
   - checker: `Y=(R+2G+B)/4` 또는 RAW dark-pixel 비율; `dark_ratio = count(<thr)/N`.
-  - 전환 임계: `NORMAL→LOW_LIGHT: dark_ratio>0.40`, `LOW_LIGHT→NORMAL: dark_ratio<0.20`.
+  - 전환 임계: `NORMAL→LOW_LIGHT: dark_ratio>0.80`(재보정 2026-07-02, 구 0.40 — ver2 참조),
+    `LOW_LIGHT→NORMAL: dark_ratio<0.20`.
   - 히스테리시스: 전환 조건이 **N 안정프레임** 유지될 때만 트리거.
   - 도구: `tools/scheduler_sim.py` 확장.
 - **데이터셋/조건:** DynamicSwitch 시퀀스 — `bright×K → dark×K → bright×K`(구 sequence.json
@@ -161,7 +162,7 @@ SW 트랙(0~3)은 보드 없이 지금 수행 가능. HW 트랙(4~6)은 Vivado/�
     | Frame | 입력 | 기대 | 검증 |
     |---|---|---|---|
     | F1 | Bright | NORMAL, RM_NORMAL_TONE, H×W | golden bit + 메타 |
-    | F2 | Dark | dark>40% → drain → PR(LOW_LIGHT RM) | drain 무손실, pr_done |
+    | F2 | Dark | dark>80%(재보정) → drain → PR(LOW_LIGHT RM) | drain 무손실, pr_done |
     | F3 | Dark | LOW_LIGHT, RM_LOW_LIGHT_TONE, H/2×W/2 | golden bit + shape |
     | F4 | Bright | recovery → drain → PR(NORMAL RM) | drain 무손실, pr_done |
     | F5 | Bright | NORMAL 원복 | golden bit + 메타 |

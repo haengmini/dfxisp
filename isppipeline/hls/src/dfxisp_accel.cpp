@@ -33,7 +33,11 @@ constexpr int GAIN_NORMAL_NUM = 5, GAIN_NORMAL_DEN = 4;      // normal 1.25x
 constexpr int GAIN_LOWLIGHT_NUM = 2, GAIN_LOWLIGHT_DEN = 1;  // low-light 2.0x
 // gamma 2.0 realized exactly as integer sqrt: 255*(v/255)^(1/2) = floor(sqrt(255*v))
 // --- checker ---
-constexpr int DARK_RATIO_PCT = 40;      // AUTO -> LOW_LIGHT when dark pixels > 40%
+// Recalibrated 2026-07-02 from measured dataset separation (Youden's J sweep,
+// data/{coco_val,exdark_val}): old 40% gave ExDark recall=1.00 but COCO
+// false-trigger=0.80 (checker almost never says NORMAL). 80% gives recall=0.90,
+// false-trigger=0.11 (near-optimal J=0.79, close to the J-max at 83%).
+constexpr int DARK_RATIO_PCT = 80;      // AUTO -> LOW_LIGHT when dark pixels > 80%
 
 static inline int clamp_i(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
 static inline uint8_t clamp_u8(int v) { return static_cast<uint8_t>(clamp_i(v, 0, 255)); }

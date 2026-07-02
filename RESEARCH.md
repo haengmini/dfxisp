@@ -347,8 +347,10 @@ dark_ratio = count(Y < dark_pixel_threshold) / frame_pixels
 후보 transition threshold:
 
 ```text
-NORMAL -> LOW_LIGHT: dark_ratio > 0.40
-LOW_LIGHT -> NORMAL: dark_ratio < 0.20
+NORMAL -> LOW_LIGHT: dark_ratio > 0.80   # recalibrated 2026-07-02 (was 0.40; see SPEC.md §3.1)
+LOW_LIGHT -> NORMAL: dark_ratio < 0.20   # exit/hysteresis stays scheduler-layer (§5.2);
+                                         # dfxisp_accel's single-frame AUTO checker only
+                                         # implements the enter-side ratio, no exit/hysteresis.
 ```
 
 ### 5.2 Hysteresis requirement
