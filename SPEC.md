@@ -300,7 +300,7 @@ Reconfigurable Partition으로 재구현·**pr_verify PASS**·partial bitstream 
 | 지표 | Arm1(static) | **Arm2(register-only, 실측)** | **Arm3(DFX, 실측)** |
 |---|---|---|---|
 | LUT / FF / BRAM / DSP | TODO | **8,264 / 5,536 / 9 / 24** | config1(static+RM_NORMAL) routed: LUT 3,953/BRAM 1.5tile/DSP 12; config2(static+RM_LOW_LIGHT) routed: LUT 2,922/BRAM 3.5tile/DSP 8(§Stage5) |
-| Fmax @5.0ns | TODO | **273.97 MHz**(critical path 3.650ns, 수정 전후 동일) | TODO(제약 미인가 fabric-only 패스, WNS 미측정) |
+| Fmax @5.0ns | TODO | **273.97 MHz**(critical path 3.650ns, 수정 전후 동일) | **200MHz 제약 만족**(WNS config1 +0.619ns/config2 +1.930ns, 2026-07-03 실측; 환산 max Fmax 228.3/325.7MHz — 두 RM이 다름, `results/dfx-vivado-considerations-2026-07-03.md` §6) |
 | pr_verify | — | — | **✅ PASS**(config 간 static 완전 동일 확인, partition pin 15개) |
 | full bitstream size | — | — | **19,311,211 bytes ≈ 19.3 MB**(수정 전후 byte 단위 동일) |
 | partial bitstream size | — | — | **686,664 bytes ≈ 671 KB**(두 RM 동일, pblock 프레임 수로 결정, 수정 전후 동일) |
@@ -378,6 +378,13 @@ Arm2 인스턴스 분해(unified top 내부, DFX 순이득 추정의 참조점, 
    끝내 얻지 못함(SYNC는 성공, 완료 신호는 3가지 방법 모두 실패 — 원인·한계 분석 포함,
    정직하게 기록)** — payload word 수(171,633)는 파일에서 직접 검증해 반영.
    상세: `results/pr-latency-breakdown-2026-07-02.md`, `results/pr-latency-vivado-sim-2026-07-02.md`.
+8. **설계 한계 종합 + DFX 실무 고려사항(2026-07-03):** 알고리즘/SW eval/HW synthesis/
+   DFX 구현/시뮬레이션 5개 층위의 한계를 종합(`results/design-limitations-2026-07-03.md`).
+   같은 날 timing-constrained 재구현으로 실제 WNS 확보(§10 Fmax 행), pblock이 실제로는
+   클럭 리전 1개분(2개 중 1개가 0.06%만 기여)만 확보됐다는 사실, 설계에 `ICAPE3`/
+   `STARTUPE3`가 전혀 없어 PR 컨트롤러가 아직 존재하지 않는다는 사실을 새로 확인.
+   Vivado DFX 트러블슈팅 전체(I/O 핀 초과, SNAPPING_MODE, black-box+lock 방법론,
+   DRC 우회 등)를 체크리스트로 정리. 상세: `results/dfx-vivado-considerations-2026-07-03.md`.
 
 ---
 
