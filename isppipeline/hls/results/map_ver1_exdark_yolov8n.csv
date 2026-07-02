@@ -1,0 +1,5 @@
+pipeline,dataset,arm,mAP_50_95,mAP_50,model,n
+ver1,ExDark,none,0.1561,0.3064,yolov8n.pt,71
+ver1,ExDark,normal,0.0826,0.1616,yolov8n.pt,71
+ver1,ExDark,lowlight,0.0586,0.1258,yolov8n.pt,71
+ver1,ExDark,adaptive,0.0586,0.1258,yolov8n.pt,71

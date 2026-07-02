@@ -1,0 +1,5 @@
+pipeline,dataset,arm,mAP_50_95,mAP_50,model,n
+ver1,COCO,none,0.4280,0.6105,yolov8s.pt,80
+ver1,COCO,normal,0.3836,0.5085,yolov8s.pt,80
+ver1,COCO,lowlight,0.3405,0.4542,yolov8s.pt,80
+ver1,COCO,adaptive,0.3609,0.4796,yolov8s.pt,80
