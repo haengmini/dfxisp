@@ -12,6 +12,7 @@ import csv
 from pathlib import Path
 
 import numpy as np
+from model_paths import resolve_yolo_model
 
 VARIANTS = ["static", "reg_only", "dfx_bin", "dfx_fp"]
 
@@ -21,7 +22,8 @@ def main() -> int:
     ap.add_argument("--work", default="data/_variant_work")
     ap.add_argument("--root", default="data/coco_val", help="for raw_bin darkness ranking")
     ap.add_argument("--k", type=int, default=40)
-    ap.add_argument("--model", default="yolov8n.pt")
+    ap.add_argument("--model", default="yolov8n.pt",
+                    help="YOLO weight name/path; known names resolve to ../../model/detectors/yolo")
     ap.add_argument("--out", default="results/map_dark.csv")
     args = ap.parse_args()
 
@@ -39,7 +41,8 @@ def main() -> int:
 
     from ultralytics import YOLO
     import yaml
-    model = YOLO(args.model)
+    model_path = resolve_yolo_model(args.model)
+    model = YOLO(model_path)
     res = {}
     for name in VARIANTS:
         ds = work / name
@@ -59,7 +62,7 @@ def main() -> int:
         wr = csv.writer(f, lineterminator="\n")
         wr.writerow(["metric", "static", "reg_only", "dfx_bin", "dfx_fp", "unit", "notes"])
         wr.writerow(["mAP_COCO_darkK_pseudoRAW"] + [f"{res[n]:.4f}" for n in VARIANTS]
-                    + ["mAP@[.5:.95]", f"darkest {len(picked)} frames, {args.model}"])
+                    + ["mAP@[.5:.95]", f"darkest {len(picked)} frames, {model_path}"])
     print(f"wrote {out}")
     return 0
 

@@ -5,9 +5,11 @@ Re-scores the arm images already built by eval_map_newrm.py (data/_newrm_work/
 <tag>/<arm>/images + COCO80 labels) with a structurally different detector family
 to confirm the mAP-guardrail *ordering* is detector-independent.
 
-Detector: torchvision ssdlite320_mobilenet_v3_large (COCO-pretrained). NOTE: the
-exact Vitis-AI tf_ssdmobilenetv1 (TF1.15) is board/DPU-stage only (no weights in
-repo, not runnable here); SSDLite-MobileNetV3 is the available SSD+MobileNet proxy.
+Detector: torchvision ssdlite320_mobilenet_v3_large (COCO-pretrained).
+Weights are resolved through the repo-local `model/` folder via `model_paths.py`.
+The TensorFlow SSD-MobileNetV1 COCO graph is also staged under `model/detectors/`
+for TF1/Vitis-AI/DPU-oriented evaluation, while this script remains the
+TorchVision SSD-MobileNetV3 software cross-check path.
 
 Per arm the image size differs (lowlight/adaptive are H/2 x W/2), so GT is built
 per arm from that arm's own image dimensions (labels are normalized YOLO).
@@ -22,6 +24,8 @@ import argparse
 import csv
 import struct
 from pathlib import Path
+
+from model_paths import configure_torch_model_cache
 
 ARMS = ["none", "normal", "lowlight", "adaptive"]
 
@@ -76,6 +80,7 @@ def build_gt_for_arm(arm_dir: Path):
 
 
 def run(work: Path, tag: str, out_csv: Path, device: str, arms):
+    configure_torch_model_cache()
     import torch
     from PIL import Image
     from torchvision.models.detection import (

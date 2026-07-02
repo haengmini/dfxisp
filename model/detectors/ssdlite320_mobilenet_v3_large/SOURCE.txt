@@ -1,0 +1,5 @@
+Model: TorchVision SSDLite320 MobileNetV3 Large COCO
+Source: https://download.pytorch.org/models/ssdlite320_mobilenet_v3_large_coco-a79551df.pth
+Local checkpoint: ssdlite320_mobilenet_v3_large_coco-a79551df.pth
+TorchVision expected cache mirror: ../../cache/torch/hub/checkpoints/ssdlite320_mobilenet_v3_large_coco-a79551df.pth
+Intended use: `tools/eval_map_ssd.py` and `tools/eval_map_newrm_ssd.py` software mAP cross-checks.

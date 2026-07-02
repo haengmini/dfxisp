@@ -1,0 +1,85 @@
+{
+  "description": "DFXISP detector models staged under repo-local model/ folder",
+  "models": [
+    {
+      "path": "model/detectors/manifest.json",
+      "bytes": 2866,
+      "sha256": "b2ca51bcc37ddeb47de1ab79c4c6b77fd6017cbce359863d61dde1b705b0780c"
+    },
+    {
+      "path": "model/detectors/ssd_mobilenetv1_coco_2018_01_28/SOURCE.txt",
+      "bytes": 456,
+      "sha256": "bc52fe0b7fc0c990bf3f6a1705da8e7902618fb12294b0e4c03aa1d5b6697b93"
+    },
+    {
+      "path": "model/detectors/ssd_mobilenetv1_coco_2018_01_28/ssd_mobilenet_v1_coco_2018_01_28/checkpoint",
+      "bytes": 77,
+      "sha256": "dd1b025d2e155283f5e300ce95bf6d5b6bc0f7fe010db73daa6975eb896ab9cb"
+    },
+    {
+      "path": "model/detectors/ssd_mobilenetv1_coco_2018_01_28/ssd_mobilenet_v1_coco_2018_01_28/frozen_inference_graph.pb",
+      "bytes": 29103956,
+      "sha256": "0cb4161a6310632814cd25afe11c261cff9a7d55487a813acd54772285b54850"
+    },
+    {
+      "path": "model/detectors/ssd_mobilenetv1_coco_2018_01_28/ssd_mobilenet_v1_coco_2018_01_28/model.ckpt.data-00000-of-00001",
+      "bytes": 27380740,
+      "sha256": "0b1bfe12471bd937de74ccca3b8dd3319915dc9b72a3428f48745daee7be3f12"
+    },
+    {
+      "path": "model/detectors/ssd_mobilenetv1_coco_2018_01_28/ssd_mobilenet_v1_coco_2018_01_28/model.ckpt.index",
+      "bytes": 8937,
+      "sha256": "d5f1842b9c21c9f2d643a79cbfc0be8504e802bb5ff02e68cfb129396977d958"
+    },
+    {
+      "path": "model/detectors/ssd_mobilenetv1_coco_2018_01_28/ssd_mobilenet_v1_coco_2018_01_28/model.ckpt.meta",
+      "bytes": 3006546,
+      "sha256": "61acc3c2b5e3b123746d470b4b95665b610676a1230dfceaf23624c85bbaeffe"
+    },
+    {
+      "path": "model/detectors/ssd_mobilenetv1_coco_2018_01_28/ssd_mobilenet_v1_coco_2018_01_28/pipeline.config",
+      "bytes": 4138,
+      "sha256": "aec63661e0c561ef6de5c8a9b463cada7c639a8ed1c160b8903cd5d121d078ce"
+    },
+    {
+      "path": "model/detectors/ssd_mobilenetv1_coco_2018_01_28/ssd_mobilenet_v1_coco_2018_01_28/saved_model/saved_model.pb",
+      "bytes": 29700424,
+      "sha256": "1d52cfab49222e3d967ff18443c306dc4275f86ef3dc065e8300cfea87ce223d"
+    },
+    {
+      "path": "model/detectors/ssd_mobilenetv1_coco_2018_01_28/ssd_mobilenet_v1_coco_2018_01_28.tar.gz",
+      "bytes": 76541073,
+      "sha256": "8788f89108519fd1102b8a5c2ac861cf6d86603571b6ce5bbd1c245b7fe005e3"
+    },
+    {
+      "path": "model/detectors/ssdlite320_mobilenet_v3_large/SOURCE.txt",
+      "bytes": 427,
+      "sha256": "e0be7d0b9363250e054d5c2744db9180a0cadc3bd81478a53d7b907562601455"
+    },
+    {
+      "path": "model/detectors/ssdlite320_mobilenet_v3_large/ssdlite320_mobilenet_v3_large_coco-a79551df.pth",
+      "bytes": 14069355,
+      "sha256": "a79551df90c79834bcd3bb3845ef9d966b5449a3a9b2833ae8404778ca5d65d2"
+    },
+    {
+      "path": "model/detectors/yolo/SOURCE.txt",
+      "bytes": 468,
+      "sha256": "dc5ac734c1cb7f174799271281367021af7673f4b07651f13a30e8c33b8a4573"
+    },
+    {
+      "path": "model/detectors/yolo/yolov8n.pt",
+      "bytes": 6549796,
+      "sha256": "f59b3d833e2ff32e194b5bb8e08d211dc7c5bdf144b90d2c8412c47ccfc83b36"
+    },
+    {
+      "path": "model/detectors/yolo/yolov8s.pt",
+      "bytes": 22588772,
+      "sha256": "1f47a78bf100391c2a140b7ac73a1caae18c32779be7d310658112f7ac9aa78a"
+    }
+  ],
+  "notes": [
+    "YOLO bare names are resolved by isppipeline/hls/tools/model_paths.py",
+    "TorchVision SSDLite MobileNetV3 uses repo-local TORCH_HOME model/cache/torch",
+    "TensorFlow SSD MobileNetV1 is staged for TF1/Vitis-AI style evaluation; TensorFlow is not required for path verification"
+  ]
+}

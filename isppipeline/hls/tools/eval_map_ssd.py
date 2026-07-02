@@ -21,6 +21,8 @@ import argparse
 import csv
 from pathlib import Path
 
+from model_paths import configure_torch_model_cache
+
 VARIANTS = ["static", "reg_only", "dfx_bin", "dfx_fp"]
 
 # Map the 80-class COCO index (used in the YOLO-format GT labels) to the real
@@ -82,6 +84,7 @@ def build_gt(work: Path):
 
 
 def run(work: Path, tag: str, out_csv: Path, device: str):
+    configure_torch_model_cache()
     import numpy as np  # noqa: F401  (kept for parity / future use)
     import torch
     from PIL import Image

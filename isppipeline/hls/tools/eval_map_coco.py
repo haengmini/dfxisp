@@ -24,6 +24,7 @@ import shutil
 from pathlib import Path
 
 import numpy as np
+from model_paths import resolve_yolo_model
 
 VARIANTS = [("static", 0), ("reg_only", 1), ("dfx_bin", 2), ("dfx_fp", 3)]
 
@@ -182,7 +183,8 @@ def main() -> int:
     ap.add_argument("--root", required=True, help="dir with raw_bin/ labels/ images/")
     ap.add_argument("--work", default="data/_variant_work")
     ap.add_argument("--limit", type=int, default=150)
-    ap.add_argument("--model", default="yolov8n.pt")
+    ap.add_argument("--model", default="yolov8n.pt",
+                    help="YOLO weight name/path; known names resolve to ../../model/detectors/yolo")
     ap.add_argument("--out", default="results/map_real.csv")
     ap.add_argument("--tag", default="COCO")
     ap.add_argument("--remap", choices=["none", "exdark"], default="none",
@@ -196,7 +198,8 @@ def main() -> int:
 
     from ultralytics import YOLO
     import yaml  # type: ignore
-    model = YOLO(args.model)
+    model_path = resolve_yolo_model(args.model)
+    model = YOLO(model_path)
     res = {}
     for name, _ in VARIANTS:
         ds = work / name
@@ -214,7 +217,7 @@ def main() -> int:
         wr = csv.writer(f, lineterminator="\n")
         wr.writerow(["metric", "static", "reg_only", "dfx_bin", "dfx_fp", "unit", "notes"])
         wr.writerow([f"mAP_{args.tag}_pseudoRAW"] + [f"{res[nm]:.4f}" for nm, _ in VARIANTS]
-                    + ["mAP@[.5:.95]", f"model={args.model} n={n}"])
+                    + ["mAP@[.5:.95]", f"model={model_path} n={n}"])
     print(f"wrote {out}")
     return 0
 

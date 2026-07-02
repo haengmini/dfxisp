@@ -11,6 +11,13 @@ isppipeline/hls/data/
 isppipeline/hls/runs/
 *_variant_work*
 *.pt
+*.pth
+*.pb
+*.ckpt*
+*.tflite
+*.onnx
+*.tar.gz
+model/cache/
 
 # Python cache
 __pycache__/

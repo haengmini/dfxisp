@@ -25,6 +25,7 @@ import numpy as np
 from PIL import Image
 
 import newrm_pipeline as P
+from model_paths import resolve_yolo_model
 
 ARMS = ["none", "normal", "lowlight", "adaptive"]
 
@@ -72,7 +73,8 @@ def main() -> int:
     ap.add_argument("--root", required=True)
     ap.add_argument("--work", default="data/_newrm_work")
     ap.add_argument("--tag", default="DATA")
-    ap.add_argument("--model", default="yolov8n.pt")
+    ap.add_argument("--model", default="yolov8n.pt",
+                    help="YOLO weight name/path; known names resolve to ../../model/detectors/yolo")
     ap.add_argument("--limit", type=int, default=150)
     ap.add_argument("--arms", default=",".join(ARMS))
     ap.add_argument("--out", default="results/map_newrm.csv")
@@ -85,7 +87,8 @@ def main() -> int:
 
     from ultralytics import YOLO
     import yaml  # type: ignore
-    model = YOLO(args.model)
+    model_path = resolve_yolo_model(args.model)
+    model = YOLO(model_path)
     res = {}
     for a in arms:
         ds = work / a
@@ -103,7 +106,7 @@ def main() -> int:
         wr = csv.writer(f, lineterminator="\n")
         wr.writerow(["dataset", "arm", "mAP_50_95", "mAP_50", "model", "n"])
         for a in arms:
-            wr.writerow([args.tag, a, f"{res[a][0]:.4f}", f"{res[a][1]:.4f}", args.model, n])
+            wr.writerow([args.tag, a, f"{res[a][0]:.4f}", f"{res[a][1]:.4f}", model_path, n])
     print(f"wrote {out}")
     return 0
 

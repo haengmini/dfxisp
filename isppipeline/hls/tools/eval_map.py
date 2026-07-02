@@ -30,6 +30,7 @@ import sys
 from pathlib import Path
 
 import rm_model as M
+from model_paths import resolve_yolo_model
 
 VARIANTS = [M.VAR_STATIC, M.VAR_REG, M.VAR_BIN, M.VAR_FP]
 
@@ -87,7 +88,7 @@ def run(dataset_dir: Path, ann_json: Path, model_name: str, limit: int):
 
     coco = COCO(str(ann_json))
     img_ids = coco.getImgIds()[:limit] if limit else coco.getImgIds()
-    model = YOLO(model_name)
+    model = YOLO(resolve_yolo_model(model_name))
 
     results = {}
     for variant in VARIANTS:
