@@ -251,7 +251,7 @@ AXI: `raw_bayer`/`rgb_out` = `m_axi`(gmem0/gmem1); 나머지 스칼라 인자·�
 | static region | AXI/control wrapper, checker/mode FSM, baseline ISP core, DFX/PR controller, output/metadata packer |
 | RM slot(재구성) | RM_NORMAL_TONE / RM_LOW_LIGHT_TONE (상호배타, 동일 downstream 계약 또는 shape 메타 노출) |
 | 전환 정책 | 장면 단위(프레임 단위 아님), 히스테리시스 checker |
-| 재구성 지연 | partial bitstream ÷ ICAP 대역폭 (TODO 측정) |
+| 재구성 지연 | drain+ICAP+warm-up 이론적 분해: **peak 1.72 ms / 전형 6.87 ms**(스펙 유도, 보드 미실측). 상세 `results/pr-latency-breakdown-2026-07-02.md`. 드라이버/FSM 오버헤드는 TODO(보드) |
 
 **실험 arm:** Arm1(static baseline+normal tone) / Arm2(register-only 적응, DFX 없음) /
 Arm3(DFX가 tone RM slot 교체). ablation: post-RGB8 gain/lift, dfx_bin, dfx_fp(`dfxisp_rm.*`).
@@ -304,7 +304,7 @@ Reconfigurable Partition으로 재구현·**pr_verify PASS**·partial bitstream 
 | pr_verify | — | — | **✅ PASS**(config 간 static 완전 동일 확인, partition pin 15개) |
 | full bitstream size | — | — | **19,311,211 bytes ≈ 19.3 MB**(수정 전후 byte 단위 동일) |
 | partial bitstream size | — | — | **686,664 bytes ≈ 671 KB**(두 RM 동일, pblock 프레임 수로 결정, 수정 전후 동일) |
-| 재구성 지연(ms) | — | — | TODO(보드 ICAP 실측 필요) |
+| 재구성 지연(ms) | — | — | 이론적 분해 peak 1.72ms/전형 6.87ms(`results/pr-latency-breakdown-2026-07-02.md`); 드라이버/FSM 포함 실측은 TODO(보드) |
 | 정상모드 전력(W) | TODO | TODO | TODO(보드 실측 필요) |
 
 Arm2 인스턴스 분해(unified top 내부, DFX 순이득 추정의 참조점, 재합성 후):
@@ -362,6 +362,18 @@ Arm2 인스턴스 분해(unified top 내부, DFX 순이득 추정의 참조점, 
    **`make verify` 646px bit-exact 유지, 새 색상보존 회귀 테스트 추가.**
    **2026-07-02 20:33 KST: 수정 반영 소스로 Vitis HLS csynth + Vivado DFX 재구현 완주
    (pr_verify PASS 유지, bitstream 크기 byte 단위로 동일). §10이 최신 수치로 갱신됨.**
+6. **low-light RM이 mAP를 못 올리는 이유 — ablation 실측 완료(2026-07-02):** 기존
+   "H/2 해상도 손실이 원인"이라는 추정(experiment-report §5.2)을 5단계 ablation
+   (`tools/isp_pipeline_ablation.py`)으로 검증한 결과 **원인은 조도 조건에 따라 다르다**:
+   ExDark(저조도)에서는 해상도 손실 기여가 −1.4%에 불과하고 **BLC/WB(두 RM이 공유하는
+   baseline core)가 손실의 약 70%를 차지**(−49.6%p) — RM 고유 문제가 아니라 공유 core의
+   정적 WB 게인이 저조도 색 통계를 왜곡하는 문제. 반대로 COCO(정상조도)에서는 해상도
+   손실이 지배적(−11.7%, BLC/WB는 −1.9%뿐). 상세: `results/lowlight-rm-map-rootcause-2026-07-02.md`.
+7. **DFX 재구성 latency — 단계별 이론적 분해(2026-07-02):** drain(측정, 74~171 cycle)와
+   ICAP 전송(686,664B ÷ AMD UG570 ICAPE3 spec 대역폭, peak 1.72ms/전형 6.87ms)과
+   warm-up(측정)으로 분해. ICAP 전송이 전체의 >99.9%를 차지(drain/warm-up은 µs, ICAP는
+   ms 스케일). 드라이버/FSM 오버헤드는 PR 컨트롤러 미합성으로 계산 불가 — TODO(보드) 유지.
+   상세: `results/pr-latency-breakdown-2026-07-02.md`.
 
 ---
 

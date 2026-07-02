@@ -157,8 +157,12 @@ SSDLite-MNv3는 torchvision COCO 사전학습(구조가 다른 detector 계열).
    크게 하락(ExDark none 0.156 → normal 0.068). gain 없는 baseline core가 dark scene을
    어둡게 만든 것이 원인(Stage 2와 정합). → **RM_NORMAL_TONE은 register gain을 담아야** 함.
 2. **H1 미지지:** low-light tone RM(bin+gain+gamma-4.0, Policy A)이 저조도에서도 none을
-   못 이김. gamma-4.0 과증폭 + H/2 해상도 손실이 원인으로 추정. → 더 약한 tone/denoise형
-   RM, 또는 Policy B(형상보존)로 재설계 필요.
+   못 이김. 원래 "gamma-4.0 과증폭 + H/2 해상도 손실"로 추정했으나, **2026-07-02 ablation
+   실측으로 반증/정정됨** — ExDark(RM의 목표 조건)에서 손실의 약 70%는 해상도 손실이
+   아니라 **두 RM이 공유하는 baseline core의 BLC/WB**에서 발생(해상도 손실 기여는
+   −1.4%뿐). COCO(정상조도, 오적용 시)에서는 반대로 해상도 손실이 지배적(−11.7%).
+   상세: `results/lowlight-rm-map-rootcause-2026-07-02.md`. → 재설계 우선순위는 tone
+   커브가 아니라 **저조도 조건에서의 baseline core WB 완화**로 이동.
 3. **스위칭 방향은 정당:** 정상조도(COCO)에서도 저조도 경로는 이득 없음(F<E<D) → 저조도
    RM은 어두울 때만 켜야 한다는 적응 방향 자체는 유효.
 4. **방향 A 강화:** 본 SW 실측은 "mAP는 최소/register 처리가 담당, 구조적 tone RM은 mAP
@@ -324,6 +328,13 @@ Stage 4~5로 "보드 측정 전단계"가 완료됐다. 남은 것은 물리적�
 - 절대 전력(W) 측정, DPU/검출기 end-to-end 실행.
 모든 보드 수치는 실측 전까지 `TODO(측정)`.
 
+**2026-07-02 추가: 재구성 latency 단계별 이론적 분해.** 보드 없이도 계산 가능한 두 항목
+(파이프라인 drain 74~171 cycle, ICAP 이론 전송 시간 = partial bitstream 686,664B ÷
+AMD UG570 ICAPE3 spec 대역폭)을 조합해 peak 1.72ms/전형 6.87ms 추정치를 냈다. ICAP
+전송이 전체의 >99.9%를 차지 — drain/warm-up(µs 스케일)은 무시 가능한 수준. **드라이버/
+FSM 오버헤드는 PR 컨트롤러를 아직 합성하지 않아 계산 불가**하므로 TODO로 유지(수치
+위조 금지 원칙). 상세: `results/pr-latency-breakdown-2026-07-02.md`.
+
 ---
 
 ## 7. 재현
@@ -378,4 +389,8 @@ Stage 1 `scheduler{,_sweep}.csv` · Stage 2 `image_metrics_{exdark,coco}.csv` ·
 Stage 3 `map_newrm_{exdark,coco}_{yolov8n,yolov8s}.csv` · 상세 `stage1-3-results-2026-07-02.md`.
 Stage 4 `resource_csynth_ver1_2026-07-02.csv` · `resource_csynth_rm_standalone_2026-07-02.csv` ·
 상세 `stage4-hw-synthesis-2026-07-02.md`. Stage 5 상세 `stage5-dfx-implementation-2026-07-02.md`.
+DFX 재구성 latency 단계별 분해: `pr-latency-breakdown-2026-07-02.md`. low-light RM mAP
+미개선 원인 ablation: `lowlight-rm-map-rootcause-2026-07-02.md`(코드 `tools/isp_pipeline_ablation.py`,
+`tools/eval_map_ablation.py`; 결과 `map_ablation_{exdark,coco}_yolov8n.csv`). 마이크로아키텍처
+다이어그램: `dfxisp-microarchitecture-2026-07-02.svg`/`.drawio`.
 수정 이력 및 최신 §10 수치는 `SPEC.md` §10/§11.5, `isppipeline/hls/README.md` 참조.
