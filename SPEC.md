@@ -253,8 +253,9 @@ Arm3(DFX가 tone RM slot 교체). ablation: post-RGB8 gain/lift, dfx_bin, dfx_fp
 | Lv | 대상 | 도구 | 상태 |
 |---|---|---|---|
 | L0 | Python golden(기준) | `gen_golden_vectors.py` | ✅ |
-| L1 | HLS C-sim (C++==Python) | `make verify` | ✅ 566px bit-exact |
-| L2 | C/RTL Co-sim (합성 RTL==C TB) | `DFXISP_HLS_FLOW=cosim make hls` | ⬜ |
+| L1 | HLS C-sim (C++==Python) | `make verify` | ✅ 646px bit-exact |
+| L1.5 | C-synthesis(실제 Vitis HLS) | `DFXISP_HLS_FLOW=csynth` | ✅ 실측(§10) |
+| L2 | C/RTL Co-sim (합성 RTL==C TB) | `DFXISP_HLS_FLOW=cosim` | 🟡 RTL 실행 성공(7/7 트랜잭션), 자동 bit-exact 비교는 툴 하네스 SIGSEGV로 미완주(`results/stage4-hw-synthesis-2026-07-02.md` §6b) |
 | L3 | RTL wrapper sim (AXI-Stream) | Vivado xsim | ⬜ |
 | L4 | DFX 멀티프레임 전환 sim | RTL TB | ⬜ |
 | L5 | 보드 HIL (실제 PR) | ZCU104 | ⬜ |
@@ -275,16 +276,39 @@ RM_LOW_LIGHT_TONE / 상호배타 RM 선택 / gain·gamma 중복 없음 / 형상�
 
 ---
 
-## 10. 성능 / 자원 목표 (TODO 측정)
+## 10. 성능 / 자원 (Stage 4 실측, 2026-07-02 — Vitis HLS 2024.1 C-synthesis)
 
-| 지표 | Arm1 | Arm2 | Arm3(DFX) |
+**실측 완료(C-synthesis, xczu7ev, 5.0ns target).** 현재 unified top(`dfxisp_accel`, 두 tone
+RM 모두 상주·런타임 mode 선택, DFX 없음)은 **Arm2(register-only)에 해당**. Arm1(정적
+baseline만)·Arm3(DFX 분리)은 아직 별도 top 분리·PR 플로어플랜이 필요해 TODO.
+상세: `results/stage4-hw-synthesis-2026-07-02.md`, `reports/csynth/dfxisp_accel_ver1_csynth.rpt`.
+
+| 지표 | Arm1(static) | **Arm2(register-only, 실측)** | Arm3(DFX) |
 |---|---|---|---|
-| LUT/FF/BRAM/DSP | TODO | TODO | TODO |
-| Fmax @5.0ns | TODO | TODO | TODO |
+| LUT / FF / BRAM / DSP | TODO | **11,217 / 7,008 / 8 / 30** | TODO |
+| Fmax @5.0ns | TODO | **273.97 MHz**(critical path 3.650ns) | TODO |
 | partial bitstream size | — | — | TODO |
 | 재구성 지연(ms) | — | — | TODO |
 | 정상모드 전력(W) | TODO | TODO | TODO |
-기대(H3): 정상모드에서 Arm3 fabric/전력 < Arm2(저조도 블록 미상주).
+
+Arm2 인스턴스 분해(unified top 내부, DFX 순이득 추정의 참조점):
+
+| instance | BRAM | DSP | FF | LUT |
+|---|---|---|---|---|
+| RM_NORMAL_TONE(`run_normal`) | 1 | 12 | 1,785 | 3,108 |
+| RM_LOW_LIGHT_TONE(`run_low_light`) | 4 | 15 | 2,784 | 5,073 |
+| AXI/제어 인프라 | 3 | 3 | 2,439 | 3,036 |
+
+**활용률(xczu7ev 대비):** BRAM 1%, DSP 1%, FF 1%, LUT 4% — 매우 여유 있음.
+
+기대(H3): 정상모드에서 Arm3 fabric/전력 < Arm2(저조도 블록 미상주). `run_low_light`
+인스턴스(4 BRAM/15 DSP/2,784 FF/5,073 LUT)가 DFX로 제거 가능한 상한 추정치 — Arm1/Arm3
+확정에는 정적 baseline-only top 분리 합성과 Vivado DFX 플로어플랜(PR/pr_verify/partial
+bitstream)이 필요.
+
+> **참고(사전 최적화 이력):** 최초 csynth에서 `gamma2()`가 런타임 정수 sqrt(반복 나눗셈)를
+> 써서 자원이 5배 이상 부풀었음(합계 FF 58,655/LUT 52,053). 256-엔트리 ROM LUT로 교체해
+> 위 수치로 개선(FF -88%, LUT -78%). 상세 §Stage4 문서.
 
 ---
 

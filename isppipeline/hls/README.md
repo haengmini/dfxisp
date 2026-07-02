@@ -129,7 +129,26 @@ C-sim에는 Vitis 전용 헤더가 필요 없다; HLS pragma만 존재하며 로
 
 ## 다음 하드웨어 단계
 
-1. `run_low_light()`의 정적 scratch binning 버퍼를 진짜 streaming line buffer로 교체.
+1. ~~`run_low_light()`의 정적 scratch binning 버퍼를 진짜 streaming line buffer로 교체.~~
+   **완료(2026-07-02)** — `row_buf[3][MAX_BINNED_W]` 3-row 슬라이딩 버퍼로 교체, bit-exact 유지.
 2. RM_LOW_LIGHT_TONE / RM_NORMAL_TONE을 독립 DFX RM slot 패키징 flow로 승격(§8.3 gate).
 3. Policy B(형상보존 upsample/pad)는 DPU가 고정 H×W ABI를 요구할 때만 추가(§4.3).
-4. Arm 2(register-only)·Arm 3(DFX) 자원/전력/PR-latency 비교(§7).
+4. Arm 2(register-only)·Arm 3(DFX) 자원/전력/PR-latency 비교(§7). **Arm2 실측 완료**
+   (unified top, C-synthesis) — `results/stage4-hw-synthesis-2026-07-02.md`. Arm1/Arm3와
+   전력/PR-latency는 여전히 TODO(Vivado DFX 플로어플랜·구현 필요).
+
+## C-synthesis / Co-sim 실행 노트 (Vitis HLS 2024.1)
+
+과거 worklog와 동일한 두 가지 환경 이슈가 재현된다:
+
+- **source-path 버그:** 중첩된 `build/vitis_hls/...` 프로젝트 경로에서 `add_files`로 design
+  source를 추가해도 csim/csynth의 `HLS_SOURCES`에서 누락되어 링크 실패. **우회:** flat
+  temp-dir(예: `/tmp/hls_dfxisp/dfxisp_accel/`)에 hpp/cpp/tb를 같은 디렉터리로 복사하고 그
+  디렉터리에서 실행.
+- **종료-hang:** `close_project` 이후 프로세스가 종료되지 않음(작업 자체는 이미 끝난 상태).
+  `timeout -k <grace> <sec> vitis_hls -f run.tcl`로 감싸고 로그의 완료 마커를 확인.
+- **cosim `depth=` 필수:** `m_axi` 인터페이스는 co-simulation에 `depth=`가 있어야 한다.
+  현재 C-sim fixture 최대(16×16=256px)에 맞춰 `depth=1024`로 설정 — 전체 설계
+  envelope(1920×1080)를 그대로 쓰면 cosim의 auto-wrapc 하네스에서 SIGSEGV(추정: 하네스
+  내부 스택 할당 오버플로) 발생. 실측 자원/타이밍은 Vitis top 함수 pragma와 무관(합성
+  결과에는 영향 없음, cosim 검증 전용 힌트).

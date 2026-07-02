@@ -1,0 +1,8 @@
+instance,module,BRAM_18K,DSP,FF,LUT,role
+total,dfxisp_accel,8,30,7008,11217,unified top (both RM modes + AXI infra)
+control_s_axi_U,control_s_axi,0,0,446,776,AXI-Lite control
+gmem0_m_axi_U,gmem0_m_axi,1,0,696,734,AXI master (raw_bayer in)
+gmem1_m_axi_U,gmem1_m_axi,2,0,665,625,AXI master (rgb_out out)
+mul_32s_32s_32_1_1_U99,mul_32s_32s_32_1_1,0,3,0,20,shared multiplier
+grp_p_anonymous_namespace_run_normal_fu_221,run_normal,1,12,1785,3108,RM_NORMAL_TONE (baseline core12 + gain1.25x + gamma2.0)
+grp_p_anonymous_namespace_run_low_light_fu_235,run_low_light,4,15,2784,5073,RM_LOW_LIGHT_TONE (2x2 bin + baseline core12 + gain2.0x + gamma2.0)

@@ -1,6 +1,6 @@
 # DFXISP HLS Verification Report
 
-Generated: 2026-07-02 06:39:38 UTC
+Generated: 2026-07-02 07:27:52 UTC
 Report: `reports/latest.md`
 
 Architecture (ver1): shared baseline core (demosaic+BLC+WB+CCM, 12-bit, no gain/gamma) + mutually exclusive tone RM slot (RM_NORMAL_TONE = gain 1.25x + gamma2.0 / RM_LOW_LIGHT_TONE = 2x2 bin + gain 2.0x + gamma2.0). See `RESEARCH.md` / `SPEC.md`.
