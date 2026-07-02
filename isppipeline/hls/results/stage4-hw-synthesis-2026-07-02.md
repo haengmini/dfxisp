@@ -163,9 +163,23 @@ unified top의 sub-instance 수치(§4.2, run_normal 1BRAM/12DSP/1785FF/3108LUT,
 - [x] RM 개별 top 분리 합성(실측) — §6c.
 - [~] C/RTL Co-sim (L2 gate) — RTL 실행 성공 확인, 자동 bit-exact 비교는 툴 하네스 문제로
       미완주(§6b). 인터페이스 재설계 또는 Vivado 수동 검증 필요.
+- [x] 두 RM IP 패키징(export, `ip_catalog` 포맷) — Vivado IP Integrator에 바로 임포트
+      가능한 IP-XACT 산출. `rm_normal_tone_top`: 159KB, `rm_low_light_tone_top`: 198KB,
+      0 errors. Vivado DFX Block Design의 직접 전제조건 완료.
 - [ ] Vivado DFX Block Design(PS+AXI interconnect+ICAP+DFX wizard), RP 플로어플랜(Pblock),
       `pr_verify`, partial bitstream 생성 — **이 시점부터가 실제 "보드 이전 최종 단계"**.
-      본 세션은 여기까지 진행(범위: Block Design GUI/XDC 작업이 커서 별도 세션 필요).
+      본 세션은 여기까지 진행(범위: Block Design·플로어플랜은 RP 크기/배치 등 설계 판단이
+      필요해 사용자 검토와 함께 별도 세션에서 진행 권장).
+
+### IP 패키징 재현
+```bash
+cd /tmp/hls_dfxisp/dfxisp_accel   # flat temp-dir (dfxisp_accel.cpp/hpp/tb 복사됨)
+source /tools/Xilinx/Vitis_HLS/2024.1/settings64.sh
+DFXISP_HLS_TOP=rm_normal_tone_top    DFXISP_HLS_FLOW=export timeout -k 15 900 vitis_hls -f run.tcl
+DFXISP_HLS_TOP=rm_low_light_tone_top DFXISP_HLS_FLOW=export timeout -k 15 900 vitis_hls -f run.tcl
+# 결과: proj_<top>/solution1/impl/export.zip (IP-XACT, Vivado IP Catalog 임포트용)
+```
+(export.zip은 바이너리 산출물이라 repo에는 커밋하지 않음 — 위 명령으로 재생성.)
 - [ ] RM_NORMAL_TONE / RM_LOW_LIGHT_TONE을 **개별 HLS top으로 분리 합성**하여 Arm1(static
       all-resident)·Arm2(register-only, 현재 unified top과 유사)·Arm3(DFX) 자원 비교의
       실제 partial-bitstream 후보 크기 산정.
