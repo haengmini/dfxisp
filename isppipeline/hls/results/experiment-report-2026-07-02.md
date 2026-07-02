@@ -125,22 +125,25 @@ Stage 3  eval_map_newrm.py --root <ds> --tag <T> --model <m> → results/map_new
 - COCO lowlight 포화율 11.25% — 정상조도 과처리. gain/γ 중복=False(구조 불변식 유지).
 - checker 과트리거: naive 임계로 COCO 89/113이 lowlight 판정 → dark-level 재보정 필요.
 
-### 4.3 Stage 3 — 정확도 mAP, 조건표 A~G
+### 4.3 Stage 3 — 정확도 mAP, 조건표 A~G (3 detector)
 
-mAP@[.5:.95] (괄호는 mAP@50):
+mAP@[.5:.95] (YOLO 괄호는 mAP@50):
 
-| 조건 | dataset·arm | YOLOv8n | YOLOv8s |
-|---|---|---|---|
-| **A** | ExDark·none | **0.1561** (0.3064) | **0.2236** (0.4059) |
-| **B** | ExDark·normal | 0.0680 (0.1490) | 0.1249 (0.2480) |
-| **C** | ExDark·lowlight | 0.0554 (0.1342) | 0.1276 (0.2595) |
-| **G** | ExDark·adaptive | 0.0554 (0.1342) | 0.1276 (0.2595) |
-| **D** | COCO·none | **0.3276** (0.4707) | **0.4280** (0.6105) |
-| **E** | COCO·normal | 0.2879 (0.4175) | 0.3775 (0.5244) |
-| **F** | COCO·lowlight | 0.2574 (0.3497) | 0.3402 (0.4590) |
-| **G** | COCO·adaptive | 0.2590 (0.3725) | 0.3486 (0.4717) |
+| 조건 | dataset·arm | YOLOv8n | YOLOv8s | SSDLite-MNv3 |
+|---|---|---|---|---|
+| **A** | ExDark·none | **0.1561** (0.3064) | **0.2236** (0.4059) | **0.1040** |
+| **B** | ExDark·normal | 0.0680 (0.1490) | 0.1249 (0.2480) | 0.0443 |
+| **C** | ExDark·lowlight | 0.0554 (0.1342) | 0.1276 (0.2595) | 0.0333 |
+| **G** | ExDark·adaptive | 0.0554 (0.1342) | 0.1276 (0.2595) | 0.0333 |
+| **D** | COCO·none | **0.3276** (0.4707) | **0.4280** (0.6105) | **0.2320** |
+| **E** | COCO·normal | 0.2879 (0.4175) | 0.3775 (0.5244) | 0.2305 |
+| **F** | COCO·lowlight | 0.2574 (0.3497) | 0.3402 (0.4590) | 0.2096 |
+| **G** | COCO·adaptive | 0.2590 (0.3725) | 0.3486 (0.4717) | 0.2125 |
 
-**두 detector·두 데이터셋 모두에서 `none`(무처리)이 최고**, 순서 `none > normal ≳ lowlight`.
+**세 detector(YOLOv8n/s + SSD+MobileNet)·두 데이터셋 모두에서 `none`(무처리)이 최고**,
+순서 `none > normal ≳ lowlight`가 detector 계열에 무관하게 유지(guardrail 결론의 견고성 강화).
+SSDLite-MNv3는 torchvision COCO 사전학습(구조가 다른 detector 계열). 정확한 Vitis-AI
+`tf_ssdmobilenetv1`은 가중치 부재·TF1.15로 이 환경 실행 불가 → 보드 DPU end-to-end 단계용.
 
 ---
 

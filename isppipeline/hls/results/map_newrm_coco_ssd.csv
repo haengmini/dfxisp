@@ -1,0 +1,5 @@
+dataset,arm,mAP_50_95,mAP_50,model
+COCO,none,0.2320,0.3253,ssdlite320_mobilenet_v3_large
+COCO,normal,0.2305,0.3211,ssdlite320_mobilenet_v3_large
+COCO,lowlight,0.2096,0.2926,ssdlite320_mobilenet_v3_large
+COCO,adaptive,0.2125,0.2989,ssdlite320_mobilenet_v3_large

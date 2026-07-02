@@ -1,0 +1,5 @@
+dataset,arm,mAP_50_95,mAP_50,model
+ExDark,none,0.1040,0.1915,ssdlite320_mobilenet_v3_large
+ExDark,normal,0.0443,0.1061,ssdlite320_mobilenet_v3_large
+ExDark,lowlight,0.0333,0.0787,ssdlite320_mobilenet_v3_large
+ExDark,adaptive,0.0333,0.0787,ssdlite320_mobilenet_v3_large

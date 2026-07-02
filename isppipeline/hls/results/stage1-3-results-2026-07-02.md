@@ -67,26 +67,29 @@ note: "실제 실측. 핵심 가설을 부분 반증하는 결과 포함 — 정
 
 ---
 
-## Stage 3 — 정확도 mAP, 조건표 A~G (2 detector)
+## Stage 3 — 정확도 mAP, 조건표 A~G (3 detector)
 
-`raw → arm → YOLO → mAP(ultralytics val)`. 라벨은 두 데이터셋 모두 COCO-80 id(remap 없음).
+`raw → arm → detector → mAP`. YOLOv8n/s는 ultralytics val, SSDLite-MNv3는 COCOeval.
+라벨은 두 데이터셋 모두 COCO-80 id(remap 없음).
 
 ### mAP@[.5:.95] (핵심 지표)
-| 조건 | dataset · arm | YOLOv8n | YOLOv8s |
-|---|---|---|---|
-| **A** | ExDark · none | **0.1561** | **0.2236** |
-| **B** | ExDark · normal | 0.0680 | 0.1249 |
-| **C** | ExDark · lowlight | 0.0554 | 0.1276 |
-| **G** | ExDark · adaptive | 0.0554 | 0.1276 |
-| **D** | COCO · none | **0.3276** | **0.4280** |
-| **E** | COCO · normal | 0.2879 | 0.3775 |
-| **F** | COCO · lowlight | 0.2574 | 0.3402 |
-| **G** | COCO · adaptive | 0.2590 | 0.3486 |
+| 조건 | dataset · arm | YOLOv8n | YOLOv8s | SSDLite-MNv3 |
+|---|---|---|---|---|
+| **A** | ExDark · none | **0.1561** | **0.2236** | **0.1040** |
+| **B** | ExDark · normal | 0.0680 | 0.1249 | 0.0443 |
+| **C** | ExDark · lowlight | 0.0554 | 0.1276 | 0.0333 |
+| **G** | ExDark · adaptive | 0.0554 | 0.1276 | 0.0333 |
+| **D** | COCO · none | **0.3276** | **0.4280** | **0.2320** |
+| **E** | COCO · normal | 0.2879 | 0.3775 | 0.2305 |
+| **F** | COCO · lowlight | 0.2574 | 0.3402 | 0.2096 |
+| **G** | COCO · adaptive | 0.2590 | 0.3486 | 0.2125 |
 
-(mAP@50: ExDark none 0.306/0.406, COCO none 0.471/0.611 — 순서 동일. CSV 참조.)
+(mAP@50 등 상세는 `results/map_newrm_*` CSV. SSDLite-MNv3는 torchvision COCO 사전학습.
+정확한 Vitis-AI `tf_ssdmobilenetv1`은 가중치 부재·TF1.15로 이 환경 실행 불가 → 보드 DPU 단계용.)
 
 ### 견고한 결론
-1. **모든 조건·두 detector에서 `none`(무처리 demosaic)이 최고.** reset 아키텍처의
+1. **모든 조건·세 detector(YOLOv8n/s + SSD+MobileNet)에서 `none`(무처리 demosaic)이 최고.**
+   순서 `none > normal ≳ lowlight`가 detector 계열에 무관하게 유지. reset 아키텍처의
    baseline core(gain/gamma 제거)와 두 tone RM 모두 **plain demosaic 대비 mAP를 떨어뜨림.**
 2. **de-duplication(정상 tone=identity)이 저조도 mAP를 악화:** gain 없는 baseline core가
    dark scene을 더 어둡게 만들어 normal arm이 none보다 크게 낮음(ExDark 0.156→0.068).
