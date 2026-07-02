@@ -146,9 +146,10 @@ extern "C" void dfxisp_accel(
    합성된 RTL에서 실제로 읽을 수 있는지 어떤 산출물로도 확인된 적 없음(cosim도 post-check
    단계에서 실패해 미확인). → 4개 개별 scalar 포인터로 교체(위 HLS top 함수 참조).
 
-**주의:** 이 수정 이후 `results/stage4-hw-synthesis-2026-07-02.md`·
-`results/stage5-dfx-implementation-2026-07-02.md`의 HW 실측 수치(csynth 자원·pr_verify·
-bitstream 크기)는 **수정 전 소스 기준**이라 stale하다. Vivado 재실행 전까지 그렇게 표시한다.
+**2026-07-02 20:33 KST 갱신:** 이 수정을 반영해 `results/stage4-hw-synthesis-2026-07-02.md`·
+`results/stage5-dfx-implementation-2026-07-02.md`를 재합성/재구현하고 수치를 최신화했다
+(pr_verify PASS 유지, LUT/FF/DSP 감소 — 버그로 인한 불필요한 2차 demosaic 로직이 제거된
+결과). 상세는 두 문서와 `SPEC.md` §10 참조.
 
 C-sim에는 Vitis 전용 헤더가 필요 없다; HLS pragma만 존재하며 로컬 g++ 빌드에서는 무시된다.
 

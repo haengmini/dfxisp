@@ -288,46 +288,51 @@ RM_LOW_LIGHT_TONE / 상호배타 RM 선택 / gain·gamma 중복 없음 / 형상�
 
 ## 10. 성능 / 자원 (Stage 4 실측, 2026-07-02 — Vitis HLS 2024.1 C-synthesis)
 
-**실측 완료(C-synthesis + 실제 Vivado DFX 구현, xczu7ev, 2024.1).** unified top
-(`dfxisp_accel`, 두 tone RM 모두 상주·런타임 mode 선택, DFX 없음)은 **Arm2(register-only)**.
-RM_NORMAL_TONE/RM_LOW_LIGHT_TONE을 실제 Reconfigurable Partition으로 구현·**pr_verify
-PASS**·partial bitstream 생성까지 완료해 **Arm3(DFX) fabric-only 실측**을 확보(PS/DDR
-미통합, 절대 전력·PR latency(ms)는 보드 전용). Arm1(정적 baseline-only)은 여전히 TODO.
+**실측 완료(C-synthesis + 실제 Vivado DFX 구현, xczu7ev, 2024.1) — 2026-07-02 20:33 KST
+adversarial-review 수정(chroma-preserving binning-demosaic + scalar 메타데이터 포인터,
+커밋 `a2d1b6d`) 반영 재합성.** unified top (`dfxisp_accel`, 두 tone RM 모두 상주·런타임
+mode 선택, DFX 없음)은 **Arm2(register-only)**. RM_NORMAL_TONE/RM_LOW_LIGHT_TONE을 실제
+Reconfigurable Partition으로 재구현·**pr_verify PASS**·partial bitstream 재생성까지
+완료해 **Arm3(DFX) fabric-only 실측**을 확보(PS/DDR 미통합, 절대 전력·PR latency(ms)는
+보드 전용). Arm1(정적 baseline-only)은 여전히 TODO.
 상세: `results/stage4-hw-synthesis-2026-07-02.md`(csynth), `results/stage5-dfx-implementation-2026-07-02.md`(DFX 구현).
 
 | 지표 | Arm1(static) | **Arm2(register-only, 실측)** | **Arm3(DFX, 실측)** |
 |---|---|---|---|
-| LUT / FF / BRAM / DSP | TODO | **11,217 / 7,008 / 8 / 30** | static+RM1 routed: LUT 3,948/BRAM 1.5tile/DSP 12(§Stage5) |
-| Fmax @5.0ns | TODO | **273.97 MHz**(critical path 3.650ns) | TODO(제약 미인가 fabric-only 패스, WNS 미측정) |
-| pr_verify | — | — | **✅ PASS**(config 간 static 완전 동일 확인) |
-| full bitstream size | — | — | **19,311,211 bytes ≈ 19.3 MB** |
-| partial bitstream size | — | — | **686,664 bytes ≈ 671 KB**(두 RM 동일, pblock 프레임 수로 결정) |
+| LUT / FF / BRAM / DSP | TODO | **8,264 / 5,536 / 9 / 24** | config1(static+RM_NORMAL) routed: LUT 3,953/BRAM 1.5tile/DSP 12; config2(static+RM_LOW_LIGHT) routed: LUT 2,922/BRAM 3.5tile/DSP 8(§Stage5) |
+| Fmax @5.0ns | TODO | **273.97 MHz**(critical path 3.650ns, 수정 전후 동일) | TODO(제약 미인가 fabric-only 패스, WNS 미측정) |
+| pr_verify | — | — | **✅ PASS**(config 간 static 완전 동일 확인, partition pin 15개) |
+| full bitstream size | — | — | **19,311,211 bytes ≈ 19.3 MB**(수정 전후 byte 단위 동일) |
+| partial bitstream size | — | — | **686,664 bytes ≈ 671 KB**(두 RM 동일, pblock 프레임 수로 결정, 수정 전후 동일) |
 | 재구성 지연(ms) | — | — | TODO(보드 ICAP 실측 필요) |
 | 정상모드 전력(W) | TODO | TODO | TODO(보드 실측 필요) |
 
-Arm2 인스턴스 분해(unified top 내부, DFX 순이득 추정의 참조점):
+Arm2 인스턴스 분해(unified top 내부, DFX 순이득 추정의 참조점, 재합성 후):
 
 | instance | BRAM | DSP | FF | LUT |
 |---|---|---|---|---|
 | RM_NORMAL_TONE(`run_normal`) | 1 | 12 | 1,785 | 3,108 |
-| RM_LOW_LIGHT_TONE(`run_low_light`) | 4 | 15 | 2,784 | 5,073 |
-| AXI/제어 인프라 | 3 | 3 | 2,439 | 3,036 |
+| RM_LOW_LIGHT_TONE(`run_low_light`) | 5 | 9 | 1,295 | 2,110 |
+| AXI/제어 인프라 | 3 | 3 | 2,456 | 3,046 |
 
 **활용률(xczu7ev 대비):** BRAM 1%, DSP 1%, FF 1%, LUT 4% — 매우 여유 있음.
 
 기대(H3): 정상모드에서 Arm3 fabric/전력 < Arm2(저조도 블록 미상주). `run_low_light`
-인스턴스(4 BRAM/15 DSP/2,784 FF/5,073 LUT)가 DFX로 제거 가능한 상한 추정치 — Arm1/Arm3
-확정에는 정적 baseline-only top 분리 합성과 Vivado DFX 플로어플랜(PR/pr_verify/partial
-bitstream)이 필요.
+인스턴스(5 BRAM/9 DSP/1,295 FF/2,110 LUT — 버그 수정으로 구 수치 대비 대폭 축소)가 DFX로
+제거 가능한 상한 추정치 — Arm1/Arm3 확정에는 정적 baseline-only top 분리 합성과 Vivado DFX
+플로어플랜(PR/pr_verify/partial bitstream)이 필요.
 
-**RM 독립 top 실측(Stage 5 준비, 2026-07-02):** `RM_NORMAL_TONE`/`RM_LOW_LIGHT_TONE`을
+**RM 독립 top 실측(Stage 5 준비, 재합성 후):** `RM_NORMAL_TONE`/`RM_LOW_LIGHT_TONE`을
 각자 자체 AXI 인프라를 가진 독립 top으로 분리 합성(DFX partial bitstream 크기의 더 현실적
 추정치):
 
 | top | BRAM | DSP | FF | LUT | Fmax |
 |---|---|---|---|---|---|
 | `rm_normal_tone_top` | 4 | 12 | 3,797 | 5,202 | 273.97 MHz |
-| `rm_low_light_tone_top` | 7 | 15 | 4,732 | 7,167 | 273.97 MHz |
+| `rm_low_light_tone_top` | 8 | 9 | 3,243 | 4,204 | 273.97 MHz |
+
+`rm_normal_tone_top`은 수정으로 내부 로직이 바뀌지 않아 이전 실측치와 완전히 동일(교차검증).
+`rm_low_light_tone_top`은 2차 demosaic 재호출 제거로 LUT -41.3%/FF -31.5%/DSP -40.0%.
 
 > **참고(사전 최적화 이력):** 최초 csynth에서 `gamma2()`가 런타임 정수 sqrt(반복 나눗셈)를
 > 써서 자원이 5배 이상 부풀었음(합계 FF 58,655/LUT 52,053). 256-엔트리 ROM LUT로 교체해
@@ -355,8 +360,8 @@ bitstream)이 필요.
    융합으로 수정, `_bin_demosaic_rggb16`과 bit-exact 일치(§3.3). (b) 메타데이터가 검증 안 된
    구조체 포인터 `s_axilite` 패턴이었던 것 — 4개 scalar 출력 포인터로 교체(§5.3/§6.1).
    **`make verify` 646px bit-exact 유지, 새 색상보존 회귀 테스트 추가.**
-   **주의: 이 수정 이후 §10의 HW 실측 수치(csynth 자원·pr_verify·bitstream 크기)는 수정 전
-   소스 기준이라 stale — Vivado 재실행 전까지 그렇게 간주할 것.**
+   **2026-07-02 20:33 KST: 수정 반영 소스로 Vitis HLS csynth + Vivado DFX 재구현 완주
+   (pr_verify PASS 유지, bitstream 크기 byte 단위로 동일). §10이 최신 수치로 갱신됨.**
 
 ---
 

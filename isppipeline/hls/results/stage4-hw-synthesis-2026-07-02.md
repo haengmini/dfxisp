@@ -10,12 +10,11 @@ Goal   : 보드 측정 전 마지막 SW/툴체인 단계. streaming line buffer 
 -->
 # Stage 4 — HW 실측: C-Synthesis (Vitis HLS 2024.1)
 
-> ⚠️ **STALE (2026-07-02 adversarial-review 수정 이후):** 이 문서의 모든 자원/타이밍 수치는
+> ✅ **재합성 완료 (2026-07-02 20:33 KST, adversarial-review 수정 반영):** §4/§6c의 수치는
 > `/codex:adversarial-review --base 0e433f9`가 발견한 두 수정(low-light 색상보존
-> binning-demosaic, 구조체→scalar 메타데이터 포인터) **이전** 소스로 합성한 결과다. 두 수정
-> 모두 `make verify` bit-exact를 유지하지만 low-light RTL 로직과 메타데이터 인터페이스가
-> 바뀌었으므로 **자원 수치는 재합성 전까지 참고용으로만 볼 것.** 상세: `SPEC.md` §11.5,
-> `isppipeline/hls/README.md` "2026-07-02 adversarial-review 수정".
+> binning-demosaic, 구조체→scalar 메타데이터 포인터)이 반영된 **커밋 a2d1b6d 소스**로
+> 재합성한 최신 실측치다. 최초 합성 시점(16:20 KST)의 구 수치는 `git log -p`로 조회 가능.
+> 상세: `SPEC.md` §11.5, §10.
 
 > 이 환경에 **Vitis HLS 2024.1 + Vivado 2024.1이 실제로 설치**되어 있음을 확인하고
 > (`/tools/Xilinx/Vitis_HLS/2024.1`, `/tools/Xilinx/Vivado/2024.1`), 실제 C-synthesis를
@@ -69,36 +68,47 @@ README·SPEC에 이미 "HW에서는 256-엔트리 LUT로 대체 가능"이라 �
 
 ## 4. 최종 synthesis 결과 (gamma ROM 반영, 실측)
 
+> **2026-07-02 20:33 KST 재합성 결과로 갱신.** 이 절의 수치는 adversarial-review 두 수정
+> (chroma-preserving binning-demosaic + scalar 메타데이터 포인터)이 반영된 커밋 `a2d1b6d`
+> 소스 기준이다. §2/§3의 gamma ROM 최적화 히스토리(전→후 표)는 그 수정 **이전** 시점의
+> before/after 기록이라 역사적 사실로 그대로 남긴다 — 아래 표만 최신 수치로 교체한다.
+
 ### 4.1 타이밍
 | Clock | Target | Estimated | Uncertainty |
 |---|---|---|---|
 | ap_clk | 5.00 ns | **3.650 ns** | 1.35 ns |
 
-Fmax ≈ 1/3.65ns = **273.97 MHz** (과거 dfxisp_hls_variants 4종과 critical path 완전 동일 —
-Fmax는 변별점이 아니라는 방향 A 관찰과 정합).
+Fmax ≈ 1/3.65ns = **273.97 MHz** (수정 전후 동일 — critical path가 gmem AXI 인프라에 있고
+low-light 알고리즘 변경과 무관함을 재확인).
 
-### 4.2 자원 (최적화 전 → 후, 실측)
+### 4.2 자원 (adversarial-review 수정 전 → 후, unified top 실측)
 | instance | BRAM(전→후) | DSP(전→후) | FF(전→후) | LUT(전→후) |
 |---|---|---|---|---|
-| run_normal (RM_NORMAL_TONE) | 0→**1** | 15→**12** | 27,605→**1,785**(-93.5%) | 23,647→**3,108**(-86.9%) |
-| run_low_light (RM_LOW_LIGHT_TONE) | 3→**4** | 15→**15** | 28,611→**2,784**(-90.3%) | 25,370→**5,073**(-80.0%) |
-| **합계(unified top)** | 6→**8** | 33→**30** | 58,655→**7,008**(-88.0%) | 52,053→**11,217**(-78.4%) |
+| **합계(unified top, `dfxisp_accel`)** | 8→**9** | 30→**24**(-20.0%) | 7,008→**5,536**(-21.0%) | 11,217→**8,264**(-26.3%) |
 
-### 4.3 디바이스 대비 활용률 (xczu7ev, gamma ROM 반영)
+수정 전 수치는 위 §3(gamma ROM 최적화 직후) 시점 기록. 수정으로 LUT/FF/DSP가 모두
+감소한 이유: low-light 경로의 3-row sliding-window + 2차 demosaic(`demosaic_rggb12_rows`
+재호출) 로직이 통째로 제거되고, 단일 fused binning-demosaic pass(`compute_binned_rgb_row`)
+로 대체되었기 때문 — 버그 수정이 곧 자원 절감으로 이어진 사례.
+
+### 4.3 디바이스 대비 활용률 (xczu7ev, 2026-07-02 20:33 재합성 기준)
 | 지표 | 사용 | 가용 | 활용% |
 |---|---|---|---|
-| BRAM_18K | 8 | 624 | 1% |
-| DSP | 30 | 1728 | 1% |
-| FF | 7,008 | 460,800 | 1% |
-| LUT | 11,217 | 230,400 | 4% |
+| BRAM_18K | 9 | 624 | 1% |
+| DSP | 24 | 1728 | 1% |
+| FF | 5,536 | 460,800 | 1% |
+| LUT | 8,264 | 230,400 | 4% |
 
 **매우 여유 있는 풋프린트**(unified top, 두 RM 모드 코드가 모두 상주 — 아직 실제 DFX 분리 전).
 
-### 4.4 latency (design envelope, 최대 지원 해상도 1920×1080 기준 보고값)
+### 4.4 latency (design envelope, 최대 지원 해상도 1920×1080 기준 보고값, 재합성 후 실측)
 | instance | min cycles | max cycles | max absolute(@target 5ns) |
 |---|---|---|---|
 | run_normal | 171 | 18,662,427 | 93.312 ms |
-| run_low_light | 164 | 7,284,608 | 36.423 ms |
+| run_low_light | 74 | 2,604,428 | 13.022 ms |
+
+(run_low_light의 max cycles가 구 수치 7,284,608 → 2,604,428로 감소한 이유도 §4.2와 동일:
+2차 demosaic 재호출이 제거되어 픽셀당 사이클 수가 줄었다.)
 
 RESEARCH 평가 목표 해상도(1280×720)로 환산(II=1 파이프라인이라 cycles≈픽셀수+오버헤드,
 achieved clock 3.65ns 기준 추정치이며 별도 실행으로 직접 측정한 값은 아님):
@@ -153,16 +163,22 @@ DFX RM 패키징의 전제조건(HLS README "다음 하드웨어 단계" #2)을 
 노출해 각각 별도 C-synthesis(`flow=synth`, no tb). 동일 translation unit 내부 함수를
 재사용하므로 동작은 `dfxisp_accel()`과 동일(별도 golden 불필요, 순수 합성 전용 entry).
 
+> **2026-07-02 20:33 KST 재합성 결과로 갱신** (adversarial-review 수정 반영, 커밋 `a2d1b6d`).
+
 | top | 역할 | BRAM | DSP | FF | LUT | Fmax |
 |---|---|---|---|---|---|---|
-| `rm_normal_tone_top` | RM_NORMAL_TONE(자체 AXI 포함) | 4 | 12 | 3,593 | 5,038 | 273.97 MHz |
-| `rm_low_light_tone_top` | RM_LOW_LIGHT_TONE(자체 AXI 포함) | 7 | 15 | 4,732 | 7,167 | 273.97 MHz |
+| `rm_normal_tone_top` | RM_NORMAL_TONE(자체 AXI 포함) | 4 | 12 | 3,797 | 5,202 | 273.97 MHz |
+| `rm_low_light_tone_top` | RM_LOW_LIGHT_TONE(자체 AXI 포함) | 8 | 9 | 3,243 | 4,204 | 273.97 MHz |
 
-unified top의 sub-instance 수치(§4.2, run_normal 1BRAM/12DSP/1785FF/3108LUT, run_low_light
-4BRAM/15DSP/2784FF/5073LUT)보다 큰 이유: 독립 top은 **자체 m_axi/s_axilite 인프라**를 포함
-(unified top에서는 두 RM이 gmem0/gmem1/control을 공유). **실제 DFX partial bitstream 크기
-추정에는 독립 top 수치가 더 현실적**(RM 하나가 재구성 가능 IP로 패키징될 때의 실제 풋프린트에
-가까움). 산출물: `reports/csynth/rm_{normal,low_light}_tone_top_csynth.rpt`,
+`rm_normal_tone_top`은 수정으로 내부 로직이 바뀌지 않아 포트 통일(out_width/out_height 추가,
+Stage 5 준비 단계) 이후 수치와 완전히 동일 — 교차검증 성공. `rm_low_light_tone_top`은 §4.2와
+같은 이유로 크게 감소(LUT 7,167→4,204, -41.3%; FF 4,732→3,243, -31.5%; DSP 15→9, -40.0%).
+BRAM은 7→8로 소폭 증가(단일 fused pass의 row 버퍼 구성 변화 영향, 미미).
+
+unified top의 sub-instance 수치보다 큰 이유는 변함없음: 독립 top은 **자체 m_axi/s_axilite
+인프라**를 포함(unified top에서는 두 RM이 gmem0/gmem1/control을 공유). **실제 DFX partial
+bitstream 크기 추정에는 독립 top 수치가 더 현실적**. 산출물:
+`reports/csynth/rm_{normal,low_light}_tone_top_csynth.rpt`,
 `results/resource_csynth_rm_standalone_2026-07-02.csv`.
 
 ## 7. 다음 (Stage 4 잔여 / Stage 5)

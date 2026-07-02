@@ -11,12 +11,12 @@ Goal   : "보드 측정 직전 최종 관문" — RM_NORMAL_TONE/RM_LOW_LIGHT_TO
 -->
 # Stage 5 — Vivado DFX 구현 (실측)
 
-> ⚠️ **STALE (2026-07-02 adversarial-review 수정 이후):** pr_verify PASS·bitstream 크기
-> 등 이 문서의 모든 수치는 low-light 색상보존 binning-demosaic 수정 및 구조체→scalar
-> 메타데이터 포인터 수정 **이전** 소스로 구현한 결과다. RM_LOW_LIGHT_TONE의 내부 로직과
-> 최상위 `dfxisp_accel`의 포트 목록이 바뀌었으므로(단, `rm_normal_tone_top`/
-> `rm_low_light_tone_top`의 포트 목록 자체는 이미 scalar out_width/out_height라 변경 없음)
-> **재구현 전까지 참고용으로만 볼 것.** 상세: `SPEC.md` §11.5.
+> ✅ **재구현 완료 (2026-07-02 20:31 KST, adversarial-review 수정 반영):** 이 문서의 모든
+> 수치는 low-light 색상보존 binning-demosaic 수정 및 구조체→scalar 메타데이터 포인터 수정이
+> 반영된 **커밋 a2d1b6d 소스**로 RM out-of-context 재합성 → DFX 재구현 → pr_verify →
+> bitstream 재생성까지 완주한 최신 실측치다. `rm_normal_tone_top`/`rm_low_light_tone_top`의
+> 포트 목록은 수정 전후 완전 동일(byte-identical stub diff로 확인)하므로 static wrapper
+> (`dfx_static_top.v`)는 재생성 없이 재사용했다. 상세: `SPEC.md` §11.5.
 
 > Stage 4(csynth)에서 확보한 `rm_normal_tone_top`/`rm_low_light_tone_top` IP를 실제
 > **Vivado 2024.1 non-project batch DFX flow**(AMD UG909 표준 절차)로 구현했다.
@@ -71,41 +71,62 @@ static 영역 배치가 Config1과 미세하게 달라짐(`instance i_53 at site
 `update_design -cell u_rp -black_box` + `lock_design -level routing`으로 static 배치를
 고정한 뒤 RM2를 이식 → 재구현. 이후 static 영역이 두 config에서 완전히 동일해짐.
 
-### Config1 자원 (routed, `dfx_static_top` 전체 = static + RM_NORMAL_TONE)
+### Config1 자원 (routed, `dfx_static_top` 전체 = static + RM_NORMAL_TONE, 재합성 후 실측)
 | 지표 | 사용 | 가용 | Util% |
 |---|---|---|---|
-| CLB LUT | 3,948 | 230,256 | 1.71% |
+| CLB LUT | 3,953 | 230,256 | 1.72% |
 | Block RAM Tile | 1.5 | 312 | 0.48% |
 | DSP | 12 | 1,728 | 0.69% |
 
-(DSP=12는 Stage4 standalone csynth 실측치와 **정확히 일치** — 교차검증.)
+(DSP=12는 Stage4 standalone csynth 실측치와 **정확히 일치** — 교차검증. LUT는 구 수치
+3,948과 거의 동일(+5, 배치·라우팅 비결정성 범위) — `rm_normal_tone_top` 내부 로직이 수정으로
+바뀌지 않았다는 사실과 정합.)
+
+### Config2 자원 (routed, `dfx_static_top` 전체 = static + RM_LOW_LIGHT_TONE, 재합성 후 실측)
+| 지표 | 사용 | 가용 | Util% |
+|---|---|---|---|
+| CLB LUT | 2,922 | 230,256 | 1.27% |
+| Block RAM Tile | 3.5 | 312 | 1.12% |
+| DSP | 8 | 1,728 | 0.46% |
+
+Config1 대비 크게 작다(LUT -26.1%, DSP -33.3%) — Stage4 §6c에서 확인한 `rm_low_light_tone_top`
+단독 축소(버그 수정으로 2차 demosaic 제거)가 실제 배치·라우팅된 하드웨어에도 그대로 반영됨.
 
 ## 4. pr_verify — DFX 정합성 공식 확인
 
 ```
 pr_verify -initial config1_normal_impl.dcp -additional config2_lowlight_impl.dcp
 ```
-**결과: PASS.**
+**결과: PASS (재합성 후에도 유지).**
 ```
 INFO: [Vivado 12-3253] PR_VERIFY: check points config1_normal_impl.dcp and
 config2_lowlight_impl.dcp are compatible
 ```
-비교 내역(양쪽 동일): reconfigurable module 1개, partition pin 2개, static tile 29,648개,
-static site 54개, static cell 256개, static routed node 1,059개, routed pip 894개 —
-**완전히 동일**(static 영역이 두 config에서 진짜로 고정됨을 수치로 증명).
+비교 내역(양쪽 동일): reconfigurable module 1개, partition pin **15개**, static tile 29,648개,
+static site 61개, static cell 256개, static routed node 1,154개, routed pip 958개 —
+**완전히 동일**(static 영역이 두 config에서 진짜로 고정됨을 수치로 증명). static cell 256개는
+구 수치와 동일(static 로직 자체는 안 바뀜); site/node/pip 수는 배치·라우팅 비결정성으로 소폭
+변동(정상).
+
+> **partition pin 2개 → 15개로 증가한 것이 이번 수정의 가장 직접적인 하드웨어 증거다.**
+> 구조체 포인터(`DfxIspResult*`) 시절에는 RP 경계를 통과하는 메타데이터 신호가 2개로 뭉뚱그려
+> 보였으나, 4개 scalar 출력(`out_width`/`out_height`/`selected_mode`/`selected_rm`)으로
+> 분리한 뒤에는 실제로 15개의 개별 partition pin이 물리적으로 존재한다. adversarial-review
+> Finding 2("메타데이터가 RTL에서 개별 출력으로 보이지 않는다")가 **post-route 배치·라우팅
+> 단계에서도 실측으로 해소**되었음을 의미한다.
 
 ## 5. Bitstream (실측 크기)
 
 | 산출물 | 크기 | 비고 |
 |---|---|---|
-| `config1_full.bit` (전체) | **19,311,211 bytes ≈ 19.3 MB** | 과거 grayscale-era 기록(19MB, archive 참조)과 정합 |
-| `rm_normal_partial.bit` (partial) | **686,664 bytes ≈ 671 KB** | RM_NORMAL_TONE |
-| `rm_lowlight_partial.bit` (partial) | **686,664 bytes ≈ 671 KB** | RM_LOW_LIGHT_TONE |
+| `config1_full.bit` (전체) | **19,311,211 bytes ≈ 19.3 MB** | 재합성 전과 **byte 단위로 동일** |
+| `rm_normal_partial.bit` (partial) | **686,664 bytes ≈ 671 KB** | RM_NORMAL_TONE, 재합성 전과 동일 |
+| `rm_lowlight_partial.bit` (partial) | **686,664 bytes ≈ 671 KB** | RM_LOW_LIGHT_TONE, 재합성 전과 동일 |
 
-두 partial bitstream 크기가 동일한 이유: 크기는 **pblock의 reconfigurable frame 수**로
-결정되며(고정 프레임 그리드), 실제 로직 활용률(LUT 사용량)과는 독립적 — 두 RM이 같은 pblock을
-공유하므로 같은 크기가 정상이다. (구 방향-A 자원표의 "1차 RM만 다르면 partial 크기도 다르다"는
-가정은 여기서 반증됨 — 방법론적으로 유용한 정정.)
+bitstream 크기가 수정 전후로 완전히 동일한 이유: 크기는 **pblock의 reconfigurable frame 수**로
+결정되며(고정 프레임 그리드), 실제 로직 활용률(LUT 사용량)과는 독립적 — Pblock/floorplan을
+그대로 재사용했고(§2, 용량 8,640 LUT는 축소된 두 RM 모두에 여전히 충분한 여유), 두 RM이 같은
+pblock을 공유하므로 로직 사용량이 줄어도 partial bitstream 크기는 변하지 않는 것이 정상이다.
 
 DRC 참고: `write_bitstream`이 `ap_clk`/`ap_rst_n`의 미지정 I/O standard/location(NSTD-1/
 UCIO-1)에서 막힘 — 실제 보드 핀 배정이 없는 fabric-only 특성화이므로 해당 DRC를

@@ -1,3 +1,3 @@
 top,role,BRAM_18K,DSP,FF,LUT,Fmax_MHz,notes
-rm_normal_tone_top,RM_NORMAL_TONE standalone (own AXI infra; port-harmonized w/ out_width/out_height for DFX),4,12,3797,5202,273.97,"gain1.25x+gamma2.0 over baseline_core12, full-res"
-rm_low_light_tone_top,RM_LOW_LIGHT_TONE standalone (own AXI infra),7,15,4732,7167,273.97,"2x2 bin+baseline_core12+gain2.0x+gamma2.0, H/2xW/2"
+rm_normal_tone_top,RM_NORMAL_TONE standalone (own AXI infra; port-harmonized w/ out_width/out_height for DFX),4,12,3797,5202,273.97,"gain1.25x+gamma2.0 over baseline_core12, full-res; unchanged by adversarial-review fixes"
+rm_low_light_tone_top,RM_LOW_LIGHT_TONE standalone (own AXI infra),8,9,3243,4204,273.97,"fused 2x2 binning-demosaic (chroma-preserving) + baseline_core12 + gain2.0x + gamma2.0, H/2xW/2; adversarial-review fix removed 2nd demosaic pass"
