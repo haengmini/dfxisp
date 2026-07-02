@@ -1,6 +1,6 @@
 # DFXISP HLS Verification Report
 
-Generated: 2026-07-01 10:04:46 UTC
+Generated: 2026-07-02 05:18:11 UTC
 Report: `reports/latest.md`
 
 Architecture: shared baseline ISP core + mutually exclusive tone RM slot (RM_NORMAL_TONE identity / RM_LOW_LIGHT_TONE = 2x2 binning + gain + gamma-4.0). See `RESEARCH.md`.

@@ -10,14 +10,14 @@
 
 ```text
 NORMAL:
-  pseudo-RAW Bayer GRBG uint16
+  pseudo-RAW Bayer RGGB uint16
     -> checker (mode 결정)
     -> RM_NORMAL_TONE (identity bypass)
     -> baseline ISP core (demosaic + BLC + AWB + CCM, gain/gamma 없음)
     -> packed RGB888 uint32  (H x W)
 
 LOW_LIGHT:
-  pseudo-RAW Bayer GRBG uint16
+  pseudo-RAW Bayer RGGB uint16
     -> checker (mode 결정)
     -> RM_LOW_LIGHT_TONE.front : 2x2 RAW binning (precision loss 전, RESEARCH §4.2)
     -> baseline ISP core (demosaic + BLC + AWB + CCM, gain/gamma 없음)
@@ -114,7 +114,7 @@ extern "C" void dfxisp_accel(
 - `checker_select_mode()` — static-region scene checker. `AUTO`에서 dark-pixel 비율로
   NORMAL/LOW_LIGHT를 결정. 장면 단위 히스테리시스는 시퀀스 스케줄러(RESEARCH §5.2) 담당이며
   단일 프레임 C-sim entry에는 없다.
-- `baseline_isp_core_pixel()` — **shared static** baseline core. demosaic(GRBG 3x3) +
+- `baseline_isp_core_pixel()` — **shared static** baseline core. demosaic(RGGB 3x3) +
   BLC + AWB(Q8 채널 게인) + CCM(identity placeholder). **gain/gamma 없음.**
 - `run_normal()` — RM_NORMAL_TONE = identity bypass. baseline core를 full-res로 실행.
 - `run_low_light()` — **RM_LOW_LIGHT_TONE**(DFX reconfigurable module 후보). RAW 2x2

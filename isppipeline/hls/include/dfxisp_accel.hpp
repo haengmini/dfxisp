@@ -24,7 +24,7 @@
 //   * output metadata reports mode, selected RM, and output shape
 //
 // Pixel format:
-//   input : pseudo-RAW Bayer GRBG, 12-bit values stored in uint16_t
+//   input : pseudo-RAW Bayer RGGB, 12-bit values stored in uint16_t
 //   output: packed RGB888 in uint32_t, 0x00RRGGBB
 //   rgb_out capacity must be >= in_width * in_height (low-light uses <= that).
 

@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""Generate deterministic DFXISP HLS C-sim golden vectors (reset 2026-07-01).
+# =============================================================================
+# File   : isppipeline/hls/tools/gen_golden_vectors.py
+# Updated: 2026-07-02 12:20 KST
+# Function: deterministic DFXISP HLS C-sim golden vectors (bit-exact mirror of
+#           src/dfxisp_accel.cpp)
+# Goal   : Bayer pattern unified to RGGB (was GRBG) to match the SW dataset
+#           pattern (data/*/raw_bin is RGGB); HW/C-sim and SW now share one
+#           Bayer convention.
+# =============================================================================
+"""Generate deterministic DFXISP HLS C-sim golden vectors.
 
 Bit-exact mirror of src/dfxisp_accel.cpp: shared baseline ISP core + mutually
 exclusive tone RM slot. The tone RM slot wraps the shared baseline core.
@@ -8,7 +17,7 @@ exclusive tone RM slot. The tone RM slot wraps the shared baseline core.
   LOW_LIGHT:  raw -> 2x2 RAW binning -> baseline_core -> gain + gamma-4.0
                   -> RGB32 (H/2 x W/2, Policy A shape-changing)
 
-baseline_core = demosaic(GRBG) + BLC + AWB + CCM(identity). No gain/gamma.
+baseline_core = demosaic(RGGB) + BLC + AWB + CCM(identity). No gain/gamma.
 gain/gamma exist only in the low-light tone RM (no duplication).
 
 Standard library only. CSV carries per-case metadata (mode, selected RM, output
@@ -61,25 +70,26 @@ def sample_clamped(raw: list[int], w: int, h: int, x: int, y: int) -> int:
     return raw[y * w + x]
 
 
-def demosaic_grbg(raw: list[int], w: int, h: int, x: int, y: int) -> tuple[int, int, int]:
+def demosaic_rggb(raw: list[int], w: int, h: int, x: int, y: int) -> tuple[int, int, int]:
+    # RGGB Bayer: (0,0)=R (0,1)=G (1,0)=G (1,1)=B
     win = [[sample_clamped(raw, w, h, x + wx - 1, y + wy - 1) for wx in range(3)] for wy in range(3)]
     ey, ex, c = (y & 1) == 0, (x & 1) == 0, win[1][1]
-    if ey and ex:                    # G on R row
-        gg = c; rr = (win[1][0] + win[1][2]) // 2; bb = (win[0][1] + win[2][1]) // 2
-    elif ey and not ex:              # R
+    if ey and ex:                    # R
         rr = c; gg = (win[1][0] + win[1][2] + win[0][1] + win[2][1]) // 4
         bb = (win[0][0] + win[0][2] + win[2][0] + win[2][2]) // 4
-    elif (not ey) and ex:            # B
+    elif ey and not ex:              # G on R row (R horizontal, B vertical)
+        gg = c; rr = (win[1][0] + win[1][2]) // 2; bb = (win[0][1] + win[2][1]) // 2
+    elif (not ey) and ex:            # G on B row (R vertical, B horizontal)
+        gg = c; rr = (win[0][1] + win[2][1]) // 2; bb = (win[1][0] + win[1][2]) // 2
+    else:                            # B
         bb = c; gg = (win[1][0] + win[1][2] + win[0][1] + win[2][1]) // 4
         rr = (win[0][0] + win[0][2] + win[2][0] + win[2][2]) // 4
-    else:                            # G on B row
-        gg = c; rr = (win[0][1] + win[2][1]) // 2; bb = (win[1][0] + win[1][2]) // 2
     return raw12_to_u8(rr), raw12_to_u8(gg), raw12_to_u8(bb)
 
 
 def baseline_core_pixel(raw: list[int], w: int, h: int, x: int, y: int) -> tuple[int, int, int]:
     """Shared baseline ISP core: demosaic + BLC + AWB + CCM(identity). No gain/gamma."""
-    dr, dg, db = demosaic_grbg(raw, w, h, x, y)
+    dr, dg, db = demosaic_rggb(raw, w, h, x, y)
     r = (clamp_u8(dr - BLC_OFFSET) * AWB_R) // 256
     g = (clamp_u8(dg - BLC_OFFSET) * AWB_G) // 256
     b = (clamp_u8(db - BLC_OFFSET) * AWB_B) // 256

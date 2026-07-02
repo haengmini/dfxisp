@@ -19,16 +19,18 @@ refs: "README.md · RESEARCH.md · isppipeline/hls · results/experiment-report-
 
 ## 0. 범위와 두 도메인 구분
 
-DFXISP는 두 실행 도메인을 가지며, **입력 Bayer 포맷이 다르다**(중요):
+DFXISP는 두 실행 도메인을 가진다. **Bayer 패턴은 RGGB로 통일**(2026-07-02)되었고, 남은 차이는
+RAW 비트 표현뿐이다:
 
 | 도메인 | 목적 | 입력 RAW | demosaic | 정본 |
 |---|---|---|---|---|
-| **HW / C-sim** | 하드웨어 경로·bit-exact 검증 | pseudo-RAW **GRBG**, 12-bit in uint16 | GRBG 3x3 | `src/dfxisp_accel.cpp` ↔ `tools/gen_golden_vectors.py` |
-| **SW eval** | 데이터셋 규모 mAP/지표 | 데이터셋 pseudo-RAW **RGGB16**(shift8) | RGGB nearest | `tools/newrm_pipeline.py` |
+| **HW / C-sim** | 하드웨어 경로·bit-exact 검증 | pseudo-RAW **RGGB**, 12-bit in uint16 (`>>4`) | RGGB 3x3 | `src/dfxisp_accel.cpp` ↔ `tools/gen_golden_vectors.py` |
+| **SW eval** | 데이터셋 규모 mAP/지표 | 데이터셋 pseudo-RAW **RGGB16**(shift8, `>>8`) | RGGB nearest | `tools/newrm_pipeline.py` |
 
-두 도메인은 동일한 아키텍처 의미(baseline core + tone RM slot)를 구현하되, 데이터셋 레이아웃
-차이로 demosaic 종류가 다르다. 판단 근거는 **arm 간 상대 순서**이며 절대 bit-exact는 HW 도메인
-내부에서만 보장된다.
+두 도메인은 이제 **같은 Bayer 규약(RGGB)**을 쓴다(2026-07-02 통일: C-sim GRBG→RGGB). 남은 차이는
+RAW 비트 표현(HW 12-bit vs SW 8-bit shift8)뿐이며, 이로 인해 데이터셋 raw를 C-sim/HW에 직접
+흘려 end-to-end bit 대조하는 것이 향후 가능해진다. 절대 bit-exact는 HW 도메인 내부(합성 fixture)에서
+보장되고, SW mAP는 **arm 간 상대 순서**로 판단한다.
 
 ---
 
@@ -78,7 +80,7 @@ DFXISP는 두 실행 도메인을 가지며, **입력 Bayer 포맷이 다르다*
 - **해상도(W,H):** 동명 `images/<stem>.jpg`의 SOF 마커에서 파싱.
 
 ### 2.3 HW / C-sim 입력 포맷 (정본 하드웨어 경로)
-- **레이아웃:** GRBG Bayer.
+- **레이아웃:** RGGB Bayer (SW 데이터셋과 통일, 2026-07-02).
 - **자료형:** 12-bit 값을 `uint16`에 저장(`raw12_to_u8(v) = min(v,4095) >> 4`).
 - **fixture:** 합성 grid 프레임(`gen_golden_vectors.py`), 시나리오 `NORMAL×3 → LOW_LIGHT×3 →
   NORMAL×1` + threshold-boundary + bright-recovery + odd-dimension.
@@ -119,8 +121,8 @@ AUTO       -> dark_ratio = count(dark) / (W*H)
 **gain/gamma 없음.** 입력(선택된 tone RM 출력 또는 raw)에 대해 픽셀당:
 
 ```text
-1. demosaic
-     HW/C-sim: GRBG 3x3 window -> R,G,B (raw12_to_u8: >>4)
+1. demosaic (RGGB, 두 도메인 공통 규약)
+     HW/C-sim: RGGB 3x3 window -> R,G,B (raw12_to_u8: >>4)
      SW eval : RGGB nearest    -> R,G,B (>>8)
 2. BLC   : v' = clip(v - 16, 0, 255)                      # black-level
 3. AWB   : R = clip(R' * 286 / 256, 0, 255)               # Q8 채널 color calibration
@@ -138,7 +140,7 @@ tone RM slot이 baseline core를 **감싼다**(front/back).
 **RM_LOW_LIGHT_TONE (LOW_LIGHT), Policy A:**
 ```text
 front (RAW):  2x2 binning
-    HW/C-sim: binned(bx,by) = (p00+p01+p10+p11)/4  over GRBG raw  -> (W/2, H/2)
+    HW/C-sim: binned(bx,by) = (p00+p01+p10+p11)/4  over RGGB raw  -> (W/2, H/2)
     SW eval : R=cell TL, G=(TR+BL)/2, B=cell BR     over RGGB raw -> (W/2, H/2)
 core       :  baseline_isp_core(binned)                            # 위 §3.2
 back (tone):  gain  : v = clip(v * 5 / 4, 0, 255)                   # 1.25x 노출
@@ -206,7 +208,7 @@ HW에서는 AXI-Lite 레지스터로 노출; DPU 전단이 출력 크기/모드�
 ### 6.1 HLS top 함수
 ```c
 extern "C" void dfxisp_accel(
-    const uint16_t* raw_bayer,     // 입력 pseudo-RAW GRBG (W*H)
+    const uint16_t* raw_bayer,     // 입력 pseudo-RAW RGGB (W*H)
     uint32_t*       rgb_out,       // 출력 RGB32 (용량 >= W*H)
     int             width,
     int             height,
@@ -284,7 +286,8 @@ RM_LOW_LIGHT_TONE / 상호배타 RM 선택 / gain·gamma 중복 없음 / 형상�
 
 1. **SW eval은 proxy:** pseudo-RAW는 이미 ISP된 JPEG 역변환, RGGB nearest, n=71~113, CPU.
    절대값 아닌 arm 순서가 판단 근거.
-2. **HW(GRBG) vs SW(RGGB) demosaic 차이:** 상대 behaviour 비교 관례.
+2. **Bayer 패턴 통일(2026-07-02):** HW/C-sim·SW 모두 RGGB. 남은 차이는 RAW 비트표현
+   (HW 12-bit `>>4` vs SW shift8 `>>8`)뿐. (과거 실험 보고서의 "GRBG vs RGGB" 캐비어트는 통일 전 기록.)
 3. **Stage 1~3 실측 발견(중요):** 현재 tone RM(normal=identity, low-light=bin+gain+gamma-4.0,
    Policy A)은 세 detector·두 데이터셋 모두에서 **무처리(none)보다 mAP 낮음** = mAP guardrail 탈락.
    → 방향 A와 정합(mAP는 최소/register 처리, DFX/RM은 자원·전력으로 정당화).

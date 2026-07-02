@@ -2,8 +2,15 @@
 
 #include <cstdint>
 
-// DFXISP core C-sim: shared baseline ISP core + mutually exclusive tone RM slot.
-// Integer-only; bit-exact mirror of tools/gen_golden_vectors.py.
+// =============================================================================
+// File   : isppipeline/hls/src/dfxisp_accel.cpp
+// Updated: 2026-07-02 12:20 KST
+// Function: DFXISP core C-sim — shared baseline ISP core + mutually exclusive
+//           tone RM slot. Integer-only; bit-exact mirror of gen_golden_vectors.py.
+// Goal   : Bayer pattern unified to RGGB (was GRBG) so the HW/C-sim demosaic
+//           matches the SW dataset pattern (data/*/raw_bin is RGGB). Both domains
+//           now use the same Bayer convention.
+// =============================================================================
 //
 // Ordering (confirmed 2026-07-01): the tone RM slot wraps the shared baseline
 // core. Low-light 2x2 binning runs on RAW (before precision loss, RESEARCH.md
@@ -81,7 +88,8 @@ static int checker_select_mode(const uint16_t* raw, int width, int height, int m
 // ---------------------------------------------------------------------------
 // Shared baseline ISP core: demosaic + BLC + AWB + CCM. No gain/gamma.
 // ---------------------------------------------------------------------------
-static void demosaic_grbg(const uint16_t* raw, int width, int height, int x, int y,
+// RGGB Bayer demosaic (pattern: (0,0)=R (0,1)=G (1,0)=G (1,1)=B).
+static void demosaic_rggb(const uint16_t* raw, int width, int height, int x, int y,
                           uint8_t& r, uint8_t& g, uint8_t& b) {
 #pragma HLS INLINE
     uint16_t win[3][3];
@@ -94,22 +102,22 @@ static void demosaic_grbg(const uint16_t* raw, int width, int height, int x, int
     const uint16_t c = win[1][1];
     uint16_t rr = 0, gg = 0, bb = 0;
 
-    if (even_y && even_x) {          // G on R row
-        gg = c;
-        rr = (win[1][0] + win[1][2]) / 2;
-        bb = (win[0][1] + win[2][1]) / 2;
-    } else if (even_y && !even_x) {  // R
+    if (even_y && even_x) {          // R
         rr = c;
         gg = (win[1][0] + win[1][2] + win[0][1] + win[2][1]) / 4;
         bb = (win[0][0] + win[0][2] + win[2][0] + win[2][2]) / 4;
-    } else if (!even_y && even_x) {  // B
-        bb = c;
-        gg = (win[1][0] + win[1][2] + win[0][1] + win[2][1]) / 4;
-        rr = (win[0][0] + win[0][2] + win[2][0] + win[2][2]) / 4;
-    } else {                         // G on B row
+    } else if (even_y && !even_x) {  // G on R row (R horizontal, B vertical)
+        gg = c;
+        rr = (win[1][0] + win[1][2]) / 2;
+        bb = (win[0][1] + win[2][1]) / 2;
+    } else if (!even_y && even_x) {  // G on B row (R vertical, B horizontal)
         gg = c;
         rr = (win[0][1] + win[2][1]) / 2;
         bb = (win[1][0] + win[1][2]) / 2;
+    } else {                         // B
+        bb = c;
+        gg = (win[1][0] + win[1][2] + win[0][1] + win[2][1]) / 4;
+        rr = (win[0][0] + win[0][2] + win[2][0] + win[2][2]) / 4;
     }
     r = raw12_to_u8(rr);
     g = raw12_to_u8(gg);
@@ -120,7 +128,7 @@ static void baseline_isp_core_pixel(const uint16_t* raw, int width, int height, 
                                     uint8_t& r, uint8_t& g, uint8_t& b) {
 #pragma HLS INLINE
     uint8_t dr, dg, db;
-    demosaic_grbg(raw, width, height, x, y, dr, dg, db);
+    demosaic_rggb(raw, width, height, x, y, dr, dg, db);
     // BLC
     int br = dr - BLC_OFFSET, bg = dg - BLC_OFFSET, bb = db - BLC_OFFSET;
     // AWB (Q8 per-channel color calibration)
