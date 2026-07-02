@@ -1,24 +1,27 @@
 #!/usr/bin/env python3
 # =============================================================================
 # File   : isppipeline/hls/tools/gen_golden_vectors.py
-# Updated: 2026-07-02 12:20 KST
+# Updated: 2026-07-02 12:40 KST
 # Function: deterministic DFXISP HLS C-sim golden vectors (bit-exact mirror of
 #           src/dfxisp_accel.cpp)
-# Goal   : Bayer pattern unified to RGGB (was GRBG) to match the SW dataset
-#           pattern (data/*/raw_bin is RGGB); HW/C-sim and SW now share one
-#           Bayer convention.
+# Goal   : Reflect ver1 RAW-domain-first ordering into HW/C-sim golden:
+#             baseline core = demosaic -> BLC -> WB -> CCM (12-bit, no gain/gamma)
+#             RM_NORMAL_TONE    = gain 1.25x + gamma2.0
+#             RM_LOW_LIGHT_TONE = 2x2 bin(front) + gain 2.0x + gamma2.0 (back)
+#           Corrections in 12-bit before final >>4; gamma via integer sqrt (gamma
+#           2.0) for bit-exactness. Bayer pattern RGGB (unified with SW dataset).
 # =============================================================================
 """Generate deterministic DFXISP HLS C-sim golden vectors.
 
 Bit-exact mirror of src/dfxisp_accel.cpp: shared baseline ISP core + mutually
-exclusive tone RM slot. The tone RM slot wraps the shared baseline core.
+exclusive tone RM slot. tone RM wraps the core; gain/gamma live only in the tone
+RMs (no duplication).
 
-  NORMAL:     raw -> RM_NORMAL_TONE(identity) -> baseline_core -> RGB32 (H x W)
-  LOW_LIGHT:  raw -> 2x2 RAW binning -> baseline_core -> gain + gamma-4.0
-                  -> RGB32 (H/2 x W/2, Policy A shape-changing)
+  NORMAL:     raw -> baseline_core12 -> RM_NORMAL_TONE(gain 1.25x + gamma2)  (H x W)
+  LOW_LIGHT:  raw -> 2x2 RAW bin -> baseline_core12 -> RM_LOW_LIGHT_TONE
+                     (gain 2.0x + gamma2)                        (H/2 x W/2, Policy A)
 
-baseline_core = demosaic(RGGB) + BLC + AWB + CCM(identity). No gain/gamma.
-gain/gamma exist only in the low-light tone RM (no duplication).
+baseline_core12 = demosaic(RGGB) + BLC + WB + CCM(identity), all in 12-bit. No gain/gamma.
 
 Standard library only. CSV carries per-case metadata (mode, selected RM, output
 shape) plus input RAW rows (kind=raw) and expected output rows (kind=rgb).
@@ -38,30 +41,31 @@ DFXISP_MODE_AUTO = 2
 DFXISP_RM_NORMAL_TONE = 0
 DFXISP_RM_LOW_LIGHT_TONE = 1
 
-# shared baseline-core params (mode independent)
-BLC_OFFSET = 16
+# shared baseline-core params (mode independent, 12-bit RAW domain)
+BLC_OFFSET12 = 16 << 4          # black level 16 (8-bit) -> 256 (12-bit)
+RAW12_MAX = 4095
 AWB_R, AWB_G, AWB_B = 286, 256, 307
-# low-light tone RM params
-LL_GAIN_NUM, LL_GAIN_DEN = 5, 4          # 1.25x exposure gain
-GAMMA4_SCALE = 16581375                  # 255**3, gamma 4.0 via exact 4th root
-DARK_RATIO_PCT = 40                      # AUTO -> LOW_LIGHT when dark pixels > 40%
+# tone RM params
+GAIN_NORMAL_NUM, GAIN_NORMAL_DEN = 5, 4        # normal 1.25x
+GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN = 2, 1    # low-light 2.0x
+DARK_RATIO_PCT = 40                            # AUTO -> LOW_LIGHT when dark pixels > 40%
+
+
+def clamp(v: int, lo: int, hi: int) -> int:
+    return lo if v < lo else hi if v > hi else v
 
 
 def clamp_u8(v: int) -> int:
-    return 0 if v < 0 else 255 if v > 255 else v
-
-
-def raw12_to_u8(v: int) -> int:
-    return (min(v, 4095) >> 4) & 0xFF
+    return clamp(v, 0, 255)
 
 
 def pack_rgb(r: int, g: int, b: int) -> int:
     return (r << 16) | (g << 8) | b
 
 
-def gamma4(v: int) -> int:
-    # out = floor((255^3 * v)^(1/4)); isqrt(isqrt(n)) == floor(n^(1/4))
-    return clamp_u8(isqrt(isqrt(GAMMA4_SCALE * v)))
+def gamma2(v: int) -> int:
+    # gamma 2.0: out = floor(sqrt(255 * v)); isqrt is exact & matches C++ isqrt_u64
+    return clamp_u8(isqrt(255 * v))
 
 
 def sample_clamped(raw: list[int], w: int, h: int, x: int, y: int) -> int:
@@ -70,8 +74,8 @@ def sample_clamped(raw: list[int], w: int, h: int, x: int, y: int) -> int:
     return raw[y * w + x]
 
 
-def demosaic_rggb(raw: list[int], w: int, h: int, x: int, y: int) -> tuple[int, int, int]:
-    # RGGB Bayer: (0,0)=R (0,1)=G (1,0)=G (1,1)=B
+def demosaic_rggb12(raw: list[int], w: int, h: int, x: int, y: int) -> tuple[int, int, int]:
+    # RGGB Bayer: (0,0)=R (0,1)=G (1,0)=G (1,1)=B ; keep 12-bit (no >>4 here)
     win = [[sample_clamped(raw, w, h, x + wx - 1, y + wy - 1) for wx in range(3)] for wy in range(3)]
     ey, ex, c = (y & 1) == 0, (x & 1) == 0, win[1][1]
     if ey and ex:                    # R
@@ -84,16 +88,25 @@ def demosaic_rggb(raw: list[int], w: int, h: int, x: int, y: int) -> tuple[int, 
     else:                            # B
         bb = c; gg = (win[1][0] + win[1][2] + win[0][1] + win[2][1]) // 4
         rr = (win[0][0] + win[0][2] + win[2][0] + win[2][2]) // 4
-    return raw12_to_u8(rr), raw12_to_u8(gg), raw12_to_u8(bb)
+    return min(rr, RAW12_MAX), min(gg, RAW12_MAX), min(bb, RAW12_MAX)
 
 
-def baseline_core_pixel(raw: list[int], w: int, h: int, x: int, y: int) -> tuple[int, int, int]:
-    """Shared baseline ISP core: demosaic + BLC + AWB + CCM(identity). No gain/gamma."""
-    dr, dg, db = demosaic_rggb(raw, w, h, x, y)
-    r = (clamp_u8(dr - BLC_OFFSET) * AWB_R) // 256
-    g = (clamp_u8(dg - BLC_OFFSET) * AWB_G) // 256
-    b = (clamp_u8(db - BLC_OFFSET) * AWB_B) // 256
-    return clamp_u8(r), clamp_u8(g), clamp_u8(b)
+def baseline_core12(raw: list[int], w: int, h: int, x: int, y: int) -> tuple[int, int, int]:
+    """Shared baseline ISP core (ver1): demosaic + BLC + WB + CCM in 12-bit. No gain/gamma."""
+    dr, dg, db = demosaic_rggb12(raw, w, h, x, y)
+    dr = clamp(dr - BLC_OFFSET12, 0, RAW12_MAX)          # BLC (subtract first)
+    dg = clamp(dg - BLC_OFFSET12, 0, RAW12_MAX)
+    db = clamp(db - BLC_OFFSET12, 0, RAW12_MAX)
+    r = clamp(dr * AWB_R // 256, 0, RAW12_MAX)           # WB per channel (Q8)
+    g = clamp(dg * AWB_G // 256, 0, RAW12_MAX)
+    b = clamp(db * AWB_B // 256, 0, RAW12_MAX)           # CCM identity
+    return r, g, b
+
+
+def tone(v12: int, gnum: int, gden: int) -> int:
+    """tone RM: exposure gain (12-bit) -> >>4 to 8-bit -> gamma 2.0."""
+    gained = clamp(v12 * gnum // gden, 0, RAW12_MAX)
+    return gamma2(clamp_u8(gained >> 4))
 
 
 def bin_dim(d: int) -> int:
@@ -114,10 +127,16 @@ def run_frame(raw: list[int], w: int, h: int, mode: int, dark_threshold: int):
     selected = checker_select_mode(raw, w, h, mode, dark_threshold)
 
     if selected == DFXISP_MODE_NORMAL:
-        out = [pack_rgb(*baseline_core_pixel(raw, w, h, x, y)) for y in range(h) for x in range(w)]
+        out = []
+        for y in range(h):
+            for x in range(w):
+                r12, g12, b12 = baseline_core12(raw, w, h, x, y)     # core (no gain/gamma)
+                out.append(pack_rgb(tone(r12, GAIN_NORMAL_NUM, GAIN_NORMAL_DEN),
+                                    tone(g12, GAIN_NORMAL_NUM, GAIN_NORMAL_DEN),
+                                    tone(b12, GAIN_NORMAL_NUM, GAIN_NORMAL_DEN)))
         return selected, DFXISP_RM_NORMAL_TONE, w, h, out
 
-    # LOW_LIGHT: 2x2 RAW binning -> baseline core -> gain + gamma-4.0 tone
+    # LOW_LIGHT: 2x2 RAW binning (front) -> baseline core -> gain 2.0x + gamma (back)
     bw, bh = bin_dim(w), bin_dim(h)
     binned = [0] * (bw * bh)
     for by in range(bh):
@@ -129,11 +148,10 @@ def run_frame(raw: list[int], w: int, h: int, mode: int, dark_threshold: int):
     out = []
     for y in range(bh):
         for x in range(bw):
-            r, g, b = baseline_core_pixel(binned, bw, bh, x, y)
-            r = gamma4(clamp_u8((r * LL_GAIN_NUM) // LL_GAIN_DEN))
-            g = gamma4(clamp_u8((g * LL_GAIN_NUM) // LL_GAIN_DEN))
-            b = gamma4(clamp_u8((b * LL_GAIN_NUM) // LL_GAIN_DEN))
-            out.append(pack_rgb(r, g, b))
+            r12, g12, b12 = baseline_core12(binned, bw, bh, x, y)
+            out.append(pack_rgb(tone(r12, GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN),
+                                tone(g12, GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN),
+                                tone(b12, GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN)))
     return selected, DFXISP_RM_LOW_LIGHT_TONE, bw, bh, out
 
 
@@ -152,13 +170,8 @@ def grid_raw(w: int, h: int, levels: list[int], cell: int = 2, texture: int = 32
     return raw
 
 
-def const_raw(w: int, h: int, value: int) -> list[int]:
-    return [value] * (w * h)
-
-
 def golden_cases():
-    # Scenario: bright normal x3 -> dark low-light x3 -> bright recovery x1,
-    # plus a threshold-boundary AUTO frame and an odd-dimension low-light frame.
+    # bright normal x3 -> dark low-light x3 -> bright recovery x1, + threshold + odd-dim.
     return [
         ("seq1_bright_normal_grid_8x8", 8, 8, DFXISP_MODE_NORMAL, 512,
          grid_raw(8, 8, [1800, 2300, 2800, 3300, 3800, 3050, 2450, 3600])),

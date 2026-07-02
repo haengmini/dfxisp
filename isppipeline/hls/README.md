@@ -12,16 +12,16 @@
 NORMAL:
   pseudo-RAW Bayer RGGB uint16
     -> checker (mode 결정)
-    -> RM_NORMAL_TONE (identity bypass)
-    -> baseline ISP core (demosaic + BLC + AWB + CCM, gain/gamma 없음)
+    -> RM_NORMAL_TONE (gain 1.25x + gamma2.0)
+    -> baseline ISP core (demosaic + BLC + WB + CCM, 12-bit, gain/gamma 없음)
     -> packed RGB888 uint32  (H x W)
 
 LOW_LIGHT:
   pseudo-RAW Bayer RGGB uint16
     -> checker (mode 결정)
     -> RM_LOW_LIGHT_TONE.front : 2x2 RAW binning (precision loss 전, RESEARCH §4.2)
-    -> baseline ISP core (demosaic + BLC + AWB + CCM, gain/gamma 없음)
-    -> RM_LOW_LIGHT_TONE.back  : low-light gain + gamma-4.0 tone
+    -> baseline ISP core (demosaic + BLC + WB + CCM, 12-bit, gain/gamma 없음)
+    -> RM_LOW_LIGHT_TONE.back  : low-light gain 2.0x + gamma2.0 tone
     -> packed RGB888 uint32  (H/2 x W/2, Policy A 형상변경)
 ```
 
@@ -37,7 +37,7 @@ C-sim이 증명하는 불변식(RESEARCH.md §8.2):
 ## 파일
 
 - `include/dfxisp_accel.hpp` — HLS top 인터페이스, mode/selected-RM enum, `DfxIspResult` 메타데이터
-- `src/dfxisp_accel.cpp` — checker + baseline core(demosaic/BLC/AWB/CCM) + RM_NORMAL_TONE(identity) + RM_LOW_LIGHT_TONE(2x2 bin + gain + gamma-4.0)
+- `src/dfxisp_accel.cpp` — checker + baseline core12(demosaic/BLC/WB/CCM, 12-bit) + RM_NORMAL_TONE(gain 1.25x + gamma2.0) + RM_LOW_LIGHT_TONE(2x2 bin + gain 2.0x + gamma2.0)
 - `tests/test_dfxisp_csim.cpp` — C-sim smoke 테스트 + golden CSV bit-compare + 아키텍처 불변식 검사
 - `tools/gen_golden_vectors.py` — stdlib-only 결정적 golden 생성기(`src/dfxisp_accel.cpp` bit-exact 미러)
 - `tools/gen_verification_report.py` — stdlib-only Markdown 검증/리포트 생성기
@@ -114,14 +114,15 @@ extern "C" void dfxisp_accel(
 - `checker_select_mode()` — static-region scene checker. `AUTO`에서 dark-pixel 비율로
   NORMAL/LOW_LIGHT를 결정. 장면 단위 히스테리시스는 시퀀스 스케줄러(RESEARCH §5.2) 담당이며
   단일 프레임 C-sim entry에는 없다.
-- `baseline_isp_core_pixel()` — **shared static** baseline core. demosaic(RGGB 3x3) +
-  BLC + AWB(Q8 채널 게인) + CCM(identity placeholder). **gain/gamma 없음.**
-- `run_normal()` — RM_NORMAL_TONE = identity bypass. baseline core를 full-res로 실행.
+- `baseline_core12()` — **shared static** baseline core (ver1). demosaic(RGGB 3x3) +
+  BLC + WB(Q8 채널 게인) + CCM(identity)을 **12-bit로 수행**(최종 >>4는 tone에서). **gain/gamma 없음.**
+- `tone()` — tone RM 스테이지: exposure gain(12-bit) → >>4 → gamma2.0. mode별 gain.
+- `run_normal()` — RM_NORMAL_TONE = **gain 1.25× + gamma2.0**. baseline core를 full-res로 실행.
 - `run_low_light()` — **RM_LOW_LIGHT_TONE**(DFX reconfigurable module 후보). RAW 2x2
-  binning(front) → baseline core → low-light gain + gamma-4.0(back). Vivado DFX 구현에서는
+  binning(front) → baseline core → **gain 2.0× + gamma2.0**(back). Vivado DFX 구현에서는
   이 tone RM slot을 RM-호환 블록으로 패키징하고, checker·baseline core·controller는 static
   region에 둔다.
-- `gamma4()` — γ=4.0을 정수 4제곱근 `floor((255^3·v)^(1/4))`로 정확히 실현(Python `isqrt`와
+- `gamma2()` — γ=2.0을 정수 sqrt `floor(sqrt(255·v))`로 정확히 실현(Python `isqrt`와
   bit-exact). HW에서는 256-엔트리 LUT로 대체 가능.
 
 C-sim에는 Vitis 전용 헤더가 필요 없다; HLS pragma만 존재하며 로컬 g++ 빌드에서는 무시된다.

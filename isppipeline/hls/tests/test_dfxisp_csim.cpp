@@ -124,7 +124,7 @@ int main() {
     assert(rl.selected_mode == DFXISP_MODE_LOW_LIGHT);
     assert(rl.selected_rm == DFXISP_RM_LOW_LIGHT_TONE);
     assert(rl.out_width == W / 2 && rl.out_height == H / 2);
-    // low-light tone (gain + gamma-4.0) brightens vs the shared baseline value.
+    // low-light tone (gain 2.0x + gamma2.0) brightens vs normal tone (gain 1.25x + gamma2.0).
     assert(red(low[0]) > red(normal[0]));
     assert(green(low[0]) > green(normal[0]));
     assert(blue(low[0]) > blue(normal[0]));
@@ -147,7 +147,7 @@ int main() {
     assert(rab.selected_mode == DFXISP_MODE_NORMAL);
     assert(rab.selected_rm == DFXISP_RM_NORMAL_TONE);
 
-    // Saturation: gamma-4.0 tone never overflows RGB8.
+    // Saturation: gain + gamma2.0 tone never overflows RGB8.
     uint16_t sat[W * H];
     for (int i = 0; i < W * H; ++i) sat[i] = 4095;
     uint32_t sat_out[W * H] = {};

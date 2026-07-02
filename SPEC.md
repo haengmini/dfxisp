@@ -40,14 +40,13 @@ RAW 비트 표현(HW 12-bit vs SW 8-bit shift8)뿐이며, 이로 인해 데이�
 [입력 데이터셋]                    [DFXISP 파이프라인]                         [출력/평가]
  pseudo-RAW Bayer  ──▶  ① Scene checker (mode 결정: dark_ratio + hysteresis)
  (raw_bin / fixture)          │
- + labels(COCO-80)            ├─ NORMAL  ─▶ RM_NORMAL_TONE(identity)
-                              │                 └─▶ ② baseline ISP core
-                              │                       (demosaic+BLC+AWB+CCM, gain/gamma 없음)
+ + labels(COCO-80)            ├─ NORMAL  ─▶ ② baseline core12 (demosaic+BLC+WB+CCM, 12-bit)
+                              │                 └─▶ ③ RM_NORMAL_TONE (gain 1.25× + gamma2.0)
                               │                       └─▶ RGB32 (H×W)
                               │
                               └─ LOW_LIGHT ─▶ ③ RM_LOW_LIGHT_TONE.front(2x2 RAW binning)
-                                                └─▶ ② baseline ISP core
-                                                     └─▶ ③ RM_LOW_LIGHT_TONE.back(gain+gamma4)
+                                                └─▶ ② baseline core12 (demosaic+BLC+WB+CCM, 12-bit)
+                                                     └─▶ ③ RM_LOW_LIGHT_TONE.back(gain 2.0× + gamma2.0)
                                                           └─▶ RGB32 (H/2 × W/2, Policy A)
                                                                        │
                                      ④ 메타데이터 DfxIspResult ─────────┤
@@ -117,42 +116,44 @@ AUTO       -> dark_ratio = count(dark) / (W*H)
   히스테리시스 밴드, min-dwell)는 스케줄러(`tools/scheduler_sim.py`/`scheduler_sweep.py`)가 담당.
   권장 파라미터(실측): narrow 밴드 + temporal_N=3 (mismatch 0.015, thrashing 0).
 
-### 3.2 ② Baseline ISP core (shared, static, mode 무관)
-**gain/gamma 없음.** 입력(선택된 tone RM 출력 또는 raw)에 대해 픽셀당:
+### 3.2 ② Baseline ISP core (shared, static, mode 무관) — ver1
+**gain/gamma 없음.** 보정을 **12-bit RAW 도메인에서 수행**하고 최종 `>>4`는 tone에서 한다
+(ver1 핵심: precision 보존). 픽셀당:
 
 ```text
-1. demosaic (RGGB, 두 도메인 공통 규약)
-     HW/C-sim: RGGB 3x3 window -> R,G,B (raw12_to_u8: >>4)
-     SW eval : RGGB nearest    -> R,G,B (>>8)
-2. BLC   : v' = clip(v - 16, 0, 255)                      # black-level
-3. AWB   : R = clip(R' * 286 / 256, 0, 255)               # Q8 채널 color calibration
-           G = clip(G' * 256 / 256, 0, 255)
-           B = clip(B' * 307 / 256, 0, 255)
-4. CCM   : identity (placeholder, Q8 scale 256)           # 구조 유지, 색변환 없음
+1. demosaic (RGGB) -> R,G,B 12-bit (0..4095)     # HW/C-sim: >>4 안 함(여기선 유지)
+2. BLC   : v = clip(v - 256, 0, 4095)            # 12-bit black-level (16<<4)
+3. WB    : R = clip(R * 286 / 256, 0, 4095)      # Q8 채널 white balance(color)
+           G = clip(G * 256 / 256, 0, 4095)
+           B = clip(B * 307 / 256, 0, 4095)
+4. CCM   : identity                              # 구조 유지, 색변환 없음
+반환      : R,G,B 12-bit  (>>4 및 gamma는 tone RM에서)
+```
+> SW eval proxy(`isp_pipeline_ver1.py`)는 8-bit 도메인(>>8) + float γ LUT를 쓰는 근사이며,
+> HW/C-sim이 정본(12-bit, 정수 γ). 상세 §0.
+
+### 3.3 ③ Tone RM slot (상호배타, reconfigurable) — ver1
+tone RM slot이 baseline core를 **감싼다**(front/back). tone = exposure gain(12-bit) → `>>4` → gamma.
+
+```text
+tone(v12, gnum, gden) = gamma2( clip(v12*gnum/gden, 0, 4095) >> 4 )
+gamma2(v8) = floor(sqrt(255 * v8)) = isqrt(255*v8)     # γ=2.0, 정수 exact, bit-exact
 ```
 
-### 3.3 ③ Tone RM slot (상호배타, reconfigurable)
-tone RM slot이 baseline core를 **감싼다**(front/back).
-
-**RM_NORMAL_TONE (NORMAL):** identity bypass. 출력 = baseline_core(raw), 형상 H×W.
-(계획된 개정: identity 대신 register gain — §11 참조.)
+**RM_NORMAL_TONE (NORMAL):** gain **1.25×**(5/4) + gamma2.0. 형상 H×W. (ver1: identity → gain+gamma)
 
 **RM_LOW_LIGHT_TONE (LOW_LIGHT), Policy A:**
 ```text
-front (RAW):  2x2 binning
-    HW/C-sim: binned(bx,by) = (p00+p01+p10+p11)/4  over RGGB raw  -> (W/2, H/2)
-    SW eval : R=cell TL, G=(TR+BL)/2, B=cell BR     over RGGB raw -> (W/2, H/2)
-core       :  baseline_isp_core(binned)                            # 위 §3.2
-back (tone):  gain  : v = clip(v * 5 / 4, 0, 255)                   # 1.25x 노출
-              gamma : v = gamma4(v)                                 # γ=4.0
+front (RAW):  2x2 binning  binned(bx,by) = (p00+p01+p10+p11)/4  -> (W/2, H/2)
+core       :  baseline_core12(binned)                          # 위 §3.2 (12-bit)
+back (tone):  gain **2.0×**(2/1) + gamma2.0
 출력 형상   :  H/2 × W/2   (bin_dim(d) = max(1, d/2))
 ```
-- **gamma4(v)** = `floor((255^3 · v)^(1/4))` = `isqrt(isqrt(16581375 · v))` (정수 4제곱근,
-  Python `math.isqrt`와 C++ 동일 → bit-exact, 부동소수 없음). gamma4(0)=0, gamma4(255)=255.
 
-### 3.4 데이터 흐름 순서 결정
-tone RM이 core를 감싸는 순서로 확정(2026-07-01): 저조도 binning은 **RAW에서 precision loss 전**에
-수행하고, gain/gamma는 8-bit tone으로 core 뒤에 둔다(RESEARCH §4.2). de-dup 불변식 유지.
+### 3.4 데이터 흐름 순서 결정 (ver1)
+ver1(2026-07-02): 보정(BLC/WB)을 **demosaic 직후 12-bit에서** 수행(선형이라 RAW-domain과 동치,
+최종 `>>4` 전까지 정밀도 보존). 저조도 binning은 **RAW에서 precision loss 전**에, gain·gamma는
+tone RM(core 뒤)에 둔다(RESEARCH §4.2). de-dup 불변식 유지(gain/gamma는 tone RM에만).
 
 ---
 
@@ -162,17 +163,18 @@ tone RM이 core를 감싸는 순서로 확정(2026-07-01): 저조도 binning은 
 |---|---|---|---|
 | checker | DARK_Y (SW) | 50 | Y<50 = dark 픽셀 |
 | checker | DARK_RATIO | 0.40 | AUTO→LOW_LIGHT 임계 |
-| baseline core | BLC_OFFSET | 16 | black-level |
-| baseline core | AWB_R / G / B | 286 / 256 / 307 | Q8(/256) color cal |
+| baseline core | BLC_OFFSET12 | 256 (=16<<4) | 12-bit black-level |
+| baseline core | AWB_R / G / B | 286 / 256 / 307 | Q8(/256) white balance |
 | baseline core | CCM | identity(256) | placeholder |
-| low-light tone | LL_GAIN | 5/4 (1.25×) | 노출 게인 |
-| low-light tone | GAMMA | γ=4.0 | `(255^3·v)^(1/4)` |
-| raw 변환 | SHIFT (SW) | 8 | 16→8 bit |
-| raw 변환 | raw12_to_u8 (HW) | `>>4` | 12→8 bit |
+| normal tone | GAIN_NORMAL | 5/4 (1.25×) | 노출 게인 (ver1 추가) |
+| low-light tone | GAIN_LOWLIGHT | 2/1 (2.0×) | 노출 게인 |
+| tone (공통) | GAMMA | γ=2.0 | `floor(sqrt(255·v))` = isqrt, 정수 exact |
+| raw 변환 | RAW12_MAX / `>>4` (HW) | 4095 / 12→8 bit | tone에서 >>4 |
+| raw 변환 | SHIFT (SW proxy) | 8 | 16→8 bit |
 | 형상 | bin_dim | `max(1, d/2)` | Policy A |
 
-> 계획된 개정(Stage 1~3 실측 반영): normal RM=register gain, low-light γ≈2.5~3.0/Policy B,
-> checker dark-level 재보정. §11 참조.
+> ver1(2026-07-02) 반영 완료: 보정 12-bit RAW-domain, normal에 gain+gamma, low-light γ4.0→2.0(완화).
+> SW proxy(`isp_pipeline_ver1.py`)는 float γ2.2/2.5·8-bit 근사(정본은 HW 정수 γ2.0).
 
 ---
 
@@ -288,11 +290,12 @@ RM_LOW_LIGHT_TONE / 상호배타 RM 선택 / gain·gamma 중복 없음 / 형상�
    절대값 아닌 arm 순서가 판단 근거.
 2. **Bayer 패턴 통일(2026-07-02):** HW/C-sim·SW 모두 RGGB. 남은 차이는 RAW 비트표현
    (HW 12-bit `>>4` vs SW shift8 `>>8`)뿐. (과거 실험 보고서의 "GRBG vs RGGB" 캐비어트는 통일 전 기록.)
-3. **Stage 1~3 실측 발견(중요):** 현재 tone RM(normal=identity, low-light=bin+gain+gamma-4.0,
-   Policy A)은 세 detector·두 데이터셋 모두에서 **무처리(none)보다 mAP 낮음** = mAP guardrail 탈락.
-   → 방향 A와 정합(mAP는 최소/register 처리, DFX/RM은 자원·전력으로 정당화).
-   **계획된 사양 개정:** (a) RM_NORMAL_TONE = register gain, (b) low-light γ 완화·Policy B·denoise,
-   (c) checker dark-level 재보정 → 개정 후 재측정으로 guardrail 재판정.
+3. **Stage 1~3 실측 발견(중요):** ver0(normal=identity, low-light=bin+gain+gamma-4.0)은 세
+   detector·두 데이터셋 모두에서 **무처리(none)보다 mAP 낮음** = mAP guardrail 탈락.
+   **ver1 반영(2026-07-02):** (a) RM_NORMAL_TONE = gain 1.25×+gamma **완료**, (b) low-light
+   γ4.0→2.0 완화 **완료**, 보정 12-bit RAW-domain **완료**. ver1은 저조도 arm을 +약20% 개선했으나
+   **여전히 none이 최고**(SW proxy 천장) → 방향 A 유지(mAP는 최소 처리, DFX/RM은 자원·전력 정당화).
+   남은 개정: (c) checker dark-level 재보정, (d) Policy B/denoise형 RM. 최종 판정은 보드 DPU+real-RAW.
 4. **HW 수치 위조 금지:** Vivado/보드 없이 §10·L2~L5 수치를 만들지 않음(TODO 유지).
 
 ---
@@ -304,7 +307,7 @@ RM_LOW_LIGHT_TONE / 상호배타 RM 선택 / gain·gamma 중복 없음 / 형상�
 | DFX / DPR | Dynamic Function eXchange / 부분 재구성 |
 | RM | Reconfigurable Module(부분 비트스트림 교체 단위) |
 | tone RM slot | gain/gamma/binning을 담는 상호배타 재구성 영역 |
-| baseline ISP core | demosaic+BLC+AWB+CCM 공통 후단(정확히는 tone에 감싸임), gain/gamma 없음 |
+| baseline ISP core | demosaic+BLC+WB+CCM 공통(12-bit, tone에 감싸임), gain/gamma 없음 |
 | Policy A / B | 형상변경(H/2×W/2) / 형상보존(upsample-pad) |
 | guardrail | mAP가 기준선(예: none/register-only) 이상이어야 RM 채택 |
 | arm | 실험 비교군(static / register-only / DFX / ablation) |

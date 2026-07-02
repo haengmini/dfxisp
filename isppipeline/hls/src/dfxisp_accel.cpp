@@ -4,42 +4,39 @@
 
 // =============================================================================
 // File   : isppipeline/hls/src/dfxisp_accel.cpp
-// Updated: 2026-07-02 12:20 KST
+// Updated: 2026-07-02 12:40 KST
 // Function: DFXISP core C-sim — shared baseline ISP core + mutually exclusive
 //           tone RM slot. Integer-only; bit-exact mirror of gen_golden_vectors.py.
-// Goal   : Bayer pattern unified to RGGB (was GRBG) so the HW/C-sim demosaic
-//           matches the SW dataset pattern (data/*/raw_bin is RGGB). Both domains
-//           now use the same Bayer convention.
+// Goal   : Reflect the ver1 RAW-domain-first ordering into HW/C-sim:
+//             baseline core = demosaic -> BLC -> WB -> CCM   (12-bit, no gain/gamma)
+//             RM_NORMAL_TONE     = gain(1.25x) + gamma        (was identity)
+//             RM_LOW_LIGHT_TONE  = 2x2 bin(front) + gain(2.0x) + gamma(back)
+//           Corrections stay in 12-bit before the final >>4 (precision preserved);
+//           gamma via integer sqrt (gamma 2.0) so it is bit-exact & HLS-friendly.
+//           Bayer pattern RGGB (unified with the SW dataset).
 // =============================================================================
 //
-// Ordering (confirmed 2026-07-01): the tone RM slot wraps the shared baseline
-// core. Low-light 2x2 binning runs on RAW (before precision loss, RESEARCH.md
-// §4.2); low-light gain + gamma run as an 8-bit tone stage after the core.
-// gain/gamma never appear inside the baseline core (no duplication).
+// Ordering: tone RM slot wraps the shared baseline core. Low-light 2x2 binning
+// runs on RAW (before precision loss); gain/gamma are the tone stages and never
+// appear inside the baseline core (no duplication, RESEARCH.md de-dup rule).
 
 namespace {
 
-// --- shared baseline-core parameters (mode independent) ---
-constexpr int BLC_OFFSET = 16;      // black-level correction
-constexpr int AWB_R = 286;          // Q8 per-channel color calibration
+// --- shared baseline-core parameters (mode independent, 12-bit RAW domain) ---
+constexpr int BLC_OFFSET12 = 16 << 4;   // black level 16 (8-bit) -> 256 (12-bit)
+constexpr int RAW12_MAX = 4095;
+constexpr int AWB_R = 286;              // Q8 per-channel white balance (color)
 constexpr int AWB_G = 256;
 constexpr int AWB_B = 307;
-// --- low-light tone RM parameters ---
-constexpr int LL_GAIN_NUM = 5;      // low-light exposure gain 1.25x
-constexpr int LL_GAIN_DEN = 4;
-// gamma 4.0 realized exactly as the integer 4th root: 255*(v/255)^(1/4)
-//   = (255^3 * v)^(1/4),  255^3 = 16581375
-constexpr uint64_t GAMMA4_SCALE = 16581375ull;
+// --- tone RM parameters (exposure gain per mode + gamma) ---
+constexpr int GAIN_NORMAL_NUM = 5, GAIN_NORMAL_DEN = 4;      // normal 1.25x
+constexpr int GAIN_LOWLIGHT_NUM = 2, GAIN_LOWLIGHT_DEN = 1;  // low-light 2.0x
+// gamma 2.0 realized exactly as integer sqrt: 255*(v/255)^(1/2) = floor(sqrt(255*v))
 // --- checker ---
-constexpr int DARK_RATIO_PCT = 40;  // AUTO -> LOW_LIGHT when dark pixels > 40%
+constexpr int DARK_RATIO_PCT = 40;      // AUTO -> LOW_LIGHT when dark pixels > 40%
 
-static inline uint8_t clamp_u8(int v) {
-    return static_cast<uint8_t>(v < 0 ? 0 : (v > 255 ? 255 : v));
-}
-
-static inline uint8_t raw12_to_u8(uint16_t v) {
-    return static_cast<uint8_t>((v > 4095u ? 4095u : v) >> 4);
-}
+static inline int clamp_i(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
+static inline uint8_t clamp_u8(int v) { return static_cast<uint8_t>(clamp_i(v, 0, 255)); }
 
 static inline uint32_t pack_rgb(uint8_t r, uint8_t g, uint8_t b) {
     return (uint32_t(r) << 16) | (uint32_t(g) << 8) | uint32_t(b);
@@ -50,13 +47,12 @@ static uint64_t isqrt_u64(uint64_t n) {
     if (n == 0) return 0;
     uint64_t x = n, y = (x + 1) / 2;
     while (y < x) { x = y; y = (x + n / x) / 2; }
-    return x;  // floor(sqrt(n))
+    return x;
 }
 
-// gamma 4.0 low-light tone: out = floor((255^3 * v)^(1/4)), exact & bit-exact.
-static inline uint8_t gamma4(uint8_t v) {
-    const uint64_t n = GAMMA4_SCALE * static_cast<uint64_t>(v);
-    return clamp_u8(static_cast<int>(isqrt_u64(isqrt_u64(n))));
+// gamma 2.0 tone: out = floor(sqrt(255 * v)), v,out in [0,255]. Exact & bit-exact.
+static inline uint8_t gamma2(uint8_t v) {
+    return clamp_u8(static_cast<int>(isqrt_u64(255ull * static_cast<uint64_t>(v))));
 }
 
 static inline uint16_t sample_clamped(const uint16_t* raw, int width, int height, int x, int y) {
@@ -66,31 +62,27 @@ static inline uint16_t sample_clamped(const uint16_t* raw, int width, int height
 }
 
 // ---------------------------------------------------------------------------
-// Scene checker / mode decision (static region). Uses dark-pixel ratio on RAW.
-// Per-frame decision; scene-level hysteresis is handled by the sequence
-// scheduler (RESEARCH.md §5.2), not by this single-frame C-sim entry point.
+// Scene checker / mode decision (static region). Dark-pixel ratio on RAW.
 // ---------------------------------------------------------------------------
 static int checker_select_mode(const uint16_t* raw, int width, int height, int mode,
                                uint16_t dark_pixel_threshold) {
     if (mode == DFXISP_MODE_NORMAL) return DFXISP_MODE_NORMAL;
     if (mode == DFXISP_MODE_LOW_LIGHT) return DFXISP_MODE_LOW_LIGHT;
-
     const int n = width * height;
     int dark = 0;
     for (int i = 0; i < n; ++i) {
 #pragma HLS LOOP_TRIPCOUNT min=16 max=2073600
         if (raw[i] < dark_pixel_threshold) ++dark;
     }
-    // dark_ratio > 40%  <=>  dark*100 > 40*n
     return (dark * 100 > DARK_RATIO_PCT * n) ? DFXISP_MODE_LOW_LIGHT : DFXISP_MODE_NORMAL;
 }
 
 // ---------------------------------------------------------------------------
-// Shared baseline ISP core: demosaic + BLC + AWB + CCM. No gain/gamma.
+// RGGB demosaic keeping 12-bit precision (no >>4 here). Pattern:
+//   (0,0)=R (0,1)=G (1,0)=G (1,1)=B
 // ---------------------------------------------------------------------------
-// RGGB Bayer demosaic (pattern: (0,0)=R (0,1)=G (1,0)=G (1,1)=B).
-static void demosaic_rggb(const uint16_t* raw, int width, int height, int x, int y,
-                          uint8_t& r, uint8_t& g, uint8_t& b) {
+static void demosaic_rggb12(const uint16_t* raw, int width, int height, int x, int y,
+                            int& r12, int& g12, int& b12) {
 #pragma HLS INLINE
     uint16_t win[3][3];
     for (int wy = 0; wy < 3; ++wy)
@@ -100,7 +92,7 @@ static void demosaic_rggb(const uint16_t* raw, int width, int height, int x, int
     const bool even_y = (y & 1) == 0;
     const bool even_x = (x & 1) == 0;
     const uint16_t c = win[1][1];
-    uint16_t rr = 0, gg = 0, bb = 0;
+    int rr = 0, gg = 0, bb = 0;
 
     if (even_y && even_x) {          // R
         rr = c;
@@ -119,30 +111,37 @@ static void demosaic_rggb(const uint16_t* raw, int width, int height, int x, int
         gg = (win[1][0] + win[1][2] + win[0][1] + win[2][1]) / 4;
         rr = (win[0][0] + win[0][2] + win[2][0] + win[2][2]) / 4;
     }
-    r = raw12_to_u8(rr);
-    g = raw12_to_u8(gg);
-    b = raw12_to_u8(bb);
-}
-
-static void baseline_isp_core_pixel(const uint16_t* raw, int width, int height, int x, int y,
-                                    uint8_t& r, uint8_t& g, uint8_t& b) {
-#pragma HLS INLINE
-    uint8_t dr, dg, db;
-    demosaic_rggb(raw, width, height, x, y, dr, dg, db);
-    // BLC
-    int br = dr - BLC_OFFSET, bg = dg - BLC_OFFSET, bb = db - BLC_OFFSET;
-    // AWB (Q8 per-channel color calibration)
-    br = (clamp_u8(br) * AWB_R) / 256;
-    bg = (clamp_u8(bg) * AWB_G) / 256;
-    bb = (clamp_u8(bb) * AWB_B) / 256;
-    // CCM (identity placeholder in the shared core; still no gain/gamma here)
-    r = clamp_u8(br);
-    g = clamp_u8(bg);
-    b = clamp_u8(bb);
+    r12 = rr > RAW12_MAX ? RAW12_MAX : rr;
+    g12 = gg > RAW12_MAX ? RAW12_MAX : gg;
+    b12 = bb > RAW12_MAX ? RAW12_MAX : bb;
 }
 
 // ---------------------------------------------------------------------------
-// RM_NORMAL_TONE = identity bypass. Baseline core over the full-res frame.
+// Shared baseline ISP core (ver1): demosaic + BLC + WB + CCM, all in 12-bit.
+// No gain/gamma. Returns 12-bit R,G,B (tone stage does >>4 + gamma).
+// ---------------------------------------------------------------------------
+static void baseline_core12(const uint16_t* raw, int width, int height, int x, int y,
+                            int& r12, int& g12, int& b12) {
+#pragma HLS INLINE
+    int dr, dg, db;
+    demosaic_rggb12(raw, width, height, x, y, dr, dg, db);         // demosaic (12-bit)
+    dr = clamp_i(dr - BLC_OFFSET12, 0, RAW12_MAX);                 // BLC (subtract first)
+    dg = clamp_i(dg - BLC_OFFSET12, 0, RAW12_MAX);
+    db = clamp_i(db - BLC_OFFSET12, 0, RAW12_MAX);
+    r12 = clamp_i(dr * AWB_R / 256, 0, RAW12_MAX);                 // WB per channel (Q8)
+    g12 = clamp_i(dg * AWB_G / 256, 0, RAW12_MAX);
+    b12 = clamp_i(db * AWB_B / 256, 0, RAW12_MAX);                 // CCM identity (no gain/gamma)
+}
+
+// tone RM: exposure gain (12-bit) -> >>4 to 8-bit -> gamma 2.0. Mode-specific gain.
+static inline uint8_t tone(int v12, int gnum, int gden) {
+#pragma HLS INLINE
+    const int gained = clamp_i(v12 * gnum / gden, 0, RAW12_MAX);
+    return gamma2(clamp_u8(gained >> 4));
+}
+
+// ---------------------------------------------------------------------------
+// RM_NORMAL_TONE (NORMAL): gain 1.25x + gamma over the full-res baseline core.
 // ---------------------------------------------------------------------------
 static void run_normal(const uint16_t* raw, uint32_t* rgb_out, int width, int height) {
     for (int y = 0; y < height; ++y) {
@@ -150,16 +149,19 @@ static void run_normal(const uint16_t* raw, uint32_t* rgb_out, int width, int he
         for (int x = 0; x < width; ++x) {
 #pragma HLS PIPELINE II=1
 #pragma HLS LOOP_TRIPCOUNT min=4 max=1920
-            uint8_t r = 0, g = 0, b = 0;
-            baseline_isp_core_pixel(raw, width, height, x, y, r, g, b);  // no gain/gamma
+            int r12, g12, b12;
+            baseline_core12(raw, width, height, x, y, r12, g12, b12);     // no gain/gamma
+            const uint8_t r = tone(r12, GAIN_NORMAL_NUM, GAIN_NORMAL_DEN);
+            const uint8_t g = tone(g12, GAIN_NORMAL_NUM, GAIN_NORMAL_DEN);
+            const uint8_t b = tone(b12, GAIN_NORMAL_NUM, GAIN_NORMAL_DEN);
             rgb_out[y * width + x] = pack_rgb(r, g, b);
         }
     }
 }
 
 // ---------------------------------------------------------------------------
-// RM_LOW_LIGHT_TONE (Policy A, shape-changing H/2 x W/2):
-//   front: 2x2 RAW binning  ->  baseline core  ->  back: gain + gamma-4.0 tone
+// RM_LOW_LIGHT_TONE (Policy A, H/2 x W/2):
+//   front: 2x2 RAW binning -> baseline core -> back: gain 2.0x + gamma
 // ---------------------------------------------------------------------------
 static inline int bin_dim(int d) { return d / 2 < 1 ? 1 : d / 2; }
 
@@ -170,8 +172,7 @@ static void run_low_light(const uint16_t* raw, uint32_t* rgb_out, int width, int
     out_width = bw;
     out_height = bh;
 
-    // front: 2x2 RAW binning (candidate formula (p00+p01+p10+p11)/4), RESEARCH §4.1
-    // Small scratch sized to the C-sim fixtures; HW uses a streaming line buffer.
+    // front: 2x2 RAW binning (sum/4), RESEARCH §4.2 — before precision loss.
     static uint16_t binned[1920 * 1080];
     for (int by = 0; by < bh; ++by) {
 #pragma HLS LOOP_TRIPCOUNT min=2 max=540
@@ -185,18 +186,16 @@ static void run_low_light(const uint16_t* raw, uint32_t* rgb_out, int width, int
         }
     }
 
-    // baseline core over the binned RAW, then low-light tone (gain + gamma).
     for (int y = 0; y < bh; ++y) {
 #pragma HLS LOOP_TRIPCOUNT min=2 max=540
         for (int x = 0; x < bw; ++x) {
 #pragma HLS PIPELINE II=1
 #pragma HLS LOOP_TRIPCOUNT min=2 max=960
-            uint8_t r = 0, g = 0, b = 0;
-            baseline_isp_core_pixel(binned, bw, bh, x, y, r, g, b);
-            // back: low-light gain then gamma-4.0 (the only gain/gamma in the pipeline)
-            r = gamma4(clamp_u8((int(r) * LL_GAIN_NUM) / LL_GAIN_DEN));
-            g = gamma4(clamp_u8((int(g) * LL_GAIN_NUM) / LL_GAIN_DEN));
-            b = gamma4(clamp_u8((int(b) * LL_GAIN_NUM) / LL_GAIN_DEN));
+            int r12, g12, b12;
+            baseline_core12(binned, bw, bh, x, y, r12, g12, b12);              // shared core
+            const uint8_t r = tone(r12, GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN);  // gain 2.0x + gamma
+            const uint8_t g = tone(g12, GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN);
+            const uint8_t b = tone(b12, GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN);
             rgb_out[y * bw + x] = pack_rgb(r, g, b);
         }
     }
@@ -234,10 +233,10 @@ extern "C" void dfxisp_accel(
 
     int out_w = width, out_h = height, sel_rm = DFXISP_RM_NORMAL_TONE;
     if (selected == DFXISP_MODE_LOW_LIGHT) {
-        run_low_light(raw_bayer, rgb_out, width, height, out_w, out_h);  // 2x2 bin + gain + gamma
+        run_low_light(raw_bayer, rgb_out, width, height, out_w, out_h);
         sel_rm = DFXISP_RM_LOW_LIGHT_TONE;
     } else {
-        run_normal(raw_bayer, rgb_out, width, height);                    // identity tone
+        run_normal(raw_bayer, rgb_out, width, height);
         sel_rm = DFXISP_RM_NORMAL_TONE;
     }
 
