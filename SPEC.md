@@ -370,10 +370,14 @@ Arm2 인스턴스 분해(unified top 내부, DFX 순이득 추정의 참조점, 
    정적 WB 게인이 저조도 색 통계를 왜곡하는 문제. 반대로 COCO(정상조도)에서는 해상도
    손실이 지배적(−11.7%, BLC/WB는 −1.9%뿐). 상세: `results/lowlight-rm-map-rootcause-2026-07-02.md`.
 7. **DFX 재구성 latency — 단계별 이론적 분해(2026-07-02):** drain(측정, 74~171 cycle)와
-   ICAP 전송(686,664B ÷ AMD UG570 ICAPE3 spec 대역폭, peak 1.72ms/전형 6.87ms)과
+   ICAP 전송(686,532B payload ÷ AMD UG570 ICAPE3 spec 대역폭, peak 1.72ms/전형 6.87ms)과
    warm-up(측정)으로 분해. ICAP 전송이 전체의 >99.9%를 차지(drain/warm-up은 µs, ICAP는
    ms 스케일). 드라이버/FSM 오버헤드는 PR 컨트롤러 미합성으로 계산 불가 — TODO(보드) 유지.
-   상세: `results/pr-latency-breakdown-2026-07-02.md`.
+   **Vivado(XSIM) 시뮬레이션으로 더 정밀한 값을 시도했으나(실제 partial bitstream을
+   ICAPE3 UNISIM 모델에 직접 스트리밍), 격리된 테스트벤치에서는 trigger→완료 신호를
+   끝내 얻지 못함(SYNC는 성공, 완료 신호는 3가지 방법 모두 실패 — 원인·한계 분석 포함,
+   정직하게 기록)** — payload word 수(171,633)는 파일에서 직접 검증해 반영.
+   상세: `results/pr-latency-breakdown-2026-07-02.md`, `results/pr-latency-vivado-sim-2026-07-02.md`.
 
 ---
 

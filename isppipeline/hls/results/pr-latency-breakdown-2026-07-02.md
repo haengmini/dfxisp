@@ -22,6 +22,14 @@ Goal   : "DFX 전환 될 때 걸리는 latency를 단계별로 모두 측정해�
 > 측정한 값이 아니다. (③TODO) ICAP 드라이버/FSM 오버헤드, PS-PL 핸드셰이크,
 > 실제 재구성 후 첫 프레임 지연은 **PR 컨트롤러를 아직 만들지 않아 계산조차
 > 불가능**하며 실보드에서만 확인된다. 세 카테고리를 표에서 "근거" 열로 항상 구분.
+>
+> **갱신(23:10 KST):** 이 계산값보다 더 정확한 근거를 얻기 위해 Vivado(XSIM)로
+> 실제 `rm_lowlight_partial.bit`를 ICAPE3 UNISIM 동작 모델에 직접 흘리는 시뮬레이션을
+> 시도했다 — SYNC는 성공했지만 trigger→완료 신호는 격리된 테스트벤치에서 끝내 얻지
+> 못했다(3가지 독립 방법 모두 동일 결론, 원인 분석 포함). 그 과정에서 payload가
+> 정확히 686,532 bytes(171,633 word, 헤더 내장 길이 필드와 일치)임을 파일에서 직접
+> 검증했다 — §2의 계산은 이 정밀한 word 수를 반영해 갱신했다. 상세:
+> `results/pr-latency-vivado-sim-2026-07-02.md`.
 
 ## 1. 재구성 이벤트의 정의
 
@@ -32,7 +40,7 @@ bitstream 로드 → ③ new-RM 파이프라인 warm-up(첫 유효 출력까지)
 
 ```text
 ... frame(old RM) | DRAIN | ICAP LOAD (partial bitstream) | WARM-UP | frame(new RM) ...
-    steady-state   <-171~or~74 cyc->  <---- 686,664 bytes ---->  <-74~or~171 cyc->  steady-state
+    steady-state   <-171~or~74 cyc->  <-- 686,532 B payload (171,633 word) -->  <-74~or~171 cyc->  steady-state
 ```
 
 ## 2. 단계별 수치
@@ -40,11 +48,11 @@ bitstream 로드 → ③ new-RM 파이프라인 warm-up(첫 유효 출력까지)
 | 단계 | 근거 | RM_NORMAL_TONE | RM_LOW_LIGHT_TONE |
 |---|---|---|---|
 | ① Drain (진행 중인 old-RM 파이프라인 flush) | **① 측정** — Vitis HLS csynth 최소 latency(오늘 재합성), target clock 5.0ns | 171 cycles = **0.855 µs** | 74 cycles = **0.370 µs** |
-| ② ICAP 전송 (partial bitstream 로드) — 이론적 peak | **② 스펙 유도** — bitstream 686,664 B(오늘 재측정, 두 RM 동일) ÷ ICAPE3 peak 400 MB/s(100 MHz × 32-bit, AMD UG570) | **1.717 ms** | **1.717 ms**(동일 크기) |
-| ② ICAP 전송 — 보수적/전형값 | **② 스펙 유도** — 동일 크기 ÷ 100 MB/s(PR 문헌에서 흔히 인용되는 드라이버/오버헤드 포함 실효 대역폭 하한) | **6.867 ms** | **6.867 ms** |
+| ② ICAP 전송 (partial bitstream 로드) — 이론적 peak | **② 스펙 유도** — payload 686,532 B(헤더 제외, 171,633 word — Vivado 시뮬레이션으로 파일에서 직접 검증, `pr-latency-vivado-sim-2026-07-02.md`) ÷ ICAPE3 peak 400 MB/s(100 MHz × 32-bit, AMD UG570) | **1.716 ms** | **1.716 ms**(동일 크기) |
+| ② ICAP 전송 — 보수적/전형값 | **② 스펙 유도** — 동일 payload ÷ 100 MB/s(PR 문헌에서 흔히 인용되는 드라이버/오버헤드 포함 실효 대역폭 하한) | **6.865 ms** | **6.865 ms** |
 | ③ Warm-up (new-RM 파이프라인 채움, 첫 유효 출력까지) | **① 측정** — 위와 동일 latency 수치를 new-RM 기준으로 적용 | 74 cycles = **0.370 µs**(LOW_LIGHT→NORMAL 전환 시) | 171 cycles = **0.855 µs**(NORMAL→LOW_LIGHT 전환 시) |
 | ④ ICAP 드라이버/FSM 오버헤드, PS↔PL 핸드셰이크 | **③ TODO** — PR 컨트롤러 미합성. 계산 근거 없음 | TODO(보드) | TODO(보드) |
-| **합계 (①+②+③, ④ 제외)** | 혼합 | **peak 1.719 ms / 전형 6.869 ms** | **peak 1.719 ms / 전형 6.869 ms** |
+| **합계 (①+②+③, ④ 제외)** | 혼합 | **peak 1.718 ms / 전형 6.867 ms** | **peak 1.718 ms / 전형 6.867 ms** |
 
 ## 3. 해석
 
@@ -52,10 +60,11 @@ bitstream 로드 → ③ new-RM 파이프라인 warm-up(첫 유효 출력까지)
    합쳐도 수 µs 수준인데, ICAP 전송은 peak 가정에서도 1.7 ms — **약 1,000배** 차이.
    즉 이 설계에서 재구성 latency 예산은 사실상 **"partial bitstream 크기 ÷ ICAP
    대역폭"** 한 항으로 근사해도 무방하다(drain/warm-up은 예산에서 반올림 오차 수준).
-2. **partial bitstream 크기가 두 RM 모두 동일(686,664 B)이므로 전환 방향(NORMAL→
-   LOW_LIGHT vs 그 반대)에 무관하게 ICAP 시간이 같다** — Stage 5 문서에서 이미 확인한
-   "partial bitstream 크기는 로직 사용량이 아니라 pblock 프레임 수로 결정된다"는
-   사실의 직접적 귀결.
+2. **partial bitstream 크기가 두 RM 모두 동일**(686,532 B payload, 171,633 word 모두
+   일치 — 명령 구조까지 word 단위로 동일함을 Vivado 시뮬레이션으로 확인)이므로
+   전환 방향(NORMAL→LOW_LIGHT vs 그 반대)에 무관하게 ICAP 시간이 같다 — Stage 5
+   문서에서 이미 확인한 "partial bitstream 크기는 로직 사용량이 아니라 pblock 프레임
+   수로 결정된다"는 사실의 직접적 귀결.
 3. **30fps 프레임 예산(33.3 ms) 대비:** peak 가정 1.72 ms는 예산의 5.1%, 전형값
    6.87 ms는 20.6%. 스케줄러가 장면 단위로만 전환(빈번하지 않음)하므로, 이 수치가
    맞다면 재구성이 프레임 드롭 없이 "한 프레임 슬랙 안에" 들어갈 여지가 있어 보이나,
