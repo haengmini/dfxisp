@@ -385,6 +385,9 @@ Arm2 인스턴스 분해(unified top 내부, DFX 순이득 추정의 참조점, 
    `STARTUPE3`가 전혀 없어 PR 컨트롤러가 아직 존재하지 않는다는 사실을 새로 확인.
    Vivado DFX 트러블슈팅 전체(I/O 핀 초과, SNAPPING_MODE, black-box+lock 방법론,
    DRC 우회 등)를 체크리스트로 정리. 상세: `results/dfx-vivado-considerations-2026-07-03.md`.
+   위 두 문서를 실행 가능한 단계별 전략으로 재구성한 문서:
+   `results/improvement-strategy-2026-07-03.md`(유일한 진짜 blocking item은 PR
+   컨트롤러 부재 — 이것만 해결하면 나머지는 병렬 진행 가능).
 
 ---
 
