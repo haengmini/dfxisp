@@ -36,7 +36,7 @@ C-sim이 증명하는 불변식(RESEARCH.md §8.2):
 
 ## 파일
 
-- `include/dfxisp_accel.hpp` — HLS top 인터페이스, mode/selected-RM enum, `DfxIspResult` 메타데이터
+- `include/dfxisp_accel.hpp` — HLS top 인터페이스, mode/selected-RM enum, 4개 scalar 메타데이터 출력 포인터
 - `src/dfxisp_accel.cpp` — checker + baseline core12(demosaic/BLC/WB/CCM, 12-bit) + RM_NORMAL_TONE(gain 1.25x + gamma2.0) + RM_LOW_LIGHT_TONE(2x2 bin + gain 2.0x + gamma2.0)
 - `tests/test_dfxisp_csim.cpp` — C-sim smoke 테스트 + golden CSV bit-compare + 아키텍처 불변식 검사
 - `tools/gen_golden_vectors.py` — stdlib-only 결정적 golden 생성기(`src/dfxisp_accel.cpp` bit-exact 미러)
@@ -94,8 +94,6 @@ DFXISP_HLS_FLOW=csynth make hls              # C-sim 후 synthesis
 ## HLS top 함수
 
 ```cpp
-struct DfxIspResult { int out_width, out_height, selected_mode, selected_rm; };
-
 extern "C" void dfxisp_accel(
     const uint16_t* raw_bayer,
     uint32_t* rgb_out,             // capacity >= width*height
@@ -103,8 +101,15 @@ extern "C" void dfxisp_accel(
     int height,
     int mode,                      // NORMAL / LOW_LIGHT / AUTO
     uint16_t dark_pixel_threshold, // AUTO: dark 픽셀 비율 > 80%(재보정 2026-07-02) 이면 LOW_LIGHT
-    DfxIspResult* result);         // 선택된 mode / RM / 출력 형상
+    int* out_width,                // 선택된 RM의 출력 폭
+    int* out_height,               // 선택된 RM의 출력 높이
+    int* selected_mode,            // 해소된 mode (AUTO 해소값)
+    int* selected_rm);             // 선택된 tone RM
 ```
+메타데이터가 구조체 포인터 하나가 아니라 **4개의 개별 scalar 출력 포인터**인 이유: 구조체
+포인터를 `s_axilite`로 선언하는 방식은 검증된 바 없는(비표준) 패턴이라 adversarial review에서
+지적됨(§ 하드웨어/DFX 구조 하단 참조). 개별 scalar 포인터는 Vitis HLS에서 완료 후 read-back
+레지스터로 신뢰성 있게 합성되는 정형화된 패턴이다.
 
 ## 하드웨어/DFX 구조
 
@@ -114,16 +119,36 @@ extern "C" void dfxisp_accel(
 - `checker_select_mode()` — static-region scene checker. `AUTO`에서 dark-pixel 비율로
   NORMAL/LOW_LIGHT를 결정. 장면 단위 히스테리시스는 시퀀스 스케줄러(RESEARCH §5.2) 담당이며
   단일 프레임 C-sim entry에는 없다.
-- `baseline_core12()` — **shared static** baseline core (ver1). demosaic(RGGB 3x3) +
-  BLC + WB(Q8 채널 게인) + CCM(identity)을 **12-bit로 수행**(최종 >>4는 tone에서). **gain/gamma 없음.**
+- `baseline_core12()`/`apply_blc_wb12()` — **shared static** baseline core (ver1).
+  BLC + WB(Q8 채널 게인) + CCM(identity)을 **12-bit로 수행**(최종 >>4는 tone에서). **gain/gamma
+  없음.** normal 경로는 `demosaic_rggb12()`(RGGB 3x3 Bayer 데모자이크) 결과를 받고, low-light
+  경로는 binning-demosaic 결과를 받는다(아래).
 - `tone()` — tone RM 스테이지: exposure gain(12-bit) → >>4 → gamma2.0. mode별 gain.
 - `run_normal()` — RM_NORMAL_TONE = **gain 1.25× + gamma2.0**. baseline core를 full-res로 실행.
-- `run_low_light()` — **RM_LOW_LIGHT_TONE**(DFX reconfigurable module 후보). RAW 2x2
-  binning(front) → baseline core → **gain 2.0× + gamma2.0**(back). Vivado DFX 구현에서는
-  이 tone RM slot을 RM-호환 블록으로 패키징하고, checker·baseline core·controller는 static
-  region에 둔다.
+- `run_low_light()`/`compute_binned_rgb_row()` — **RM_LOW_LIGHT_TONE**(DFX reconfigurable
+  module 후보). RAW 2x2 **binning-demosaic 융합**(front, R=top-left·G=avg(top-right,
+  bottom-left)·B=bottom-right — 채널별 정체성 보존) → baseline core → **gain 2.0× +
+  gamma2.0**(back). Vivado DFX 구현에서는 이 tone RM slot을 RM-호환 블록으로 패키징하고,
+  checker·baseline core·controller는 static region에 둔다.
 - `gamma2()` — γ=2.0을 정수 sqrt `floor(sqrt(255·v))`로 정확히 실현(Python `isqrt`와
   bit-exact). HW에서는 256-엔트리 LUT로 대체 가능.
+
+### 2026-07-02 adversarial-review 수정 (중요)
+`/codex:adversarial-review --base 0e433f9`가 두 결함을 발견해 수정했다:
+1. **색상 손실 버그(high):** 이전 low-light front-end는 2x2 RGGB 셀의 4개 샘플을
+   **하나의 스칼라 평균**으로 합친 뒤 그 값을 다시 Bayer인 것처럼 재-demosaic — 색 정보가
+   demosaic 전에 이미 파괴됨. golden 모델(`gen_golden_vectors.py`)이 같은 버그를 그대로
+   미러링해서 `make verify`의 bit-exact 테스트가 이를 전혀 못 잡았고, 보고된 lowlight mAP
+   증거(`isp_pipeline_ver1.py`)는 **채널 정체성을 보존하는 다른 알고리즘**을 측정한 것이라
+   실제 HW 후보의 증거가 아니었음. → `compute_binned_rgb_row()`로 binning+demosaic을 한
+   단계에 융합, `_bin_demosaic_rggb16`(SW ver1)과 bit-exact 일치하도록 수정.
+2. **메타데이터 RTL 미검증(medium):** `DfxIspResult*` 구조체 포인터를 `s_axilite`로 선언 —
+   합성된 RTL에서 실제로 읽을 수 있는지 어떤 산출물로도 확인된 적 없음(cosim도 post-check
+   단계에서 실패해 미확인). → 4개 개별 scalar 포인터로 교체(위 HLS top 함수 참조).
+
+**주의:** 이 수정 이후 `results/stage4-hw-synthesis-2026-07-02.md`·
+`results/stage5-dfx-implementation-2026-07-02.md`의 HW 실측 수치(csynth 자원·pr_verify·
+bitstream 크기)는 **수정 전 소스 기준**이라 stale하다. Vivado 재실행 전까지 그렇게 표시한다.
 
 C-sim에는 Vitis 전용 헤더가 필요 없다; HLS pragma만 존재하며 로컬 g++ 빌드에서는 무시된다.
 

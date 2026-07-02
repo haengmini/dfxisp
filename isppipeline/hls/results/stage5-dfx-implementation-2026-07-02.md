@@ -11,6 +11,13 @@ Goal   : "보드 측정 직전 최종 관문" — RM_NORMAL_TONE/RM_LOW_LIGHT_TO
 -->
 # Stage 5 — Vivado DFX 구현 (실측)
 
+> ⚠️ **STALE (2026-07-02 adversarial-review 수정 이후):** pr_verify PASS·bitstream 크기
+> 등 이 문서의 모든 수치는 low-light 색상보존 binning-demosaic 수정 및 구조체→scalar
+> 메타데이터 포인터 수정 **이전** 소스로 구현한 결과다. RM_LOW_LIGHT_TONE의 내부 로직과
+> 최상위 `dfxisp_accel`의 포트 목록이 바뀌었으므로(단, `rm_normal_tone_top`/
+> `rm_low_light_tone_top`의 포트 목록 자체는 이미 scalar out_width/out_height라 변경 없음)
+> **재구현 전까지 참고용으로만 볼 것.** 상세: `SPEC.md` §11.5.
+
 > Stage 4(csynth)에서 확보한 `rm_normal_tone_top`/`rm_low_light_tone_top` IP를 실제
 > **Vivado 2024.1 non-project batch DFX flow**(AMD UG909 표준 절차)로 구현했다.
 > Fabric-only 특성화(PS/DDR 통합 없음, 순수 플로어플랜·자원·pr_verify·partial bitstream

@@ -4,30 +4,58 @@
 
 // =============================================================================
 // File   : isppipeline/hls/src/dfxisp_accel.cpp
-// Updated: 2026-07-02 16:10 KST
+// Updated: 2026-07-02 (adversarial-review fixes)
 // Function: DFXISP core C-sim — shared baseline ISP core + mutually exclusive
 //           tone RM slot. Integer-only; bit-exact mirror of gen_golden_vectors.py.
-// Goal   : Reflect the ver1 RAW-domain-first ordering into HW/C-sim:
-//             baseline core = demosaic -> BLC -> WB -> CCM   (12-bit, no gain/gamma)
-//             RM_NORMAL_TONE     = gain(1.25x) + gamma        (was identity)
-//             RM_LOW_LIGHT_TONE  = 2x2 bin(front) + gain(2.0x) + gamma(back)
-//           Corrections stay in 12-bit before the final >>4 (precision preserved);
-//           gamma via integer sqrt (gamma 2.0) so it is bit-exact & HLS-friendly.
-//           Bayer pattern RGGB (unified with the SW dataset).
-//           2026-07-02 16:10: first real csynth (xczu7ev, 5.0ns) showed the tone
-//           stage dominating resource (run_low_light 28.6k FF/25.4k LUT, run_normal
-//           27.6k FF/23.6k LUT) because gamma2() used a runtime Newton's-method
-//           isqrt loop inside a PIPELINE II=1 region. Replaced with a 256-entry ROM
-//           table (GAMMA2_LUT, same formula floor(sqrt(255*v)), values generated
-//           once in Python and pasted as a plain static array — a std::array/
-//           constexpr-loop version was tried first but Vitis HLS's bundled
-//           gcc-8.3.0 STL headers reject <array> under -std=c++17; a plain C array
-//           avoids that). Bit-exact unchanged (golden compare); resource re-measured.
-// =============================================================================
+// Goal   : Two corrections found by an adversarial review of the branch diff
+//          against the 2026-07-01 architecture reset (see
+//          results/experiment_ver1_2026-07-02.md and stage1-3-results for the
+//          mAP evidence this must now actually match):
+//   (1) CHROMA-COLLAPSE BUG (high severity): the low-light front end used to
+//       average all 4 RGGB samples in a 2x2 cell into ONE scalar
+//       ((p00+p01+p10+p11)/4), then re-demosaic that scalar grid as if it were
+//       still Bayer-patterned. Since every "pixel" in that grid was already a
+//       mixed R+2G+B-like average, re-demosaicing just spread near-identical
+//       values around -> low-light output was structurally desaturated
+//       (chroma destroyed before AWB/gain ever ran). Worse, the golden model
+//       (tools/gen_golden_vectors.py) mirrored the exact same bug, so
+//       `make verify`'s bit-exact test could never catch it -- HLS matched its
+//       own (wrong) golden model perfectly. Meanwhile the SW mAP evidence
+//       (tools/isp_pipeline_ver1.py `_bin_demosaic_rggb16`) used a DIFFERENT,
+//       chroma-preserving algorithm (R=top-left, G=avg(top-right,bottom-left),
+//       B=bottom-right), so the reported low-light mAP was never evidence for
+//       what this file actually computed. Fixed: `compute_binned_rgb_row()`
+//       now performs a fused 2x2 binning+demosaic in one step, extracting
+//       true per-channel R/G/B directly (bit-exact match to
+//       `_bin_demosaic_rggb16`), then feeds the shared `apply_blc_wb12()` core
+//       directly -- no second (Bayer-assuming) demosaic pass. This removed
+//       the need for `demosaic_rggb12_rows`/`baseline_core12_from_rows`/the
+//       3-row sliding window entirely (binning-demosaic only needs the 2 raw
+//       rows of its own cell, not neighbouring binned cells).
+//   (2) METADATA RTL-VISIBILITY (medium severity): `DfxIspResult* result`
+//       (a struct pointer) was declared `s_axilite`, an interface mode meant
+//       for lightweight slave-side register access, not memory-writing struct
+//       output -- no artifact (interface report, cosim) ever confirmed the
+//       four fields synthesize as separately addressable registers. Replaced
+//       with four separate scalar `int*` output pointers
+//       (out_width/out_height/selected_mode/selected_rm), the standard,
+//       well-supported Vitis HLS idiom for post-completion status registers
+//       (same pattern already used by rm_normal_tone_top/rm_low_light_tone_top
+//       below). See include/dfxisp_accel.hpp for the interface-level rationale.
 //
-// Ordering: tone RM slot wraps the shared baseline core. Low-light 2x2 binning
-// runs on RAW (before precision loss); gain/gamma are the tone stages and never
-// appear inside the baseline core (no duplication, RESEARCH.md de-dup rule).
+// Earlier history: ver1 RAW-domain-first reordering (baseline core =
+// demosaic->BLC->WB->CCM in 12-bit, RM_NORMAL_TONE gain+gamma instead of
+// identity, RM_LOW_LIGHT_TONE gain 2.0x+gamma back); gamma2() moved from a
+// runtime Newton's-method isqrt (which dominated csynth resource, 28.6k FF/
+// 25.4k LUT for run_low_light) to a 256-entry ROM table generated once in
+// Python (std::array/constexpr was tried first but Vitis HLS's bundled
+// gcc-8.3.0 STL rejects <array> under -std=c++17; plain C array avoids that).
+// Bayer pattern RGGB (unified with the SW dataset).
+//
+// Ordering: tone RM slot wraps the shared baseline core. Low-light binning-
+// demosaic runs on RAW (before precision loss); gain/gamma are the tone
+// stages and never appear inside the baseline core (no duplication,
+// RESEARCH.md de-dup rule).
 
 namespace {
 
@@ -87,11 +115,6 @@ static inline uint16_t sample_clamped(const uint16_t* raw, int width, int height
     x = x < 0 ? 0 : (x >= width ? width - 1 : x);
     y = y < 0 ? 0 : (y >= height ? height - 1 : y);
     return raw[y * width + x];
-}
-
-static inline uint16_t sample_row_clamped(const uint16_t* row, int w, int x) {
-    x = x < 0 ? 0 : (x >= w ? w - 1 : x);
-    return row[x];
 }
 
 // Max binned-row width for the low-light streaming line buffer (RESEARCH frame
@@ -154,54 +177,12 @@ static void demosaic_rggb12(const uint16_t* raw, int width, int height, int x, i
     b12 = bb > RAW12_MAX ? RAW12_MAX : bb;
 }
 
-// Same demosaic math as demosaic_rggb12, but sampling from 3 explicit resident
-// rows (row_m1=y-1, row_0=y, row_p1=y+1, already y-clamped by the caller) instead
-// of a full 2D array. Used by the low-light streaming line buffer so the RM does
-// not need a full-frame scratch copy of the binned grid. `y` is the absolute row
-// index (needed for RGGB phase), `x` is clamped to [0,bw).
-static void demosaic_rggb12_rows(const uint16_t* row_m1, const uint16_t* row_0,
-                                 const uint16_t* row_p1, int bw, int x, int y,
-                                 int& r12, int& g12, int& b12) {
-#pragma HLS INLINE
-    const uint16_t w00 = sample_row_clamped(row_m1, bw, x - 1);
-    const uint16_t w01 = sample_row_clamped(row_m1, bw, x);
-    const uint16_t w02 = sample_row_clamped(row_m1, bw, x + 1);
-    const uint16_t w10 = sample_row_clamped(row_0, bw, x - 1);
-    const uint16_t w11 = sample_row_clamped(row_0, bw, x);
-    const uint16_t w12 = sample_row_clamped(row_0, bw, x + 1);
-    const uint16_t w20 = sample_row_clamped(row_p1, bw, x - 1);
-    const uint16_t w21 = sample_row_clamped(row_p1, bw, x);
-    const uint16_t w22 = sample_row_clamped(row_p1, bw, x + 1);
-
-    const bool even_y = (y & 1) == 0;
-    const bool even_x = (x & 1) == 0;
-    int rr = 0, gg = 0, bb = 0;
-
-    if (even_y && even_x) {          // R
-        rr = w11;
-        gg = (w10 + w12 + w01 + w21) / 4;
-        bb = (w00 + w02 + w20 + w22) / 4;
-    } else if (even_y && !even_x) {  // G on R row
-        gg = w11;
-        rr = (w10 + w12) / 2;
-        bb = (w01 + w21) / 2;
-    } else if (!even_y && even_x) {  // G on B row
-        gg = w11;
-        rr = (w01 + w21) / 2;
-        bb = (w10 + w12) / 2;
-    } else {                         // B
-        bb = w11;
-        gg = (w10 + w12 + w01 + w21) / 4;
-        rr = (w00 + w02 + w20 + w22) / 4;
-    }
-    r12 = rr > RAW12_MAX ? RAW12_MAX : rr;
-    g12 = gg > RAW12_MAX ? RAW12_MAX : gg;
-    b12 = bb > RAW12_MAX ? RAW12_MAX : bb;
-}
-
 // ---------------------------------------------------------------------------
-// Shared baseline ISP core (ver1): demosaic + BLC + WB + CCM, all in 12-bit.
-// No gain/gamma. Returns 12-bit R,G,B (tone stage does >>4 + gamma).
+// Shared baseline ISP core (ver1): BLC + WB + CCM, all in 12-bit. No gain/
+// gamma. Returns 12-bit R,G,B (tone stage does >>4 + gamma). Consumes
+// already-demosaiced R,G,B triples -- callers supply them either from a full
+// Bayer demosaic (normal path) or from the low-light binning-demosaic (which
+// IS the demosaic step for the binned grid; no second pass here).
 // ---------------------------------------------------------------------------
 static inline void apply_blc_wb12(int dr, int dg, int db, int& r12, int& g12, int& b12) {
 #pragma HLS INLINE
@@ -218,16 +199,6 @@ static void baseline_core12(const uint16_t* raw, int width, int height, int x, i
 #pragma HLS INLINE
     int dr, dg, db;
     demosaic_rggb12(raw, width, height, x, y, dr, dg, db);         // demosaic (12-bit)
-    apply_blc_wb12(dr, dg, db, r12, g12, b12);
-}
-
-// Low-light path: baseline core fed by the 3-row streaming binned buffer.
-static void baseline_core12_from_rows(const uint16_t* row_m1, const uint16_t* row_0,
-                                      const uint16_t* row_p1, int bw, int x, int y,
-                                      int& r12, int& g12, int& b12) {
-#pragma HLS INLINE
-    int dr, dg, db;
-    demosaic_rggb12_rows(row_m1, row_0, row_p1, bw, x, y, dr, dg, db);
     apply_blc_wb12(dr, dg, db, r12, g12, b12);
 }
 
@@ -263,28 +234,37 @@ static void run_normal(const uint16_t* raw, uint32_t* rgb_out, int width, int he
 // ---------------------------------------------------------------------------
 static inline int bin_dim(int d) { return d / 2 < 1 ? 1 : d / 2; }
 
-// front: 2x2 RAW binning (sum/4) for one binned row `by` (RESEARCH §4.2 — before
-// precision loss). `by` must already be caller-clamped to [0,bh).
-static void compute_binned_row(const uint16_t* raw, int width, int height, int bw, int by,
-                               uint16_t* row_out) {
+// front: 2x2 RAW binning-demosaic, fused (RESEARCH §4.2 — before precision
+// loss). This IS the demosaic step for the binned grid: each RGGB cell's four
+// samples are mapped directly to R/G/B (R=top-left, G=avg(top-right,
+// bottom-left), B=bottom-right) -- bit-exact match to
+// tools/isp_pipeline_ver1.py's `_bin_demosaic_rggb16`. No Bayer-phase
+// re-interpolation is applied afterward (that would require the binned grid
+// to still look like Bayer data, which it does not once averaged/extracted).
+// `by` must already be caller-clamped to [0,bh).
+static void compute_binned_rgb_row(const uint16_t* raw, int width, int height, int bw, int by,
+                                   uint16_t* row_r, uint16_t* row_g, uint16_t* row_b) {
 #pragma HLS INLINE
     const int y0 = 2 * by, y1 = (2 * by + 1 < height) ? 2 * by + 1 : height - 1;
     for (int bx = 0; bx < bw; ++bx) {
 #pragma HLS LOOP_TRIPCOUNT min=2 max=960
         const int x0 = 2 * bx, x1 = (2 * bx + 1 < width) ? 2 * bx + 1 : width - 1;
-        const int s = raw[y0 * width + x0] + raw[y0 * width + x1] +
-                      raw[y1 * width + x0] + raw[y1 * width + x1];
-        row_out[bx] = static_cast<uint16_t>(s / 4);
+        const uint16_t p00 = raw[y0 * width + x0];  // R (top-left)
+        const uint16_t p01 = raw[y0 * width + x1];  // G (top-right)
+        const uint16_t p10 = raw[y1 * width + x0];  // G (bottom-left)
+        const uint16_t p11 = raw[y1 * width + x1];  // B (bottom-right)
+        row_r[bx] = p00;
+        row_g[bx] = static_cast<uint16_t>((p01 + p10) / 2);
+        row_b[bx] = p11;
     }
 }
 
 // RM_LOW_LIGHT_TONE (Policy A, H/2 x W/2), streaming line-buffer version:
-//   front: 2x2 RAW binning -> baseline core -> back: gain 2.0x + gamma
-// Resident state is 3 binned rows (row_buf), not a full-frame scratch copy, so
-// BRAM usage is O(3*MAX_BINNED_W) instead of O(width*height). Each output row
-// recomputes its y-1/y/y+1 binned neighbours from raw on demand (simple, correct
-// streaming producer; a follow-up can reuse rows across iterations to cut
-// redundant RAW reads once this passes cosim).
+//   front: 2x2 RAW binning-demosaic -> baseline core -> back: gain 2.0x + gamma
+// Resident state is one row each of R/G/B (O(3*MAX_BINNED_W) BRAM, not a
+// full-frame scratch copy). No neighbouring-row window is needed here (unlike
+// the earlier scalar-then-redemosaic version): binning-demosaic only reads
+// the 2 raw rows belonging to its own cell.
 static void run_low_light(const uint16_t* raw, uint32_t* rgb_out, int width, int height,
                           int& out_width, int& out_height) {
     const int bw = bin_dim(width);
@@ -292,23 +272,17 @@ static void run_low_light(const uint16_t* raw, uint32_t* rgb_out, int width, int
     out_width = bw;
     out_height = bh;
 
-    static uint16_t row_buf[3][MAX_BINNED_W];  // [0]=y-1, [1]=y, [2]=y+1 (y-clamped)
-#pragma HLS ARRAY_PARTITION variable=row_buf dim=1 complete
+    static uint16_t row_r[MAX_BINNED_W], row_g[MAX_BINNED_W], row_b[MAX_BINNED_W];
 
     for (int y = 0; y < bh; ++y) {
 #pragma HLS LOOP_TRIPCOUNT min=2 max=540
-        const int y_m1 = (y - 1 < 0) ? 0 : y - 1;
-        const int y_p1 = (y + 1 >= bh) ? bh - 1 : y + 1;
-        compute_binned_row(raw, width, height, bw, y_m1, row_buf[0]);
-        compute_binned_row(raw, width, height, bw, y, row_buf[1]);
-        compute_binned_row(raw, width, height, bw, y_p1, row_buf[2]);
+        compute_binned_rgb_row(raw, width, height, bw, y, row_r, row_g, row_b);
 
         for (int x = 0; x < bw; ++x) {
 #pragma HLS PIPELINE II=1
 #pragma HLS LOOP_TRIPCOUNT min=2 max=960
             int r12, g12, b12;
-            baseline_core12_from_rows(row_buf[0], row_buf[1], row_buf[2], bw, x, y,
-                                      r12, g12, b12);                          // shared core
+            apply_blc_wb12(row_r[x], row_g[x], row_b[x], r12, g12, b12);       // shared core
             const uint8_t r = tone(r12, GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN);  // gain 2.0x + gamma
             const uint8_t g = tone(g12, GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN);
             const uint8_t b = tone(b12, GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN);
@@ -385,7 +359,10 @@ extern "C" void dfxisp_accel(
     int height,
     int mode,
     uint16_t dark_pixel_threshold,
-    DfxIspResult* result) {
+    int* out_width,
+    int* out_height,
+    int* selected_mode,
+    int* selected_rm) {
 // depth= is a cosim/BFM memory-model sizing hint required for C/RTL cosim's
 // m_axi bus functional model; it does not affect synthesized RTL behavior
 // (real depth is width*height at runtime). depth=1920*1080 (full design
@@ -403,13 +380,17 @@ extern "C" void dfxisp_accel(
 #pragma HLS INTERFACE s_axilite port=height bundle=control
 #pragma HLS INTERFACE s_axilite port=mode bundle=control
 #pragma HLS INTERFACE s_axilite port=dark_pixel_threshold bundle=control
-#pragma HLS INTERFACE s_axilite port=result bundle=control depth=1
+#pragma HLS INTERFACE s_axilite port=out_width bundle=control
+#pragma HLS INTERFACE s_axilite port=out_height bundle=control
+#pragma HLS INTERFACE s_axilite port=selected_mode bundle=control
+#pragma HLS INTERFACE s_axilite port=selected_rm bundle=control
 #pragma HLS INTERFACE s_axilite port=return bundle=control
 
     if (!raw_bayer || !rgb_out || width <= 0 || height <= 0) {
-        if (result) { result->out_width = 0; result->out_height = 0;
-                      result->selected_mode = DFXISP_MODE_NORMAL;
-                      result->selected_rm = DFXISP_RM_NORMAL_TONE; }
+        if (out_width) *out_width = 0;
+        if (out_height) *out_height = 0;
+        if (selected_mode) *selected_mode = DFXISP_MODE_NORMAL;
+        if (selected_rm) *selected_rm = DFXISP_RM_NORMAL_TONE;
         return;
     }
 
@@ -424,10 +405,8 @@ extern "C" void dfxisp_accel(
         sel_rm = DFXISP_RM_NORMAL_TONE;
     }
 
-    if (result) {
-        result->out_width = out_w;
-        result->out_height = out_h;
-        result->selected_mode = selected;
-        result->selected_rm = sel_rm;
-    }
+    if (out_width) *out_width = out_w;
+    if (out_height) *out_height = out_h;
+    if (selected_mode) *selected_mode = selected;
+    if (selected_rm) *selected_rm = sel_rm;
 }

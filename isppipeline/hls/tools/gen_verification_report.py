@@ -200,7 +200,7 @@ def write_report(root: Path, out: Path) -> None:
         "| Gate | Status |",
         "|---|---:|",
         f"| Shared baseline core (bit-exact) | {gate(structural_ok and csim_ok)} |",
-        f"| RM_NORMAL_TONE / identity present | {gate(has_normal and csim_ok)} |",
+        f"| RM_NORMAL_TONE present | {gate(has_normal and csim_ok)} |",
         f"| RM_LOW_LIGHT_TONE present | {gate(has_low and csim_ok)} |",
         f"| Mutually exclusive RM selection | {gate(structural_ok and csim_ok)} |",
         f"| No duplicate gain/gamma (tone RM only) | {gate(structural_ok and csim_ok)} |",

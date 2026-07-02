@@ -69,22 +69,23 @@ static void check_golden_vectors(const char* path) {
     int checked = 0;
     for (const GoldenCase& c : cases) {
         std::vector<uint32_t> got(c.in_w * c.in_h, 0);  // capacity >= out
-        DfxIspResult res{};
-        dfxisp_accel(c.raw.data(), got.data(), c.in_w, c.in_h, c.mode, c.threshold, &res);
+        int out_w = 0, out_h = 0, sel_mode = 0, sel_rm = 0;
+        dfxisp_accel(c.raw.data(), got.data(), c.in_w, c.in_h, c.mode, c.threshold,
+                    &out_w, &out_h, &sel_mode, &sel_rm);
 
         // metadata gates (mode / selected RM / output shape)
-        assert(res.selected_mode == c.sel_mode);
-        assert(res.selected_rm == c.sel_rm);
-        assert(res.out_width == c.out_w && res.out_height == c.out_h);
+        assert(sel_mode == c.sel_mode);
+        assert(sel_rm == c.sel_rm);
+        assert(out_w == c.out_w && out_h == c.out_h);
         // mutually exclusive tone RM: exactly one selected, consistent with mode
-        assert(res.selected_rm == (res.selected_mode == DFXISP_MODE_LOW_LIGHT
-                                       ? DFXISP_RM_LOW_LIGHT_TONE : DFXISP_RM_NORMAL_TONE));
+        assert(sel_rm == (sel_mode == DFXISP_MODE_LOW_LIGHT
+                              ? DFXISP_RM_LOW_LIGHT_TONE : DFXISP_RM_NORMAL_TONE));
         // low-light is shape-changing (Policy A); normal preserves shape
-        if (res.selected_mode == DFXISP_MODE_LOW_LIGHT) {
-            assert(res.out_width == (c.in_w / 2 < 1 ? 1 : c.in_w / 2));
-            assert(res.out_height == (c.in_h / 2 < 1 ? 1 : c.in_h / 2));
+        if (sel_mode == DFXISP_MODE_LOW_LIGHT) {
+            assert(out_w == (c.in_w / 2 < 1 ? 1 : c.in_w / 2));
+            assert(out_h == (c.in_h / 2 < 1 ? 1 : c.in_h / 2));
         } else {
-            assert(res.out_width == c.in_w && res.out_height == c.in_h);
+            assert(out_w == c.in_w && out_h == c.in_h);
         }
 
         for (int i = 0; i < c.out_w * c.out_h; ++i) {
@@ -109,21 +110,21 @@ int main() {
     for (int i = 0; i < W * H; ++i) mid[i] = 1600;
 
     uint32_t normal[W * H] = {};
-    DfxIspResult rn{};
-    dfxisp_accel(mid, normal, W, H, DFXISP_MODE_NORMAL, 512, &rn);
-    // normal: identity tone RM, shape preserved, baseline output nonzero
-    assert(rn.selected_mode == DFXISP_MODE_NORMAL);
-    assert(rn.selected_rm == DFXISP_RM_NORMAL_TONE);
-    assert(rn.out_width == W && rn.out_height == H);
+    int ow_n = 0, oh_n = 0, sm_n = 0, sr_n = 0;
+    dfxisp_accel(mid, normal, W, H, DFXISP_MODE_NORMAL, 512, &ow_n, &oh_n, &sm_n, &sr_n);
+    // normal: RM_NORMAL_TONE, shape preserved, baseline output nonzero
+    assert(sm_n == DFXISP_MODE_NORMAL);
+    assert(sr_n == DFXISP_RM_NORMAL_TONE);
+    assert(ow_n == W && oh_n == H);
     assert(normal[0] != 0);
 
     uint32_t low[W * H] = {};
-    DfxIspResult rl{};
-    dfxisp_accel(mid, low, W, H, DFXISP_MODE_LOW_LIGHT, 512, &rl);
+    int ow_l = 0, oh_l = 0, sm_l = 0, sr_l = 0;
+    dfxisp_accel(mid, low, W, H, DFXISP_MODE_LOW_LIGHT, 512, &ow_l, &oh_l, &sm_l, &sr_l);
     // low-light: low-light tone RM, shape halved (Policy A)
-    assert(rl.selected_mode == DFXISP_MODE_LOW_LIGHT);
-    assert(rl.selected_rm == DFXISP_RM_LOW_LIGHT_TONE);
-    assert(rl.out_width == W / 2 && rl.out_height == H / 2);
+    assert(sm_l == DFXISP_MODE_LOW_LIGHT);
+    assert(sr_l == DFXISP_RM_LOW_LIGHT_TONE);
+    assert(ow_l == W / 2 && oh_l == H / 2);
     // low-light tone (gain 2.0x + gamma2.0) brightens vs normal tone (gain 1.25x + gamma2.0).
     assert(red(low[0]) > red(normal[0]));
     assert(green(low[0]) > green(normal[0]));
@@ -133,19 +134,19 @@ int main() {
     uint16_t dark[W * H];
     for (int i = 0; i < W * H; ++i) dark[i] = 200;
     uint32_t adark[W * H] = {};
-    DfxIspResult rad{};
-    dfxisp_accel(dark, adark, W, H, DFXISP_MODE_AUTO, 512, &rad);
-    assert(rad.selected_mode == DFXISP_MODE_LOW_LIGHT);
-    assert(rad.selected_rm == DFXISP_RM_LOW_LIGHT_TONE);
+    int ow_ad = 0, oh_ad = 0, sm_ad = 0, sr_ad = 0;
+    dfxisp_accel(dark, adark, W, H, DFXISP_MODE_AUTO, 512, &ow_ad, &oh_ad, &sm_ad, &sr_ad);
+    assert(sm_ad == DFXISP_MODE_LOW_LIGHT);
+    assert(sr_ad == DFXISP_RM_LOW_LIGHT_TONE);
 
     // AUTO on a bright frame stays normal (RM_NORMAL_TONE = gain 1.25x + gamma2.0).
     uint16_t bright[W * H];
     for (int i = 0; i < W * H; ++i) bright[i] = 3000;
     uint32_t abright[W * H] = {};
-    DfxIspResult rab{};
-    dfxisp_accel(bright, abright, W, H, DFXISP_MODE_AUTO, 512, &rab);
-    assert(rab.selected_mode == DFXISP_MODE_NORMAL);
-    assert(rab.selected_rm == DFXISP_RM_NORMAL_TONE);
+    int ow_ab = 0, oh_ab = 0, sm_ab = 0, sr_ab = 0;
+    dfxisp_accel(bright, abright, W, H, DFXISP_MODE_AUTO, 512, &ow_ab, &oh_ab, &sm_ab, &sr_ab);
+    assert(sm_ab == DFXISP_MODE_NORMAL);
+    assert(sr_ab == DFXISP_RM_NORMAL_TONE);
 
     // Checker recalibration (2026-07-02): DARK_RATIO_PCT 40 -> 80. 75% dark must
     // stay NORMAL, 86% dark must trigger LOW_LIGHT (regression for the new gate).
@@ -155,29 +156,52 @@ int main() {
         for (; i < (W * H * 75) / 100; ++i) r75[i] = 200;   // 48/64 = 75% dark
         for (; i < W * H; ++i) r75[i] = 3000;
         uint32_t out75[W * H] = {};
-        DfxIspResult res75{};
-        dfxisp_accel(r75, out75, W, H, DFXISP_MODE_AUTO, 512, &res75);
-        assert(res75.selected_mode == DFXISP_MODE_NORMAL);   // 75% <= 80% -> NORMAL
-        assert(res75.selected_rm == DFXISP_RM_NORMAL_TONE);
+        int ow75 = 0, oh75 = 0, sm75 = 0, sr75 = 0;
+        dfxisp_accel(r75, out75, W, H, DFXISP_MODE_AUTO, 512, &ow75, &oh75, &sm75, &sr75);
+        assert(sm75 == DFXISP_MODE_NORMAL);   // 75% <= 80% -> NORMAL
+        assert(sr75 == DFXISP_RM_NORMAL_TONE);
 
         uint16_t r86[W * H];
         i = 0;
         for (; i < (W * H * 86) / 100; ++i) r86[i] = 200;    // 55/64 ~= 86% dark
         for (; i < W * H; ++i) r86[i] = 3000;
         uint32_t out86[W * H] = {};
-        DfxIspResult res86{};
-        dfxisp_accel(r86, out86, W, H, DFXISP_MODE_AUTO, 512, &res86);
-        assert(res86.selected_mode == DFXISP_MODE_LOW_LIGHT);  // 86% > 80% -> LOW_LIGHT
-        assert(res86.selected_rm == DFXISP_RM_LOW_LIGHT_TONE);
+        int ow86 = 0, oh86 = 0, sm86 = 0, sr86 = 0;
+        dfxisp_accel(r86, out86, W, H, DFXISP_MODE_AUTO, 512, &ow86, &oh86, &sm86, &sr86);
+        assert(sm86 == DFXISP_MODE_LOW_LIGHT);  // 86% > 80% -> LOW_LIGHT
+        assert(sr86 == DFXISP_RM_LOW_LIGHT_TONE);
     }
 
     // Saturation: gain + gamma2.0 tone never overflows RGB8.
     uint16_t sat[W * H];
     for (int i = 0; i < W * H; ++i) sat[i] = 4095;
     uint32_t sat_out[W * H] = {};
-    DfxIspResult rs{};
-    dfxisp_accel(sat, sat_out, W, H, DFXISP_MODE_LOW_LIGHT, 512, &rs);
+    int ow_s = 0, oh_s = 0, sm_s = 0, sr_s = 0;
+    dfxisp_accel(sat, sat_out, W, H, DFXISP_MODE_LOW_LIGHT, 512, &ow_s, &oh_s, &sm_s, &sr_s);
     assert(red(sat_out[0]) == 255 && green(sat_out[0]) == 255 && blue(sat_out[0]) == 255);
+
+    // Chroma preservation (adversarial-review regression, 2026-07-02): a 2x2 RGGB
+    // cell that is pure-red-in-RAW-space (R sample saturated, both G samples and
+    // the B sample at 0) must survive low-light binning-demosaic as a clearly
+    // red-dominant pixel, not collapse toward gray. This is the case that a
+    // scalar-average-then-redemosaic bug (fixed 2026-07-02) would fail: averaging
+    // all 4 samples first destroys the information this assertion checks for.
+    {
+        uint16_t red_cell[4] = {
+            4095, 0,     // R=top-left(4095), G=top-right(0)
+            0,    0,     // G=bottom-left(0), B=bottom-right(0)
+        };
+        uint32_t red_out[1] = {};
+        int ow_r = 0, oh_r = 0, sm_r = 0, sr_r = 0;
+        dfxisp_accel(red_cell, red_out, 2, 2, DFXISP_MODE_LOW_LIGHT, 512,
+                    &ow_r, &oh_r, &sm_r, &sr_r);
+        assert(ow_r == 1 && oh_r == 1);
+        // must be clearly red-dominant: this would fail under the old scalar-bin
+        // bug, where all 4 samples get averaged into one value before demosaic,
+        // producing a near-gray pixel instead.
+        assert(red(red_out[0]) > green(red_out[0]) + 50);
+        assert(red(red_out[0]) > blue(red_out[0]) + 50);
+    }
 
     check_golden_vectors("tests/golden_vectors.csv");
 

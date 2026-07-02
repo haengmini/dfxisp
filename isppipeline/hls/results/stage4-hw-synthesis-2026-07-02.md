@@ -10,6 +10,13 @@ Goal   : 보드 측정 전 마지막 SW/툴체인 단계. streaming line buffer 
 -->
 # Stage 4 — HW 실측: C-Synthesis (Vitis HLS 2024.1)
 
+> ⚠️ **STALE (2026-07-02 adversarial-review 수정 이후):** 이 문서의 모든 자원/타이밍 수치는
+> `/codex:adversarial-review --base 0e433f9`가 발견한 두 수정(low-light 색상보존
+> binning-demosaic, 구조체→scalar 메타데이터 포인터) **이전** 소스로 합성한 결과다. 두 수정
+> 모두 `make verify` bit-exact를 유지하지만 low-light RTL 로직과 메타데이터 인터페이스가
+> 바뀌었으므로 **자원 수치는 재합성 전까지 참고용으로만 볼 것.** 상세: `SPEC.md` §11.5,
+> `isppipeline/hls/README.md` "2026-07-02 adversarial-review 수정".
+
 > 이 환경에 **Vitis HLS 2024.1 + Vivado 2024.1이 실제로 설치**되어 있음을 확인하고
 > (`/tools/Xilinx/Vitis_HLS/2024.1`, `/tools/Xilinx/Vivado/2024.1`), 실제 C-synthesis를
 > 수행했다. 대상: `dfxisp_accel`(현재 ver1+ver2 아키텍처 — RAW-domain-first baseline

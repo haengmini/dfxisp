@@ -44,13 +44,14 @@ RAW 비트 표현(HW 12-bit vs SW 8-bit shift8)뿐이며, 이로 인해 데이�
                               │                 └─▶ ③ RM_NORMAL_TONE (gain 1.25× + gamma2.0)
                               │                       └─▶ RGB32 (H×W)
                               │
-                              └─ LOW_LIGHT ─▶ ③ RM_LOW_LIGHT_TONE.front(2x2 RAW binning)
-                                                └─▶ ② baseline core12 (demosaic+BLC+WB+CCM, 12-bit)
+                              └─ LOW_LIGHT ─▶ ③ RM_LOW_LIGHT_TONE.front(2x2 RAW binning-demosaic,
+                                                  융합: R=TL·G=avg(TR,BL)·B=BR, 채널 보존)
+                                                └─▶ ② baseline core12 (BLC+WB+CCM, 12-bit, demosaic 재실행 없음)
                                                      └─▶ ③ RM_LOW_LIGHT_TONE.back(gain 2.0× + gamma2.0)
                                                           └─▶ RGB32 (H/2 × W/2, Policy A)
                                                                        │
-                                     ④ 메타데이터 DfxIspResult ─────────┤
-                                        {out_w,out_h,selected_mode,selected_rm}
+                              ④ 메타데이터(4개 scalar 출력 포인터) ─────┤
+                                 out_w, out_h, selected_mode, selected_rm
                                                                        ▼
                                                         packed RGB888 0x00RRGGBB
                                                         ─▶ DPU / detector(YOLO·SSD) ─▶ mAP
@@ -148,11 +149,16 @@ gamma2(v8) = floor(sqrt(255 * v8)) = isqrt(255*v8)     # γ=2.0, 정수 exact, b
 
 **RM_LOW_LIGHT_TONE (LOW_LIGHT), Policy A:**
 ```text
-front (RAW):  2x2 binning  binned(bx,by) = (p00+p01+p10+p11)/4  -> (W/2, H/2)
-core       :  baseline_core12(binned)                          # 위 §3.2 (12-bit)
+front (RAW):  2x2 RAW binning-demosaic, 융합(fused) — R=top-left, G=avg(top-right,
+              bottom-left), B=bottom-right  -> (W/2, H/2) R,G,B triple
+core       :  apply_blc_wb12(front 출력)                        # 위 §3.2, demosaic 재실행 없음
 back (tone):  gain **2.0×**(2/1) + gamma2.0
 출력 형상   :  H/2 × W/2   (bin_dim(d) = max(1, d/2))
 ```
+**주의(2026-07-02 수정):** 이전엔 4개 샘플을 `(p00+p01+p10+p11)/4` 스칼라 하나로 평균한 뒤
+그 값을 다시 Bayer인 것처럼 demosaic — 색 정보가 이미 파괴된 뒤라 사실상 흑백에 가까운
+출력이 나오는 버그였다(adversarial review로 발견). 채널별 정체성을 보존하는 위 방식으로
+수정(`tools/isp_pipeline_ver1.py`의 `_bin_demosaic_rggb16`과 bit-exact 일치).
 
 ### 3.4 데이터 흐름 순서 결정 (ver1)
 ver1(2026-07-02): 보정(BLC/WB)을 **demosaic 직후 12-bit에서** 수행(선형이라 RAW-domain과 동치,
@@ -197,15 +203,15 @@ tone RM(core 뒤)에 둔다(RESEARCH §4.2). de-dup 불변식 유지(gain/gamma�
 - (Policy B = upsample/pad로 H×W 복원은 DPU 고정 ABI가 필요할 때만; §11 미래.)
 
 ### 5.3 출력 메타데이터
-```c
-struct DfxIspResult {
-    int out_width;      // 실제 출력 폭
-    int out_height;     // 실제 출력 높이
-    int selected_mode;  // 0=NORMAL, 1=LOW_LIGHT (AUTO 해소값)
-    int selected_rm;    // 0=RM_NORMAL_TONE, 1=RM_LOW_LIGHT_TONE
-};
-```
-HW에서는 AXI-Lite 레지스터로 노출; DPU 전단이 출력 크기/모드를 알 수 있어야 함.
+**4개 개별 scalar 출력 포인터**(2026-07-02 수정, 아래 §6.1 참조):
+`out_width`(실제 출력 폭) · `out_height`(실제 출력 높이) · `selected_mode`(0=NORMAL,
+1=LOW_LIGHT, AUTO 해소값) · `selected_rm`(0=RM_NORMAL_TONE, 1=RM_LOW_LIGHT_TONE).
+HW에서는 각각 AXI-Lite read-back 레지스터로 노출; DPU 전단이 출력 크기/모드를 알 수 있어야 함.
+
+> **이전 설계(구조체 포인터, adversarial review로 폐기):** `DfxIspResult*` 구조체 하나를
+> `s_axilite`로 선언했었으나, s_axilite는 slave-only 제어 인터페이스라 구조체 필드 write-back이
+> 실제로 합성되는지 어떤 산출물로도 검증되지 않았다(cosim도 미완주). 개별 scalar 포인터로
+> 교체 — 완료 후 read-back되는 정형화된(well-established) Vitis HLS 패턴이라 신뢰도가 높다.
 
 ---
 
@@ -220,9 +226,13 @@ extern "C" void dfxisp_accel(
     int             height,
     int             mode,          // DfxIspMode
     uint16_t        dark_pixel_threshold,  // AUTO checker RAW 임계
-    DfxIspResult*   result);       // 출력 메타데이터
+    int*            out_width,     // 출력 메타데이터 (개별 scalar 포인터)
+    int*            out_height,
+    int*            selected_mode,
+    int*            selected_rm);
 ```
-AXI: `raw_bayer`/`rgb_out` = `m_axi`(gmem0/gmem1); 스칼라·`result`·`return` = `s_axilite`(control).
+AXI: `raw_bayer`/`rgb_out` = `m_axi`(gmem0/gmem1); 나머지 스칼라 인자·메타데이터 출력 4종·
+`return` = `s_axilite`(control).
 
 ### 6.2 Golden vector CSV 포맷 (검증 계약)
 헤더: `case,in_w,in_h,mode,threshold,out_w,out_h,sel_mode,sel_rm,kind,idx,val`
@@ -338,6 +348,15 @@ bitstream)이 필요.
    **여전히 none이 최고**(SW proxy 천장) → 방향 A 유지(mAP는 최소 처리, DFX/RM은 자원·전력 정당화).
    남은 개정: (c) checker dark-level 재보정, (d) Policy B/denoise형 RM. 최종 판정은 보드 DPU+real-RAW.
 4. **HW 수치 위조 금지:** Vivado/보드 없이 §10·L2~L5 수치를 만들지 않음(TODO 유지).
+5. **Adversarial review 수정(2026-07-02):** `/codex:adversarial-review --base 0e433f9`가
+   두 결함을 발견·수정: (a) low-light binning이 4샘플을 스칼라 평균한 뒤 재-demosaic해
+   색 정보를 파괴하는 버그(golden 모델도 같은 버그를 미러링해 bit-exact 테스트가 못 잡음;
+   보고된 lowlight mAP 증거는 다른(색 보존) 알고리즘을 측정한 것이었음) — binning-demosaic
+   융합으로 수정, `_bin_demosaic_rggb16`과 bit-exact 일치(§3.3). (b) 메타데이터가 검증 안 된
+   구조체 포인터 `s_axilite` 패턴이었던 것 — 4개 scalar 출력 포인터로 교체(§5.3/§6.1).
+   **`make verify` 646px bit-exact 유지, 새 색상보존 회귀 테스트 추가.**
+   **주의: 이 수정 이후 §10의 HW 실측 수치(csynth 자원·pr_verify·bitstream 크기)는 수정 전
+   소스 기준이라 stale — Vivado 재실행 전까지 그렇게 간주할 것.**
 
 ---
 

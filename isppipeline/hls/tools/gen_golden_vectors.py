@@ -1,15 +1,25 @@
 #!/usr/bin/env python3
 # =============================================================================
 # File   : isppipeline/hls/tools/gen_golden_vectors.py
-# Updated: 2026-07-02 12:40 KST
+# Updated: 2026-07-02 (adversarial-review fix)
 # Function: deterministic DFXISP HLS C-sim golden vectors (bit-exact mirror of
 #           src/dfxisp_accel.cpp)
-# Goal   : Reflect ver1 RAW-domain-first ordering into HW/C-sim golden:
-#             baseline core = demosaic -> BLC -> WB -> CCM (12-bit, no gain/gamma)
-#             RM_NORMAL_TONE    = gain 1.25x + gamma2.0
-#             RM_LOW_LIGHT_TONE = 2x2 bin(front) + gain 2.0x + gamma2.0 (back)
-#           Corrections in 12-bit before final >>4; gamma via integer sqrt (gamma
-#           2.0) for bit-exactness. Bayer pattern RGGB (unified with SW dataset).
+# Goal   : Fix a chroma-collapse bug found by an adversarial review: the
+#           low-light path used to average all 4 RGGB samples in a 2x2 cell
+#           into ONE scalar, then re-demosaic that scalar grid as if it were
+#           still Bayer-patterned -- since the grid no longer had real Bayer
+#           structure, this just spread near-identical values around,
+#           destroying chroma before AWB/gain ever ran. Because this file WAS
+#           the golden model, `make verify`'s bit-exact test matched the bug
+#           perfectly and could never catch it. Worse, the SW mAP evidence
+#           (tools/isp_pipeline_ver1.py `_bin_demosaic_rggb16`) used a
+#           different, chroma-preserving algorithm, so the reported low-light
+#           mAP was never evidence for what this file/the HLS computed.
+#           Fixed: `bin_demosaic_rggb12()` now performs a fused 2x2
+#           binning+demosaic in one step (R=top-left, G=avg(top-right,
+#           bottom-left), B=bottom-right) -- bit-exact match to
+#           `_bin_demosaic_rggb16` -- then feeds the shared `apply_blc_wb12()`
+#           core directly (no second Bayer-assuming demosaic pass).
 # =============================================================================
 """Generate deterministic DFXISP HLS C-sim golden vectors.
 
@@ -17,11 +27,13 @@ Bit-exact mirror of src/dfxisp_accel.cpp: shared baseline ISP core + mutually
 exclusive tone RM slot. tone RM wraps the core; gain/gamma live only in the tone
 RMs (no duplication).
 
-  NORMAL:     raw -> baseline_core12 -> RM_NORMAL_TONE(gain 1.25x + gamma2)  (H x W)
-  LOW_LIGHT:  raw -> 2x2 RAW bin -> baseline_core12 -> RM_LOW_LIGHT_TONE
-                     (gain 2.0x + gamma2)                        (H/2 x W/2, Policy A)
+  NORMAL:     raw -> demosaic(RGGB) -> apply_blc_wb12 -> RM_NORMAL_TONE
+                     (gain 1.25x + gamma2)                          (H x W)
+  LOW_LIGHT:  raw -> 2x2 RAW binning-demosaic (fused) -> apply_blc_wb12
+                     -> RM_LOW_LIGHT_TONE(gain 2.0x + gamma2)  (H/2 x W/2, Policy A)
 
-baseline_core12 = demosaic(RGGB) + BLC + WB + CCM(identity), all in 12-bit. No gain/gamma.
+apply_blc_wb12 = BLC + WB + CCM(identity), 12-bit, no gain/gamma -- shared between
+both paths, consuming an already-demosaiced R,G,B triple either way.
 
 Standard library only. CSV carries per-case metadata (mode, selected RM, output
 shape) plus input RAW rows (kind=raw) and expected output rows (kind=rgb).
@@ -94,9 +106,10 @@ def demosaic_rggb12(raw: list[int], w: int, h: int, x: int, y: int) -> tuple[int
     return min(rr, RAW12_MAX), min(gg, RAW12_MAX), min(bb, RAW12_MAX)
 
 
-def baseline_core12(raw: list[int], w: int, h: int, x: int, y: int) -> tuple[int, int, int]:
-    """Shared baseline ISP core (ver1): demosaic + BLC + WB + CCM in 12-bit. No gain/gamma."""
-    dr, dg, db = demosaic_rggb12(raw, w, h, x, y)
+def apply_blc_wb12(dr: int, dg: int, db: int) -> tuple[int, int, int]:
+    """Shared baseline ISP core (ver1): BLC + WB + CCM in 12-bit. No gain/gamma.
+    Consumes an already-demosaiced R,G,B triple (full Bayer demosaic for normal,
+    or the low-light binning-demosaic -- see run_frame LOW_LIGHT branch)."""
     dr = clamp(dr - BLC_OFFSET12, 0, RAW12_MAX)          # BLC (subtract first)
     dg = clamp(dg - BLC_OFFSET12, 0, RAW12_MAX)
     db = clamp(db - BLC_OFFSET12, 0, RAW12_MAX)
@@ -104,6 +117,27 @@ def baseline_core12(raw: list[int], w: int, h: int, x: int, y: int) -> tuple[int
     g = clamp(dg * AWB_G // 256, 0, RAW12_MAX)
     b = clamp(db * AWB_B // 256, 0, RAW12_MAX)           # CCM identity
     return r, g, b
+
+
+def baseline_core12(raw: list[int], w: int, h: int, x: int, y: int) -> tuple[int, int, int]:
+    """Normal-path baseline core: full Bayer demosaic -> apply_blc_wb12."""
+    dr, dg, db = demosaic_rggb12(raw, w, h, x, y)
+    return apply_blc_wb12(dr, dg, db)
+
+
+def bin_demosaic_rggb12(raw: list[int], w: int, h: int, bx: int, by: int) -> tuple[int, int, int]:
+    """2x2 RAW binning-demosaic, fused (RESEARCH §4.2): one RGGB cell -> one R,G,B
+    triple (R=top-left, G=avg(top-right,bottom-left), B=bottom-right). This IS the
+    demosaic step for the binned grid -- bit-exact match to
+    tools/isp_pipeline_ver1.py's `_bin_demosaic_rggb16`. Chroma-preserving (fixes
+    the earlier scalar-average-then-redemosaic bug that collapsed color)."""
+    x0, x1 = 2 * bx, min(2 * bx + 1, w - 1)
+    y0, y1 = 2 * by, min(2 * by + 1, h - 1)
+    p00 = raw[y0 * w + x0]  # R (top-left)
+    p01 = raw[y0 * w + x1]  # G (top-right)
+    p10 = raw[y1 * w + x0]  # G (bottom-left)
+    p11 = raw[y1 * w + x1]  # B (bottom-right)
+    return p00, (p01 + p10) // 2, p11
 
 
 def tone(v12: int, gnum: int, gden: int) -> int:
@@ -139,19 +173,14 @@ def run_frame(raw: list[int], w: int, h: int, mode: int, dark_threshold: int):
                                     tone(b12, GAIN_NORMAL_NUM, GAIN_NORMAL_DEN)))
         return selected, DFXISP_RM_NORMAL_TONE, w, h, out
 
-    # LOW_LIGHT: 2x2 RAW binning (front) -> baseline core -> gain 2.0x + gamma (back)
+    # LOW_LIGHT: 2x2 RAW binning-demosaic (front, fused) -> baseline core (BLC+WB,
+    # no second demosaic) -> gain 2.0x + gamma (back)
     bw, bh = bin_dim(w), bin_dim(h)
-    binned = [0] * (bw * bh)
-    for by in range(bh):
-        for bx in range(bw):
-            x0, x1 = 2 * bx, min(2 * bx + 1, w - 1)
-            y0, y1 = 2 * by, min(2 * by + 1, h - 1)
-            s = raw[y0 * w + x0] + raw[y0 * w + x1] + raw[y1 * w + x0] + raw[y1 * w + x1]
-            binned[by * bw + bx] = s // 4
     out = []
     for y in range(bh):
         for x in range(bw):
-            r12, g12, b12 = baseline_core12(binned, bw, bh, x, y)
+            dr, dg, db = bin_demosaic_rggb12(raw, w, h, x, y)
+            r12, g12, b12 = apply_blc_wb12(dr, dg, db)
             out.append(pack_rgb(tone(r12, GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN),
                                 tone(g12, GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN),
                                 tone(b12, GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN)))
