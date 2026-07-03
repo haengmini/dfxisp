@@ -8,6 +8,7 @@ board: dfxisp
 created: 2026-06-23
 owner: 이형민
 tags: [fpga, dfx, isp, machine-vision, zynq-ultrascale, low-light]
+updated: 2026-07-03
 ---
 
 # DFXISP
@@ -38,59 +39,54 @@ Input Bayer / pseudo-RAW / RGB fixture
 5. **Low-light tone RM의 1차 명세는 `binning + gain + gamma`다.**
 6. DFX 실증 전에는 C-Sim/Python golden으로 산술 정합을 먼저 고정한다.
 
-## Current reset decision
+## Current status (2026-07-03)
 
-최근 HLS C-sim scaffold는 low-light를 post-RGB8 gain/lift로 단순화했지만, 이것은 최종 연구 구조와 다르다. 지금부터 문서/구현 기준은 다음으로 재정렬한다.
+- **Stage 0~3 (SW 트랙): 완료** — golden/baseline core 확정, checker+히스테리시스, tone RM 산술, mAP 평가(ver1/ver2/BLC 완화 3라운드).
+- **Stage 4~5 (HW 트랙): 완료(한계 기록됨)** — Vitis HLS 합성 + C/RTL Co-sim, Vivado DFX 구현 + pr_verify + PR latency 분석.
+- **Stage 6 (보드 실장 + DPU end-to-end): 미착수** — 실물 ZCU104 필요, 유일하게 남은 단계.
+- 상세 진행 상태와 근거 문서는 `ROADMAP.md` 참조.
 
-```text
-정본 방향: mode-specific tone RM slot + baseline ISP core
-NORMAL RM: gain + gamma or identity
-LOW_LIGHT RM: binning + gain + gamma
-현재 단순 scaffold: normal demosaic 후 RGB8 gain/lift
-```
+## Next direction
 
-따라서 후속 구현은 `RESEARCH.md`의 RM/baseline 구조를 기준으로 고친다.
+다음 리팩토링 방향은 **Vitis Vision Library 기준 baseline + DFXISP 확장 모듈** 구조다 (자체 ISP 전체를 새로 만드는 대신 Vitis Base를 고정하고 Check / Dark / DFX Ctrl을 확장). 계획 전문은 `STRATEGY.md` 참조.
 
 ## Active documents
 
-- `README.md` — 프로젝트 한 페이지 요약
+- `README.md` — 프로젝트 한 페이지 요약 (이 문서)
 - `RESEARCH.md` — 연구 정본: 배경, 아키텍처, RM 명세, 실험/검증 계획
-- `SPEC.md` — 시스템 사양서: 입력 데이터셋 → checker → tone RM → baseline core → RGB32 출력 → 평가 (포맷·산술·인터페이스·파라미터)
+- `SPEC.md` — 시스템 사양서: 입력 데이터셋 → checker → tone RM → baseline core → RGB32 출력 → 평가
+- `ROADMAP.md` — Stage 0~6 진행 상태 추적 (근거 문서 링크 포함)
+- `STRATEGY.md` — Vitis-first 리팩토링 전략 (2026-07-03, 다음 구현 방향)
 
-이전 문서들은 아래 archive로 보존했다.
+실험/시뮬레이션 산출물 전체 목록은 `isppipeline/hls/results/INDEX.md` 에서 찾을 수 있다.
+
+이전 문서들은 `archive/docs-reorg-2026-07-01/` 에 보존되어 있다 (`archive/README.md` 참조).
+
+## Repository layout
 
 ```text
-archive/docs-reorg-2026-07-01/
-```
-
-## Important local paths
-
-```text
-isppipeline/hls/                 Current HLS C-sim scaffold
-isppipeline/baseline/            Historical/current baseline ISP references
-isppipeline/proposal/            Historical proposal ISP references
-archive/docs-reorg-2026-07-01/   Archived docs from the pre-reset structure
-RESEARCH.md                      Current research and implementation source of truth
+README.md / RESEARCH.md / SPEC.md / ROADMAP.md / STRATEGY.md   정본 문서 5종
+isppipeline/hls/            HLS 구현 (src, include, tests, tools, scripts)
+isppipeline/hls/results/    실험·시뮬레이션 산출물 (INDEX.md 로 탐색)
+isppipeline/hls/reports/    최신 검증 리포트 (latest.md) + csynth 리포트
+isppipeline/baseline/       Baseline ISP 참고 자료
+isppipeline/proposal/       Proposal ISP 참고 자료 (historical)
+model/                      Detector 모델 메타데이터 (weights는 Drive 백업)
+include/aie-ml/             AIE-ML 참고 자료
+archive/                    이전 구조의 문서 보존 (archive/README.md 참조)
 ```
 
 ## Verification status
 
-Current executable C-sim status before reset:
-
 ```text
 cd isppipeline/hls
-make verify
-# DFXISP golden vector compare passed (832 pixels)
-# DFXISP C-sim smoke tests passed
+make verify        # Python golden ↔ C-sim bit-exact + binning cross-check
+make report        # reports/latest.md 갱신
 ```
 
-주의: 이 PASS는 현재 scaffold의 bit-exactness를 의미할 뿐, 새 RM 구조가 구현 완료되었다는 뜻은 아니다.
+`reports/latest.md` 기준: golden PASS, C-sim PASS, 아키텍처 gate 6종 PASS (shared baseline core / RM 2종 / 상호배타 / gain·gamma 중복없음 / 형상정책).
 
-## Next implementation target
+## Related locations
 
-1. `RM_NORMAL_TONE`: normal gain + gamma, or identity bypass if not needed
-2. `RM_LOW_LIGHT_TONE`: `2x2 binning + gain + gamma`
-3. `baseline_isp_core`: shared ISP core without duplicated gain/gamma
-4. `checker`: dark-scene trigger, hysteresis 포함
-5. `mode controller`: mutually exclusive RM selection; dark trigger 시 low-light tone RM active
-6. Python golden + HLS C-sim fixtures: bright → dark → bright sequence
+- GitHub (code source of truth): https://github.com/haengmini/dfxisp
+- Google Drive 백업: `내 드라이브/Agent OS/06-production/DFXISP/` (dataset zip, 모델 weights, 다이어그램, lit-reviews 포함)
