@@ -1,9 +1,20 @@
 # Agent/runtime-local files
 .hermes/
 
+# Vivado/Vitis session droppings (root-level batch runs)
+vivado.jou
+vivado.log
+vivado_pid*.str
+logs/
+
 # Build outputs
 build/
 isppipeline/hls/build/
+
+# Local copies of reproducible HLS/Vivado synthesis artifacts (bitstreams,
+# checkpoints, raw Verilog) -- large binaries, regenerate via documented
+# procedures in isppipeline/hls/results/*.md rather than committing.
+deliverables/
 
 # Datasets / runs / large artifacts
 data/
