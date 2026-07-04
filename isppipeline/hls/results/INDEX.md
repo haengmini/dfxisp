@@ -29,6 +29,10 @@
 | `experiment_ver2_2026-07-02.md` | 07-02 | ver2 checker dark-level 재보정 |
 | `lowlight-rm-map-rootcause-2026-07-02.md` | 07-02 | low-light RM mAP 미개선 원인 ablation |
 | `phase0-2-execution-2026-07-03.md` | 07-03 | 개선전략 Phase 0~2 실행 결과 |
+| `checker-improvement-theory-2026-07-03.md` | 07-03 | checker 개선 이론 (결정이론/노이즈물리/hysteresis) |
+| `checker-improvement-simulation-2026-07-03.md` | 07-03 | checker 통계량 1150프레임 전수 스윕 (dark16 권고) |
+| `lowlight-mv-isp-survey-2026-07-03.md` | 07-03 | 저조도 특성 + MV-ISP 모듈 서베이 (RM 후보) |
+| `checker-improvement-analysis-2026-07-04.md` | 07-04 | dark16 우월성 원인 규명 + 기존 결과 비교 |
 | `isp_analysis.md` / `isp_analysis.csv` | 06-29 | ISP variant proxy 분석 (detector 없음) |
 | `11-ssd-crosscheck-2026-06-29.md` | 06-29 | SSD 2차 detector 교차검증 |
 
