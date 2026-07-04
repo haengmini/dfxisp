@@ -19,6 +19,14 @@ Usage:
 
 Baseline: dark-ratio at dark_pixel_threshold=12800 (= 8-bit 50 << 8, the
 Y<50-equivalent used by the 2026-07-02 ver2 recalibration), trigger at >80%.
+
+RAW-domain note (adversarial review, 2026-07-04): thresholds in this script are
+in the DATASET domain -- the .bin files are shift-8 pseudo-RAW, so an 8-bit
+threshold T8 is T8 << 8 (dark16 -> 4096). The HLS pipeline input is 12-bit
+(RAW12_MAX=4095 in src/dfxisp_accel.cpp), where the same T8 is T8 << 4
+(dark16 -> 256). Feeding a dataset-domain value like 4096 to the HLS
+dark_pixel_threshold register would mark EVERY valid 12-bit pixel dark and
+route all AUTO frames to LOW_LIGHT. --analyze prints both domains.
 """
 from __future__ import annotations
 
@@ -247,7 +255,14 @@ def analyze(csv_path: Path) -> None:
     D = load(csv_path)
     y = D["label"]
 
-    print("## baseline reproduction")
+    print("## dark_pixel_threshold domain mapping (see module docstring)")
+    print("| 8-bit T8 | dataset pseudo-RAW16 (T8<<8) | HLS raw12 (T8<<4) |")
+    print("|---|---|---|")
+    for t8 in DARK_T8:
+        cur = " (current)" if t8 == 50 else ""
+        print(f"| {t8}{cur} | {t8 << 8} | {t8 << 4} |")
+
+    print("\n## baseline reproduction")
     for col, note in (("y50_ratio", "golden Y<50 (ver2 recal metric)"),
                       ("dark50", "HW raw16<12800")):
         r, ft = eval_at(D[col], y, 0.80)

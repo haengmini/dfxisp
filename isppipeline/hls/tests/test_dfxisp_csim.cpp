@@ -172,6 +172,33 @@ int main() {
         assert(sr86 == DFXISP_RM_LOW_LIGHT_TONE);
     }
 
+    // RAW-domain boundary regression (adversarial review, 2026-07-04): the dark16
+    // recommendation (checker-improvement-simulation-2026-07-03.md) is calibrated
+    // on shift-8 pseudo-RAW where 8-bit 16 -> 16<<8 = 4096; on this 12-bit HLS
+    // path the same threshold is 16<<4 = 256. A dataset-domain value (4096) here
+    // would mark every valid pixel dark (raw < 4096 always) and route ALL frames
+    // to LOW_LIGHT. Prove 256 does not: pixels at exactly 256 are NOT dark
+    // (strict < compare) so AUTO stays NORMAL; one LSB lower flips to LOW_LIGHT.
+    {
+        uint16_t at_thr[W * H];
+        for (int i = 0; i < W * H; ++i) at_thr[i] = 256;   // == threshold: not dark
+        uint32_t out_at[W * H] = {};
+        int ow_at = 0, oh_at = 0, sm_at = 0, sr_at = 0;
+        dfxisp_accel(at_thr, out_at, W, H, DFXISP_MODE_AUTO, 256,
+                    &ow_at, &oh_at, &sm_at, &sr_at);
+        assert(sm_at == DFXISP_MODE_NORMAL);   // 0% dark -> NORMAL
+        assert(sr_at == DFXISP_RM_NORMAL_TONE);
+
+        uint16_t below_thr[W * H];
+        for (int i = 0; i < W * H; ++i) below_thr[i] = 255;  // < threshold: dark
+        uint32_t out_bt[W * H] = {};
+        int ow_bt = 0, oh_bt = 0, sm_bt = 0, sr_bt = 0;
+        dfxisp_accel(below_thr, out_bt, W, H, DFXISP_MODE_AUTO, 256,
+                    &ow_bt, &oh_bt, &sm_bt, &sr_bt);
+        assert(sm_bt == DFXISP_MODE_LOW_LIGHT);  // 100% dark -> LOW_LIGHT
+        assert(sr_bt == DFXISP_RM_LOW_LIGHT_TONE);
+    }
+
     // Saturation: gain + gamma2.0 tone never overflows RGB8.
     uint16_t sat[W * H];
     for (int i = 0; i < W * H; ++i) sat[i] = 4095;

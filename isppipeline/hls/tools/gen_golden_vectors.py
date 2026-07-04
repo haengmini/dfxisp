@@ -245,6 +245,14 @@ def golden_cases():
          boundary_ratio_raw(8, 8, dark_count=48)),   # 48/64 = 75% -> NOT > 80% -> NORMAL
         ("auto_boundary_ratio_86_8x8", 8, 8, DFXISP_MODE_AUTO, 512,
          boundary_ratio_raw(8, 8, dark_count=55)),   # 55/64 = 85.9% -> > 80% -> LOW_LIGHT
+        # RAW-domain boundary regression (adversarial review, 2026-07-04): the dark16
+        # threshold is 16<<4 = 256 in the HLS raw12 domain (NOT the dataset-domain
+        # 16<<8 = 4096, which would mark every 12-bit pixel dark). Pixels at exactly
+        # 256 are not dark (strict < compare) -> NORMAL; one LSB below -> LOW_LIGHT.
+        ("auto_raw12_thr256_at_threshold_8x8", 8, 8, DFXISP_MODE_AUTO, 256,
+         [256] * 64),   # raw == threshold -> 0% dark -> NORMAL
+        ("auto_raw12_thr256_below_threshold_8x8", 8, 8, DFXISP_MODE_AUTO, 256,
+         [255] * 64),   # raw < threshold everywhere -> 100% dark -> LOW_LIGHT
     ]
 
 

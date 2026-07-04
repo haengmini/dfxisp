@@ -10,6 +10,11 @@ Goal   : design-limitations §"dark_pixel_threshold naive" 지적에 대한 응�
           현행 dark-ratio(Y<50 등가, >80%) 대비 HW 1-pass로 계산 가능한 대안
           통계량들을 실측 비교하고, 임계값+hysteresis+HW 비용까지 포함한
           순위화된 권고를 도출.
+Rev    : 2026-07-04 — Codex adversarial review [high] 반영: 임계값의 RAW 도메인
+          구분(데이터셋 pseudo-RAW16 vs HLS raw12)을 §1.0에 명시하고, §7 실행
+          제안의 HLS 주입값을 raw12 도메인(256=16<<4)으로 정정. C-sim/golden
+          경계 회귀 테스트 추가(tests/test_dfxisp_csim.cpp,
+          tools/gen_golden_vectors.py: auto_raw12_thr256_*).
 =============================================================================
 -->
 # checker 통계량 개선 시뮬레이션 (2026-07-03)
@@ -25,9 +30,11 @@ Goal   : design-limitations §"dark_pixel_threshold naive" 지적에 대한 응�
 1. **현행 dark50(=`dark_pixel_threshold`=12800, 8-bit 50 등가) 기준선은 baseline으로
    재현됨** — 전수(575/575)에서 recall=0.918 / false-trigger(FT)=0.125, J=0.79로 문서값
    J=0.79와 일치. (단 recall/FT 개별값은 재보정 당시 부분집합 n=150~200과 ±0.02~0.04 차이.)
-2. **같은 HW에서 dark 임계만 8-bit 16(raw16<4096)으로 내리면(dark16) AUC 0.963→0.977,
+2. **같은 HW에서 dark 임계만 8-bit 16으로 내리면(dark16) AUC 0.963→0.977,
    J 0.809→0.849** (recall 0.937 / FT 0.089). **RTL 변경 0** — 런타임 레지스터
-   `dark_pixel_threshold`=4096 + `DARK_RATIO_PCT` 80→62.
+   `dark_pixel_threshold`를 8-bit 16 등가로(HLS raw12 도메인 **256**=16<<4;
+   본 리포트의 데이터셋 pseudo-RAW16 도메인으로는 4096=16<<8, §1.0 도메인 주의
+   참조) + `DARK_RATIO_PCT` 80→62.
 3. log-mean(AE 표준 log-average luminance, AUC 0.978)·entropy(0.977)·p50(0.972)도
    dark16과 사실상 동급 — 추가 HW(LUT/histogram)를 정당화할 만큼의 이득은 없음.
 4. **1/16 subsampling(Bayer-quad 보존)은 사실상 공짜** (ΔAUC ≤0.0001) — checker
@@ -37,6 +44,23 @@ Goal   : design-limitations §"dark_pixel_threshold naive" 지적에 대한 응�
 ---
 
 ## 1. 방법론
+
+### 1.0 RAW 도메인 주의 — 데이터셋 vs HLS (필독)
+
+이 리포트의 모든 임계 절대값은 **데이터셋 도메인**이다. 두 도메인은 다르다:
+
+| 도메인 | 스케일 | 8-bit 임계 T8의 값 | dark16 | dark50(현행) | 근거 |
+|---|---|---|---|---|---|
+| 데이터셋 pseudo-RAW (.bin, 본 리포트 스윕) | 16-bit = 8-bit<<8 | T8<<8 | **4096** | 12800 | `isp_pipeline_ver1.py` SHIFT=8 |
+| **HLS 파이프라인 입력 (구현 대상)** | **12-bit (0..4095)** | **T8<<4** | **256** | 800 | `dfxisp_accel.cpp` RAW12_MAX=4095, BLC=16<<4 |
+
+**데이터셋 도메인 값 4096을 HLS `dark_pixel_threshold` 레지스터에 그대로 넣으면
+12-bit 경로의 모든 유효 픽셀(0..4095)이 `raw < 4096`으로 dark 판정되어 AUTO가
+사실상 항상 LOW_LIGHT로 라우팅된다** (Codex adversarial review 2026-07-04 [high]
+지적). HLS/C-sim/golden 픽스처에 주입할 값은 **256**(=16<<4)이며, 기존 픽스처의
+512는 raw12 도메인의 8-bit 32 등가다. 이 도메인 변환을 검증하는 경계 회귀
+테스트(임계 256에서 raw==256 전 픽셀 → NORMAL, raw==255 → LOW_LIGHT)를
+`tests/test_dfxisp_csim.cpp`와 golden 벡터(`auto_raw12_thr256_*`)에 추가했다.
 
 ### 1.1 데이터 및 프레임 치수 복원
 
@@ -255,7 +279,7 @@ dual threshold는 진입 t\*+δ / 해제 t\*−δ:
 
 | 순위 | 통계량 + 운영점 | 성능 (recall / FT / J) | HW 비용 (정성) |
 |---|---|---|---|
-| **1** | **dark16**: `dark_pixel_threshold`=**4096**(=16<<8), 진입 dark_ratio>**64%** / 해제 <**60%** (hysteresis δ=2%p, 중심 62%) | 0.936 / 0.089 / 0.847 (@62%, 전수) — 현행 대비 recall +0.018, FT −0.036, J +0.038 | **변경 0**: 기존 비교기+카운터 그대로. 레지스터 값 4096 + `DARK_RATIO_PCT` 상수 80→62(hysteresis 시 64/60 두 상수 + mode FF 1개). pass 수 동일(1) |
+| **1** | **dark16**: `dark_pixel_threshold`=**256**(=16<<4, HLS raw12 도메인 — 데이터셋 도메인 스윕값 4096의 등가, §1.0), 진입 dark_ratio>**64%** / 해제 <**60%** (hysteresis δ=2%p, 중심 62%) | 0.936 / 0.089 / 0.847 (@62%, 전수) — 현행 대비 recall +0.018, FT −0.036, J +0.038 | **변경 0**: 기존 비교기+카운터 그대로. 레지스터 값 4096 + `DARK_RATIO_PCT` 상수 80→62(hysteresis 시 64/60 두 상수 + mode FF 1개). pass 수 동일(1) |
 | 2 | 위 + **1/16 Bayer-quad subsampling** (quad-grid stride 4×4) | 0.934 / 0.089 / 0.845 — 열화 무시 가능(σ_ratio≈0.25%p) | 카운터 1 + 주소 스킵 로직. checker pass 픽셀 읽기 **16배 감소** |
 | 3 | logmean(log-average luminance) < 3.22 bit | 0.939 / 0.090 / 0.849 | 256-entry log2 LUT(Q8) + 40bit 누산기 + frame-end 나눗셈 1회. dark16 대비 이득 없음(ΔJ=0.000, ΔAUC +0.0014) → 비용 대비 기각 |
 | 4 | 256-bin histogram + p50<9.5 (CDF walk) | 0.953 / 0.106 / 0.847 | BRAM 256×21bit + walk FSM. recall 최고지만 운영점이 정수 격자에 몰려 취약(§5.1), FT도 0.106 |
@@ -264,14 +288,18 @@ dual threshold는 진입 t\*+δ / 해제 t\*−δ:
 
 **실행 제안(1순위 반영 시 변경 지점):** `src/dfxisp_accel.cpp`·`tools/gen_golden_vectors.py`의
 `DARK_RATIO_PCT` 80→62(hysteresis 채택 시 ENTER=64/EXIT=60), `tools/isp_pipeline_ver1.py`
-`DARK_Y` 50→16·`DARK_RATIO` 0.80→0.62, 테스트벤치의 `dark_pixel_threshold` 주입값
-12800→4096, boundary regression fixture 2종(61%→NORMAL, 66%→LOW_LIGHT 등) 교체.
+`DARK_Y` 50→16·`DARK_RATIO` 0.80→0.62, C-sim/golden 테스트벤치의 `dark_pixel_threshold`
+주입값 512→**256** (raw12 도메인, §1.0 — 데이터셋 도메인 스크립트/골든모델에서는
+12800→4096), boundary regression fixture 2종(61%→NORMAL, 66%→LOW_LIGHT 등) 교체.
+RAW 도메인 경계 회귀(`auto_raw12_thr256_*`: 임계 256에서 raw==256 → NORMAL /
+raw==255 → LOW_LIGHT)는 2026-07-04에 선반영 완료.
 hysteresis는 checker가 이전 mode를 입력으로 받아야 하므로 s_axilite `mode` 대신 내부
 상태 FF 1개 추가가 필요 — AUTO 연속 프레임 운용 시나리오(보드)에서만 의미 있고,
 단일 프레임 C-sim 의미론은 불변.
 
-**한계:** (1) pseudo-RAW(sRGB 역변환) 기반 — real-RAW 센서에서 dark16=4096의 절대값은
-black level/노출에 따라 재보정 필요(상대 결론인 "낮은 dark 임계가 우월"은 유지 전망).
+**한계:** (1) pseudo-RAW(sRGB 역변환) 기반 — real-RAW 센서에서 dark16 절대값
+(HLS raw12 256 / 데이터셋 4096)은 black level/노출에 따라 재보정 필요(상대 결론인
+"낮은 dark 임계가 우월"은 유지 전망).
 (2) FT의 fold 간 분산(±0.04)이 크므로 소수점 둘째 자리 차이는 과신하지 말 것.
 (3) hysteresis σ는 공간 샘플링 노이즈 proxy — 실제 시간축 jitter(센서 노이즈, AE 변동)는
 보드 실측으로 확인 필요.
