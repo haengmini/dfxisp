@@ -1,0 +1,7 @@
+dataset,version,name,mAP_50_95,mAP_50,AP_small,AP_medium,AP_large,model,n
+ExDark,R0,R0_baseline (bin+gain+gamma2.5),0.0732,0.1430,0.0002,0.0058,0.1051,ssdlite320_mobilenet_v3_large,150
+ExDark,R1,R1_RM_TONE_LUT_PARAM (fullres+VST),0.0684,0.1409,0.0000,0.0049,0.0999,ssdlite320_mobilenet_v3_large,150
+ExDark,R3,R3_RM_TONE_CLAHE (fullres+CLAHE),0.0693,0.1400,0.0000,0.0048,0.1007,ssdlite320_mobilenet_v3_large,150
+COCO,R0,R0_baseline (bin+gain+gamma2.5),0.1959,0.2917,0.0020,0.0370,0.3777,ssdlite320_mobilenet_v3_large,150
+COCO,R1,R1_RM_TONE_LUT_PARAM (fullres+VST),0.2085,0.3134,0.0039,0.0398,0.4040,ssdlite320_mobilenet_v3_large,150
+COCO,R3,R3_RM_TONE_CLAHE (fullres+CLAHE),0.2087,0.3070,0.0019,0.0325,0.4005,ssdlite320_mobilenet_v3_large,150

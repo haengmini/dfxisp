@@ -1,0 +1,5 @@
+dataset,checker,mAP_50_95,mAP_50,n_lowlight,n
+ExDark,C0_dark50_0p80,0.0589,0.1300,133,150
+ExDark,C1_dark16_0p62,0.0512,0.1191,134,150
+COCO,C0_dark50_0p80,0.3304,0.4555,20,150
+COCO,C1_dark16_0p62,0.3308,0.4596,11,150

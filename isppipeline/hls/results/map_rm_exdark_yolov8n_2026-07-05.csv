@@ -1,0 +1,5 @@
+dataset,version,name,mAP_50_95,mAP_50,AP_small,AP_medium,AP_large,model,n
+ExDark,R0,R0_baseline (bin+gain+gamma2.5),0.0777,0.1640,0.0039,0.0258,0.1095,yolov8n.pt,150
+ExDark,R1,R1_RM_TONE_LUT_PARAM (fullres+VST),0.0838,0.1768,0.0075,0.0282,0.1190,yolov8n.pt,150
+ExDark,R2,R2_RM_LL_BIN_DN (bin+denoise+VST),0.0726,0.1594,0.0044,0.0251,0.1054,yolov8n.pt,150
+ExDark,R3,R3_RM_TONE_CLAHE (fullres+CLAHE),0.0811,0.1777,0.0054,0.0322,0.1138,yolov8n.pt,150

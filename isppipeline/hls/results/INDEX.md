@@ -90,6 +90,24 @@ G4 (07-03, BLC 완화 최종): map_ver1_coco_yolov8n_blcfix.csv ★
 | `scheduler.csv` | checker/히스테리시스 단계별 효과 |
 | `scheduler_sweep.csv` | band×temporal×dwell 27조합 sweep |
 
+## 6.5 principled-v3 캠페인 (2026-07-05, 원리기반 checker+RM 재설계)
+
+정본 종합: `principled-comparison-2026-07-05.md` (여기부터 읽기). 브랜치 `exp/principled-checker-rm-2026-07-05`.
+
+| 파일 | 내용 |
+|---|---|
+| `PLAN-principled-checker-rm-2026-07-05.md` | 캠페인 계획 (버전정의·에이전트팀 배치) |
+| `checker-principles-2026-07-05.md` | **정본** checker 5원리 (결정이론/광도계/노이즈물리/샘플링/시간축) |
+| `checker-principled-versions-2026-07-05.md` | checker C0..C4 구현·실험 (winner C1 dark16>0.62) |
+| `lowlight-feature-principles-2026-07-05.md` | **정본** 저조도 feature 추출 원리 (SNR/VST/tone) |
+| `lowlight-rm-principled-versions-2026-07-05.md` | RM R0..R3 mAP+size-AP 실험 (winner R1 full-res VST) |
+| `rm-ssd-crosscheck-2026-07-05.md` | SSDLite 3차 검출기 교차검증 |
+| `principled-comparison-2026-07-05.md` | **정본** 이전버전 대비 종합 비교·결론 |
+| `map_rm_{exdark,coco}_yolov8{n,s}_2026-07-05.csv`, `map_rm_ssd_2026-07-05.csv` | RM 버전 mAP |
+| `scratch_frame_stats.csv`, `scratch_adaptive_map_principled.csv` | checker 통계·adaptive mAP |
+
+구현: `tools/checker_versions.py`, `tools/rm_versions.py`, `tools/eval_map_rmversions{,_ssd}.py`, `tools/scratch_adaptive_map_principled.py`.
+
 ## 7. 파일 명명 규칙 (앞으로도 이 규칙 유지)
 
 ```text
