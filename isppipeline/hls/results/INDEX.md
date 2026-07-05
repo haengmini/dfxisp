@@ -108,6 +108,20 @@ G4 (07-03, BLC 완화 최종): map_ver1_coco_yolov8n_blcfix.csv ★
 
 구현: `tools/checker_versions.py`, `tools/rm_versions.py`, `tools/eval_map_rmversions{,_ssd}.py`, `tools/scratch_adaptive_map_principled.py`.
 
+### principled-v3 refinement (2026-07-05, 재검토+Codex리뷰+세분화)
+
+정본: `principled-v3-refinement-2026-07-05.md` (1차 결론 정정 — RM 이득=binning 제거이고 COCO 견고·ExDark 검출기의존; 최적 checker 임계 dark8~10; C4 nested-CV 기각 확정).
+
+| 파일 | 내용 |
+|---|---|
+| `principled-v3-refinement-2026-07-05.md` | **정본** 재검토·Codex·세분화 종합 (자체 5갭 + Codex 7findings 반영) |
+| `checker_fine_2026-07-05.csv` | dark8~32 미세 sweep + 정직한 5-fold/nested CV |
+| `map_rmfine_{coco,exdark}_yolov8n_2026-07-05.csv` | 2×3 resolution×tone factorial (n=150) |
+| `map_rmfine575_{coco,exdark}_yolov8{n,s}_2026-07-05.csv` | 결정 셀 전수 + cross-detector |
+| `map_rmfine_deployexact_{coco,exdark}_yolov8n_2026-07-05.csv` | bit-exact 배포 톤(floor LUT) 확인 |
+
+구현: `tools/checker_versions_fine.py`, `tools/rm_versions_fine.py`, `tools/eval_map_rmversions_fine.py`.
+
 ## 7. 파일 명명 규칙 (앞으로도 이 규칙 유지)
 
 ```text

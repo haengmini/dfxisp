@@ -48,7 +48,19 @@ BLK_LL = V.BLK_RAW_LOWLIGHT
 
 # ---- tone LUTs -------------------------------------------------------------
 _LUT_G25 = V._gamma_lut(2.5)          # ver1 low-light tone (exponent 0.40)
-_LUT_G20 = V._gamma_lut(2.0)          # sqrt tone == DEPLOYED canonical HLS gamma2()
+_LUT_G20 = V._gamma_lut(2.0)          # SW sqrt tone (np.round; ~deployed, differs +-1 LSB)
+
+
+def _gamma2_floor_lut() -> np.ndarray:
+    """BIT-EXACT deployed HLS low-light tone: gamma2()=floor(sqrt(255*v)),
+    v in [0,255] (src/dfxisp_accel.cpp GAMMA2_LUT). Codex-review finding 1:
+    V._gamma_lut(2.0) uses np.round and differs from this in 136/256 entries by
+    +1 LSB, so use THIS for the honest 'deployed tone' control (B_g20f/F_g20f)."""
+    v = np.arange(256, dtype=np.float64)
+    return np.clip(np.floor(np.sqrt(255.0 * v)), 0, 255).astype(np.uint8)
+
+
+_LUT_G20F = _gamma2_floor_lut()       # == deployed HLS gamma2(), bit-exact
 def _lut_vst(offset: float) -> np.ndarray:
     return RM.vst_tone_lut(offset)    # GAT-form sqrt(v+offset), normalized
 
@@ -90,6 +102,9 @@ FACTORIAL = {
     # knee / denoise probes
     "F_vst_knee": dict(binned=False, lut=_LUT_VST, knee=True, denoise=False),  # == first-pass R1
     "B_vst_dn":   dict(binned=True,  lut=_LUT_VST, knee=False, denoise=True),  # == first-pass R2 (no knee)
+    # bit-exact deployed-tone controls (Codex finding 1): floor(sqrt(255*v)) LUT
+    "B_g20f": dict(binned=True,  lut=_LUT_G20F, knee=False, denoise=False),   # bit-exact DEPLOYED
+    "F_g20f": dict(binned=False, lut=_LUT_G20F, knee=False, denoise=False),   # deployed tone, full-res
 }
 
 VERSION_NAMES = {
@@ -101,6 +116,8 @@ VERSION_NAMES = {
     "B_vst": "binned + VST(offset4)",
     "F_vst_knee": "full-res + VST + soft-knee (== R1)",
     "B_vst_dn": "binned + VST + edge-denoise (== R2)",
+    "B_g20f": "binned + floor-sqrt (BIT-EXACT deployed HLS tone)",
+    "F_g20f": "full-res + floor-sqrt (deployed tone, binning removed)",
 }
 
 # VST read-offset sensitivity sweep (full-res, no knee): principle 4.2 says the

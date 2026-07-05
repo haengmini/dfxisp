@@ -1,0 +1,4 @@
+dataset,version,name,mAP_50_95,ci_lo,ci_hi,ci_sd,mAP_50,AP_small,AP_medium,AP_large,model,n
+COCO,B_g20,"binned + sqrt (DEPLOYED tone, honest control)",0.3075,nan,nan,nan,0.4642,0.1446,0.2352,0.5009,yolov8s.pt,347
+COCO,F_g20,full-res + sqrt(gamma2.0),0.3435,nan,nan,nan,0.4993,0.2458,0.2976,0.5151,yolov8s.pt,347
+COCO,F_vst_knee,full-res + VST + soft-knee (== R1),0.3415,nan,nan,nan,0.4927,0.2352,0.3003,0.5123,yolov8s.pt,347

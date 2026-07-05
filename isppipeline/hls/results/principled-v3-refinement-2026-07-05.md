@@ -18,9 +18,11 @@ Inputs : self-review(코드 정독) + Codex review(§4) + 세분화 실험
 > 1차 결과(`principled-comparison-2026-07-05.md` 및 트랙별 문서)를 **비판적으로 재검토**하고,
 > **Codex 고급 리뷰**(§4)를 받아 전략을 고도화한 뒤, 갭을 메우는 **세분화 버전**을 만들어
 > 실험·분석했다. 핵심은 1차의 두 서사를 **정직하게 교정**한 것이다:
-> (i) 저조도 RM 이득은 "VST 톤"이 아니라 **binning 제거(해상도)**가 전부다.
-> (ii) 최적 checker dark 임계는 16이 아니라 **더 낮은 대역(dark8~10)**이며, 이는 정직한
-> held-out CV에서도 유지된다.
+> (i) 저조도 RM 이득은 "VST 톤"이 아니라 **binning 제거(해상도)**에서 오며, **COCO/정상조도에서
+> 견고**하고 **저조도(ExDark)에서는 검출기 의존적 wash**다 — 배포본은 이미 원리적 sqrt(VST계열)
+> 톤을 써서 VST-param LUT·soft-knee는 순효과가 없다.
+> (ii) 최적 checker dark 임계는 16이 아니라 **더 낮은 대역(dark8~10)**이며, 정직한 held-out
+> CV에서 유지되고 C3/C4 기각은 nested-CV로 확정된다.
 
 ---
 
@@ -71,7 +73,9 @@ G-HW-1은 §5 전략에 board-track 항목으로 이관.
 + soft-knee/denoise probe. `eval_map_rmversions_fine.py`(COCOeval size-AP + **image-level 부트스트랩
 95% CI**). 이로써 "binning 제거"와 "톤 변경"을 **독립적으로** 귀속한다.
 
-### 3.1 전수 n=575, yolov8n, mAP@[.5:.95] (부트스트랩 300)
+### 3.1 전수(ExDark n=260*, COCO n=347*), yolov8n, mAP@[.5:.95] (부트스트랩 300)
+
+\* **정직한 n 정정:** raw16 크기가 JPEG와 일치하는 프레임만 유효 → ExDark 260(491 이미지 중), COCO 347(575 raw 중). `--limit 575`를 줬어도 실제 평가 n은 이 값이다(두 검출기 런 동일, apples-to-apples). 1차 문서들이 "전수 n=575"라 표기한 것은 부정확했고 여기서 정정한다(부호·순위 결론은 불변, 표본 크기 표기만 교정).
 
 | 셀 | 구성 | ExDark (95%CI) | COCO (95%CI) |
 |---|---|---:|---:|
@@ -90,33 +94,75 @@ G-HW-1은 §5 전략에 board-track 항목으로 이관.
 | F_vst_knee − F_g20 | VST offset + soft-knee | +0.0005 | **−0.0033** |
 | B_vst_dn − B_g20 | edge-preserving denoise | −0.0111 | −0.0163 |
 
-**분석 (핵심 교정):**
-1. **저조도 RM 이득의 전부가 "binning 제거"다.** F_g20−B_g20 = +0.0064(ExDark)/+0.0176(COCO). COCO **AP_small 0.0495→0.1958 (+296%)** — 해상도 보존이 소형 객체를 되살리는 것이 지배 메커니즘(size-AP로 확증).
-2. **1차 "VST 톤이 이득" 서사는 아티팩트였다(G-RM-1 확정).** 배포본은 이미 sqrt 톤이라 VST와 사실상 동일(톤 대비 +0.001급). 1차 R1이 F_g20보다 나아 보인 몫은 **gamma2.5라는 약한 baseline과 비교**했기 때문. 배포 sqrt(B_g20) 기준 R1의 순이득은 ExDark +0.0069·COCO +0.0143인데, 그중 VST+soft-knee 몫은 **0~음수**(COCO에서 F_g20이 R1을 0.0033 앞섬).
-3. **따라서 3rd RM은 F_g20 = "binning만 제거, 기존 sqrt 톤 유지"가 최적.** 1차 권고 R1(RM_TONE_LUT_PARAM: VST-param LUT + soft-knee)은 **과설계** — 새 LUT 없이 기존 `gamma2()` ROM을 그대로 쓰고 binning 단계만 빼면 되며, R1과 같거나 낫고 더 싸다.
-4. **denoise(R2)는 두 데이터셋·전수에서 명확한 음수** — pseudo-RAW에서 반증 재확인(real-RAW 유보는 유지).
+**분석 (핵심 교정, yolov8n; detector 의존성은 §3.4):**
+1. **저조도 RM의 유의미한 이득은 "binning 제거"에서 온다(단, ExDark는 검출기 의존 — §3.4).** yolov8n에서 F_g20−B_g20 = +0.0064(ExDark)/+0.0176(COCO). COCO **AP_small 0.0495→0.1958 (+296%)** — 해상도 보존이 소형 객체를 되살리는 것이 지배 메커니즘(size-AP로 확증). ExDark의 +0.0064는 CI 내이고 yolov8s에서 부호가 뒤집힌다(§3.4).
+2. **1차 "VST 톤이 이득" 서사는 아티팩트였다(G-RM-1, Codex finding 1 확정).** 배포본은 이미 sqrt 톤이라 VST와 사실상 동일(톤 대비 +0.001급). 1차 R1이 F_g20보다 나아 보인 몫은 **약한 baseline(gamma2.5)과 비교**했기 때문. VST offset+soft-knee의 순효과는 무의미: **COCO에선 F_g20>R1(−0.0033), ExDark에선 R1이 근소 우위(+0.0005)** — 둘 다 noise 대역, 방향 불일치.
+3. **따라서 3rd RM은 F_g20 = "binning 제거 + 기존 배포 sqrt 톤 유지"가 (동급 성능·더 낮은 HW로) 우선.** 1차 권고 R1(RM_TONE_LUT_PARAM: VST-param LUT + soft-knee)은 **과설계** — 새 LUT 없이 기존 `gamma2()` ROM을 그대로 쓰고 binning만 제거하면 되며, COCO에서 R1보다 낫고 ExDark에선 통계적 동급이다.
+4. **denoise(R2)는 두 데이터셋 모두 명확한 음수** — pseudo-RAW에서 반증 재확인(real-RAW 유보는 유지).
 
 ### 3.3 1차 대비 정직성 개선
 
-- 1차 보고 "R1 vs R0 COCO +0.0274, ExDark +0.0061"은 (i) **약한 baseline(gamma2.5)** 과 (ii) **n=150 특정 부분집합**의 합작. 전수 n=575·배포 baseline 기준으로 재산정하면 **의미 있는 순이득은 +0.018(COCO)/+0.006(ExDark), 전량 해상도**. 부호는 유지되나 크기·귀속이 정정됨. (첫 문서 상단에 정정 배너 추가.)
+- 1차 보고 "R1 vs R0 COCO +0.0274, ExDark +0.0061"은 (i) **약한 baseline(gamma2.5)** 과 (ii) **n=150 특정 부분집합**의 합작. 전수(COCO 347/ExDark 260)·배포 baseline(B_g20) 기준으로 재산정하면 **의미 있는 순이득은 yolov8n COCO +0.018(견고)·ExDark +0.006(검출기 의존, CI 내)**, 귀속은 **전량 해상도(binning 제거)**. 부호·귀속·표본크기가 정정됨(첫 문서 상단 배너).
+
+### 3.4 Cross-detector — binning 제거 효과의 견고성 (yolov8n vs yolov8s)
+
+동일 셀을 yolov8s로 재평가(Codex finding 5대로 부트스트랩 OOM 회피 위해 점추정). **binning 제거 효과 = F_g20 − B_g20:**
+
+| 검출기 | ExDark (n=260) | COCO (n=347) |
+|---|---:|---:|
+| yolov8n | **+0.0064** (full 우위) | **+0.0176** (full 우위) |
+| yolov8s | **−0.0063** (bin 우위) | **+0.0360** (full 우위) |
+| SSD(1차, R1 vs R0 근사) | 역전(bin 우위) | + (full 우위) |
+
+**판정 (정직):** **COCO(정상조도)에서는 binning 제거가 3개 검출기 모두에서 견고하게 우위**(+0.018~+0.036, AP_small 주도). 반면 **저조도 목표도메인 ExDark에서는 검출기 의존적**이다 — yolov8n은 full-res, **yolov8s·SSD는 binning**을 선호하고 CI가 겹친다. 이는 원리적으로 정합한다: pseudo-RAW엔 binning이 회수할 실제 Poisson-Gaussian 노이즈가 없어 저조도에서 "해상도 vs SNR" 트레이드가 진짜로 균형점에 있고, 검출기 backbone(작은 v8n vs 큰 v8s의 receptive field/downsample)에 따라 저울이 기운다. **⇒ 1차의 무조건적 "binning 제거=이득" 서사를 "COCO 견고·ExDark 검출기의존/wash"로 조건화**한다.
+
+### 3.5 Bit-exact 배포 톤 확인 (Codex finding 1 해소)
+
+Codex가 지적한 대로 `_gamma_lut(2.0)`(round)는 배포 HLS `gamma2()`(floor(√(255·v)))와 **136/256 항목이 +1 LSB** 다르다. 정확한 `_gamma2_floor_lut()`로 결정 비교를 재실행:
+
+| 셀(bit-exact floor 톤) | ExDark (n=260) | COCO (n=347) |
+|---|---:|---:|
+| B_g20f (binned, 배포 톤 정확) | 0.0906 [.078,.117] | 0.2680 [.241,.312] |
+| F_g20f (full-res, 배포 톤 정확) | 0.0947 [.080,.122] | 0.2843 [.257,.331] |
+| **binning 제거 효과** | **+0.0041** | **+0.0163** |
+
+**round LUT(§3.1) 대비 차이는 mAP <0.002** (COCO +0.0176→+0.0163, ExDark +0.0064→+0.0041) — 결론(binning 제거가 COCO 견고 우위·ExDark 소폭/wave) **불변**. Codex finding 1은 **라벨 정확성 이슈였고 결론을 바꾸지 않음**을 실측 확인. 이후 "배포 톤" 대조는 bit-exact `B_g20f`를 정본으로 한다.
 
 ## 4. Codex 고급 리뷰 결과 및 반영
 
-*(Codex `task-mr7sq2gu` 완료 시 이 절에 발견사항 원문 요지 + 반영 내역 기입. 본 refinement의
-G-RM-1/G-CHK-2/G-STAT-1은 Codex 착수 전 자체 재검토에서 이미 특정·해소했고, Codex는 추가
-버그/방법론 지적을 교차검증하는 역할.)*
+**실행 이력(정직):** 1차 Codex 리뷰(`task-mr7sq2gu`)는 21:58경 **리소스 경합으로 프로세스가 죽었다**(당시 병렬 mAP 실험들이 16코어·메모리를 점유). companion이 "running"으로 오인해 좀비 상태였고, 취소 후 mAP 작업 종료 뒤 **재실행(범위 축소)해 완료**했다. Codex 로그상 죽기 직전 조사 대상이 정확히 §1의 R0 tone confound("conclusions are stronger than the design supports")여서, 자체 재검토와 Codex의 착안점이 독립적으로 수렴했음이 확인된다.
+
+**Codex 발견사항(우선순위순) 및 반영:**
+
+| # | 발견 (verdict) | 반영 |
+|---|---|---|
+| 1 | **B_g20이 배포 톤과 bit-exact 아님 (CONFIRMED).** `_gamma_lut(2.0)`는 `np.round`, 배포 HLS `gamma2()`는 `floor(sqrt(255·v))` — **136/256 항목이 +1 LSB 차이**. "DEPLOYED" 라벨 부정확. | **정확한 `_gamma2_floor_lut()` 추가**(`rm_versions_fine.py`), bit-exact 셀 `B_g20f`/`F_g20f`로 결정 비교 **재실행**(§3.5), B_g20 라벨을 "≈deployed(±1 LSB)"로 정정. |
+| 2 | **full-res vs binned는 해상도뿐 아니라 demosaic 의미론도 바꾼다 (CONFIRMED).** full은 `_demosaic_rggb16`(보간), binned는 fused RGGB 추출 — F_g20−B_g20은 "binning 제거"이지 순수 리샘플만은 아님. | **본질적 결합으로 인정**(binning=demosaic 선택 자체). "순수 해상도"가 아니라 "binning 제거(=RGGB quad 추출→보간 demosaic 전환 포함)"로 서술 정정. "full-res→downsample" 순수-해상도 분리는 board-track 추가 실험으로 이관. |
+| 3 | soft-knee는 factorial에서 깨끗이 배제됨 (CONFIRMED). B_g25==ver1 lowlight 확인. | 유지. "≈old R0/R1" 근사 표기 유지. |
+| 4 | size-AP 좌표 처리 방법론적으로 공정 (CONFIRMED). | 유지(§3.2 size-AP 신뢰). |
+| 5 | **yolov8s 부트스트랩 실패=OOM/복잡도, 버그 아님 (PLAUSIBLE).** 로직 크래시 재현 안 됨; CSV에 nan CI. | yolov8s 교차검증은 **bootstrap=0(점추정)**으로 재실행(§3.4). paired-delta 1-pass 부트스트랩은 개선안으로 기록. |
+| 6 | **C4 2-feature가 정직한 CV 안 됨 (CONFIRMED).** 스칼라만 CV, C4 그리드는 in-sample → "C4 기각" 미완결. | **nested-CV C4 추가**(`checker_versions_fine.py nested_cv_c4`): held-out J=0.838 < 최고 스칼라 dark8(0.850), Δ−0.012 → **reject-C4가 정직한 nested-CV에서도 성립**. Codex 지적으로 결론이 오히려 강화됨. |
+| 7 | risk 모델 일관 적용 (CONFIRMED); CV-J·CV-risk winner 병기 권고. | 이미 §2에서 병기. |
+
+**Codex의 사전-주장 검증(내 주장 반박 포함):**
+- "F_g20 ≥ R1 everywhere"는 **부분 반박**: COCO에선 F_g20>R1이나 **ExDark에선 R1이 근소 우위**(yolov8n 0.0967 vs 0.0962, yolov8s 0.1119 vs 0.1100 — 모두 noise 대역). → §3.2·§5 서술을 "F_g20≈R1(ExDark), F_g20>R1(COCO); VST/knee 순효과 무의미"로 정정.
+- "reject-C3/C4"는 C4 정직 CV 전엔 미완결이라는 지적 → finding 6으로 해소(위).
+- n=347/260, 해상도 우위의 COCO-견고·ExDark-detector의존은 **CONFIRMED**.
 
 ## 5. 고도화된 전략 (refined)
 
 | 트랙 | 1차 권고 | **고도화 권고** | 근거 |
 |---|---|---|---|
-| Checker | C1 dark16>0.62 | **dark10~12 + 낮은 운영점**을 승격 후보로, 실센서 재보정 전엔 dark16>0.62 유지(dark10 A/B) | §2 held-out J 최적이 16 미만 |
-| Low-light RM | R1 VST-param LUT | **F_g20: binning만 제거, 기존 sqrt 톤 유지** (새 LUT·soft-knee 불채택) | §3 이득 전량 해상도, VST/knee 순효과 0~음 |
-| Denoise RM | R2 유보 | 유보 유지(real-RAW에서만) | §3.2 전수 음수 |
+| Checker | C1 dark16>0.62 | **dark10~12 + 낮은 운영점**을 승격 후보로, 실센서 재보정 전엔 dark16>0.62 유지(dark10 A/B). C3/C4는 정직 CV·nested-CV에서 기각 확정. | §2 held-out J 최적이 16 미만; §4 finding6 |
+| Low-light RM | R1 VST-param LUT | **F_g20: binning 제거 + 기존 배포 sqrt 톤 유지** (새 VST LUT·soft-knee 불채택). 단 **저조도 이득은 검출기 의존** — 조건부 채택. | §3.4 COCO 견고 우위·ExDark wash; VST/knee 순효과 무의미 |
+| Denoise RM | R2 유보 | 유보 유지(real-RAW에서만) | §3.2 두 데이터셋 음수 |
 
-**board-track (G-HW-1):** F_g20 = 기존 low-light RM에서 2×2 binning 제거 + gain2.0/sqrt 유지.
-csynth로 (a) binning line-buffer 제거에 따른 BRAM 감소, (b) full-res 처리량(H×W vs H/2×W/2)의
-latency/throughput 트레이드를 정량화해야 함 — "HW 감소" 주장을 수치로 마감.
+**핵심 정정:** 1차의 "R1(VST-param LUT) 3rd RM 채택 + small-obj +50% 무조건 우위" → **"F_g20(binning 제거, 톤 무변경)로 단순화. 이득은 COCO/정상조도에서 견고하고 소형객체 주도이나, 저조도(ExDark)에서는 검출기 의존적 wash."** VST-param LUT과 soft-knee는 순효과가 없어 불채택 — 배포 파이프라인은 이미 원리적 sqrt(VST계열) 톤을 쓰고 있었다.
+
+**board-track (G-HW-1 및 Codex finding 2):**
+1. F_g20 = 기존 low-light RM에서 2×2 binning 제거 + gain2.0/`gamma2()` 유지. csynth로 (a) binning line-buffer 제거 BRAM 감소, (b) full-res 처리량(H×W vs H/2×W/2) latency/throughput 트레이드 정량화 — "HW 감소" 주장 마감.
+2. **순수 해상도 vs demosaic 분리(Codex finding 2):** "full-res→H/2×W/2 downsample" 대조군으로 검출 이득이 "픽셀 수"에서 오는지 "보간 demosaic 품질"에서 오는지 분리.
+3. **real-RAW 재검증:** ExDark 검출기 의존성/wash은 pseudo-RAW 노이즈 부재의 산물일 수 있음 — 보드 실센서에서 binning +6dB가 물리적으로 존재할 때 재측정(F_g20 vs binned).
 
 ## 6. 한계 (정직)
 
@@ -127,7 +173,10 @@ latency/throughput 트레이드를 정량화해야 함 — "HW 감소" 주장을
 
 ## 7. 산출물 (refinement)
 
-- 코드: `tools/checker_versions_fine.py`, `tools/rm_versions_fine.py`, `tools/eval_map_rmversions_fine.py`
-- CSV: `results/checker_fine_2026-07-05.csv`, `results/map_rmfine_{coco,exdark}_yolov8n_2026-07-05.csv`,
-  `results/map_rmfine575_{coco,exdark}_yolov8n_2026-07-05.csv`
-- 본 문서: `results/principled-v3-refinement-2026-07-05.md`
+- 코드: `tools/checker_versions_fine.py`(+`nested_cv_c4`), `tools/rm_versions_fine.py`(+`_gamma2_floor_lut`, `B_g20f`/`F_g20f`), `tools/eval_map_rmversions_fine.py`(+부트스트랩 CI)
+- CSV(checker): `results/checker_fine_2026-07-05.csv`
+- CSV(RM factorial n=150): `results/map_rmfine_{coco,exdark}_yolov8n_2026-07-05.csv`
+- CSV(RM 전수 yolov8n): `results/map_rmfine575_{coco,exdark}_yolov8n_2026-07-05.csv`
+- CSV(RM cross-detector yolov8s): `results/map_rmfine575_{coco,exdark}_yolov8s_2026-07-05.csv`
+- CSV(bit-exact 배포톤): `results/map_rmfine_deployexact_{coco,exdark}_yolov8n_2026-07-05.csv`
+- 본 문서: `results/principled-v3-refinement-2026-07-05.md` (1차 정정: `principled-comparison-2026-07-05.md` 상단 배너)

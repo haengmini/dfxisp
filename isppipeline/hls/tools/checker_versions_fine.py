@@ -97,6 +97,39 @@ def fixed_row(score: np.ndarray, y: np.ndarray, thr: float, name: str, rule: str
                 cv_j=r - f, cv_thr=thr, cv_thr_sd=0.0, cv_risk=risk(r, f))
 
 
+def _fit_c4(d16, ent, y):
+    """Grid-fit the C4 AND rule dark16>a AND entropy<b for max Youden J on the
+    GIVEN (train) split. Returns (a, b)."""
+    best, best_j = (0.62, 5.3), -1.0
+    for a in np.round(np.arange(0.40, 0.85, 0.01), 3):
+        pa = d16 > a
+        for b in np.round(np.arange(4.0, 6.0, 0.05), 3):
+            pred = pa & (ent < b)
+            j = pred[y == 1].mean() - pred[y == 0].mean()
+            if j > best_j:
+                best_j, best = j, (a, b)
+    return best
+
+
+def nested_cv_c4(D, k=5, seed=0):
+    """Honest nested CV for the C4 two-feature grid rule (Codex finding 6): fit
+    (a,b) on train folds, evaluate on the held-out fold. Prevents the in-sample
+    optimism of the original checker_versions.py C4 report."""
+    y = D["label"]; d16 = D["dark16"]; ent = D["entropy"]
+    rng = np.random.default_rng(seed)
+    idx = rng.permutation(len(y))
+    folds = np.array_split(idx, k)
+    rec, ft = [], []
+    for f in folds:
+        tr = np.ones(len(y), bool); tr[f] = False
+        a, b = _fit_c4(d16[tr], ent[tr], y[tr])
+        pred = (d16[~tr] > a) & (ent[~tr] < b)
+        rec.append(float(pred[y[~tr] == 1].mean()))
+        ft.append(float(pred[y[~tr] == 0].mean()))
+    r, f = float(np.mean(rec)), float(np.mean(ft))
+    return r, f, r - f, risk(r, f)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", default="results/checker_fine_2026-07-05.csv")
@@ -134,6 +167,16 @@ def main() -> int:
     for r in fixed:
         print(f"| {r['name']} | {r['rule']} | {r['auc']:.4f} | {r['ins_recall']:.3f} | "
               f"{r['ins_ft']:.3f} | {r['ins_j']:.3f} | {r['ins_risk']:.5f} |")
+
+    # Honest nested-CV for the C4 two-feature rule (Codex finding 6).
+    c4r, c4f, c4j, c4risk = nested_cv_c4(D)
+    print(f"\n## C4 (dark16 AND entropy) honest NESTED-CV held-out")
+    print(f"  recall={c4r:.3f} FT={c4f:.3f} J={c4j:.3f} risk={c4risk:.5f}")
+    best_scalar_j = max(r["cv_j"] for r in rows)
+    print(f"  best scalar CV J = {best_scalar_j:.3f} -> C4 nested-CV "
+          f"{'BEATS' if c4j > best_scalar_j else 'does NOT beat'} best scalar "
+          f"(delta {c4j - best_scalar_j:+.3f}) => reject-C4 "
+          f"{'REFUTED' if c4j > best_scalar_j + 0.005 else 'HOLDS honestly'}")
 
     # best by honest held-out J and by held-out risk
     best_j = max(rows, key=lambda r: r["cv_j"])
