@@ -12,6 +12,13 @@ Inputs : checker-principled-versions-2026-07-05.md, lowlight-rm-principled-versi
 -->
 # 원리 기반 재설계 종합 비교 — Checker & Low-light RM (principled-v3)
 
+> ⚠️ **부분 정정(2026-07-05 refinement):** 본 문서 §3의 low-light RM 결론은
+> `principled-v3-refinement-2026-07-05.md`가 **정정**한다. R0 baseline이 배포본(sqrt/gamma2.0)이
+> 아닌 ver1 gamma2.5여서 R1의 이득이 과대·오귀속되었다. resolution×tone factorial(전수 n=575)
+> 결과, **저조도 RM 이득은 전량 "binning 제거"이고 VST 톤/soft-knee의 순효과는 0~음수**다.
+> 권고는 R1(VST-param LUT) → **F_g20(binning만 제거, 기존 sqrt 톤 유지)** 로 갱신됨.
+> checker 결론(§2)은 유효하되 최적 임계가 dark16보다 낮음(dark8~10)이 세분화로 추가 확인됨.
+
 **작성:** 2026-07-05 21:43 KST · **브랜치:** `exp/principled-checker-rm-2026-07-05` ·
 **캠페인 버전:** `principled-v3` (ver1/ver2 후속) · **에이전트 팀:** CHK(opus)‖RM(opus)‖XCHK(sonnet)→CMP(opus)
 
