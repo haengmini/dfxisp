@@ -1,0 +1,5 @@
+dataset,arm,mAP_50_95,mAP_50,model,n
+SonyNOD,none,0.1342,0.2513,/home/mini/workspace/dfxisp/model/detectors/yolo/yolov8n.pt,321
+SonyNOD,normal,0.0216,0.0560,/home/mini/workspace/dfxisp/model/detectors/yolo/yolov8n.pt,321
+SonyNOD,lowlight,0.0356,0.0793,/home/mini/workspace/dfxisp/model/detectors/yolo/yolov8n.pt,321
+SonyNOD,adaptive,0.0356,0.0793,/home/mini/workspace/dfxisp/model/detectors/yolo/yolov8n.pt,321
