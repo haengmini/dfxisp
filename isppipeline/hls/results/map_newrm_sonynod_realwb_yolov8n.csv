@@ -1,0 +1,4 @@
+dataset,arm,mAP_50_95,mAP_50,model,n
+SonyNOD-RealWB,normal,0.0214,0.0561,/home/mini/workspace/dfxisp/model/detectors/yolo/yolov8n.pt,321
+SonyNOD-RealWB,lowlight,0.0350,0.0791,/home/mini/workspace/dfxisp/model/detectors/yolo/yolov8n.pt,321
+SonyNOD-RealWB,adaptive,0.0350,0.0791,/home/mini/workspace/dfxisp/model/detectors/yolo/yolov8n.pt,321

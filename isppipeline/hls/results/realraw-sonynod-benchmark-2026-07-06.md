@@ -4,9 +4,11 @@ File   : isppipeline/hls/results/realraw-sonynod-benchmark-2026-07-06.md
 Date   : 2026-07-06
 Function: 실제 카메라 센서 raw(.ARW) + 사람이 단 GT로 새 mAP 벤치마크를 구성해
           SPEC.md §11-1의 "SW eval은 proxy(pseudo-RAW)" 한계를 raw 표현 축에서
-          부분적으로 해소.
+          부분적으로 해소. 후속으로 AWB domain-gap ablation 수행(§6bis).
 Goal   : "Sony RAW dataset을 어떻게 활용할지" 요청에 대한 응답 -- 새로운 real-RAW
          mAP 벤치마크(SonyNOD)를 만들고 기존 pseudo-RAW(ExDark/COCO) 결과와 비교.
+         이어서 "AWB domain-gap 분리 ablation 수행" 요청에 응답 -- 결과: AWB는
+         무관하고 BLC가 신호를 먼저 죽이는 것이 실제 원인(§6bis).
 =============================================================================
 -->
 # Real-RAW 벤치마크: RAW-NOD Sony 서브셋 (2026-07-06)
@@ -73,22 +75,69 @@ Goal   : "Sony RAW dataset을 어떻게 활용할지" 요청에 대한 응답 --
 
 ## 6. 해석
 
-1. **`none`이 항상 천장이라는 SPEC §11-1 관찰이 real-RAW에서도 그대로 재현된다**
-   — checker/RM/baseline core를 거치는 순간 mAP가 크게 떨어진다. pseudo-RAW
-   한계가 아니라 이 파이프라인/평가 방식 자체의 특성임을 다시 확인.
-2. **arm 순서가 뒤집힌다.** ExDark(pseudo-RAW)는 `normal(0.068) > lowlight(0.055)`
+> **범위 노트(2026-07-06 후속):** `none`은 checker/RM/baseline core를 전혀
+> 거치지 않는 arm이라 이 파이프라인 연구의 비교 대상이 아니다(사용자 판단:
+> "다른 계열의 연구 분야"). 이후 해석은 **normal/lowlight/adaptive만** 비교한다.
+> `none` 수치는 §5 표에 참고용으로만 남겨둔다.
+
+1. **arm 순서가 뒤집힌다.** ExDark(pseudo-RAW)는 `normal(0.068) > lowlight(0.055)`
    인데, SonyNOD(real-RAW)는 `lowlight(0.036) > normal(0.022)`다. pseudo-RAW
    기반 실험(§11-6, BLC/WB가 저조도 mAP 손실의 70%를 차지)에서 도출한 결론이
    real 센서 raw에서는 그대로 성립하지 않을 수 있다는 신호 — low-light 전용
    RM(2x2 binning+gain+gamma)이 실제 센서 noise 특성에서는 오히려 유리하게
    작용할 수 있음을 시사한다. n=321 대 71이라 통계적으로 더 안정적인 비교이기도
    하다.
-3. **baseline core의 고정 AWB(Q8 R286/G256/B307)가 실제 카메라 화이트밸런스와
-   맞지 않는다.** `adaptive` arm 이미지를 육안 확인한 결과 뚜렷한 녹색 편향이
-   나타남 — 이 AWB 상수는 pseudo-RAW(JPEG 역-ISP)의 색 통계에 맞춰진 것이라
-   실제 센서 raw에는 재보정이 필요하다는 명확한 근거. 지금 수치(특히 `normal`
-   arm이 `lowlight`보다 더 나쁜 것)에 이 domain gap이 얼마나 기여하는지는
-   미분리 — 후속 ablation 필요.
+2. **baseline core의 고정 AWB(Q8 R286/G256/B307)가 실제 카메라 화이트밸런스와
+   맞지 않는다.** `adaptive`/`normal` arm 이미지를 육안 확인한 결과 뚜렷한
+   녹색 편향이 나타남. §6-1의 arm 순서 역전이 이 AWB domain gap 때문인지
+   확인하기 위해 아래 ablation을 수행했다.
+
+## 6bis. AWB domain-gap ablation (2026-07-06)
+
+**방법:** 샘플 ARW의 `rawpy` 메타데이터(`camera_whitebalance`)를 321장 전부에서
+추출(`camera_wb.json`), Q8 규약(`awb_r=round(256*R_mul/G_mul)`,
+`awb_b=round(256*B_mul/G_mul)`)으로 변환해 **프레임별 실제 카메라 AWB**로
+baseline core를 재실행(`newrm_pipeline_realwb.py` + `eval_map_newrm_realwb.py`,
+BLC/gain/gamma/binning 등 나머지는 전부 고정 — AWB 소스만 바꾼 순수 ablation).
+`none`은 AWB/baseline core를 안 거치므로 대상에서 제외(§6 범위 노트와 동일 이유).
+
+측정된 실제 AWB는 고정 상수보다 훨씬 크다 — 321장 전체 통계:
+
+| | R/G ratio | B/G ratio |
+|---|---:|---:|
+| 파이프라인 고정값 | 1.117 | 1.199 |
+| 실제 카메라(min/mean/max) | 1.48 / 1.95 / 2.47 | 1.57 / 2.17 / 3.07 |
+
+**결과 (yolov8n, n=321):**
+
+| arm | AWB | mAP@[.5:.95] | mAP@50 |
+|---|---|---:|---:|
+| normal | 고정(pseudo-RAW 튜닝) | 0.0216 | 0.0560 |
+| normal | 실제 카메라(프레임별) | 0.0214 | 0.0561 |
+| lowlight | 고정 | 0.0356 | 0.0793 |
+| lowlight | 실제 카메라 | 0.0350 | 0.0791 |
+| adaptive | 고정 | 0.0356 | 0.0793 |
+| adaptive | 실제 카메라 | 0.0350 | 0.0791 |
+
+**AWB를 실제 값으로 교체해도 mAP가 사실상 변하지 않는다(±0.0006, 노이즈 수준).**
+즉 AWB 재보정은 SonyNOD의 mAP 손실이나 §6-1의 arm 순서 역전을 설명하지 못한다
+— 육안상 뚜렷한 녹색 편향과는 별개로, **detector 성능에는 거의 영향이 없다.**
+
+**원인 — BLC가 AWB보다 먼저 신호를 죽인다.** `raw_bin`(shift8, 8-bit 도메인)
+픽셀 통계를 직접 확인한 결과:
+
+- 두 샘플 모두 8-bit 값의 **50% 이상이 정확히 0**, 99th percentile이 **10**
+  (255 만점 기준) — RAW-NOD 야간 장면의 실제 신호가 8-bit 표현폭의 최하단
+  4%에만 존재한다.
+- `baseline_core`의 `BLC_OFFSET=16`을 적용하면 **픽셀의 99.9%가 0으로 잘려나간다**
+  (`(raw8bit - 16) <= 0`인 비율 99.91%/99.90%, 두 샘플).
+- AWB는 BLC **다음** 단계에서 곱셈으로 적용되는데, 입력이 이미 0이면 게인이
+  얼마든 결과도 0이다 — 이것이 AWB ablation이 무효과로 나온 정확한 이유다.
+
+`BLC_OFFSET=16`은 pseudo-RAW(역-ISP 8-bit 통계)에 맞춰 튜닝된 상수라, 이렇게
+극단적으로 어두운(원본 14-bit raw에서 white_level 대비 <1% 반사율) 실제
+야간 raw에는 맞지 않는다. **AWB가 아니라 BLC 재보정(혹은 shift8 재양자화 자체를
+real-RAW 동적범위에 맞게 재설계)이 다음으로 확인해야 할 도메인 갭이다.**
 
 ## 7. 알려진 한계
 
@@ -98,7 +147,8 @@ Goal   : "Sony RAW dataset을 어떻게 활용할지" 요청에 대한 응답 --
   교차검증 아직 TODO.
 - HW/C-sim(12-bit raw12 경로)은 여전히 합성 fixture만 사용 — 이번 통합은
   SW eval 경로에 한정.
-- AWB domain gap(§6-3)을 분리하는 ablation 미실시.
+- BLC 재보정 ablation은 아직 미실시(§6bis에서 원인으로 지목만 함) — 다음 후속
+  작업 후보.
 - `data/sonynod_test/`는 17GB(라벨 있는 321장 기준)라 `.gitignore`의 `data/`
   규칙에 따라 커밋하지 않음 — 재현하려면 `tools/build_sonynod_dataset.py` +
   Drive `dataset/Sony/Sony-ARW/` + GitHub `igor-morawski/RAW-NOD` 어노테이션.
@@ -110,8 +160,11 @@ Goal   : "Sony RAW dataset을 어떻게 활용할지" 요청에 대한 응답 --
 # 2) 변환
 python3 isppipeline/hls/tools/build_sonynod_dataset.py \
     raw_str_labeled_new_Sony_RX100m7_test.json <ARW dir> data/sonynod_test
-# 3) 평가
+# 3) 기존 고정-AWB 평가
 cd isppipeline/hls/tools
 python3 eval_map_newrm.py --root ../../../data/sonynod_test --tag SonyNOD \
     --model yolov8n.pt --limit 321 --out ../results/map_newrm_sonynod_yolov8n.csv
+# 4) AWB domain-gap ablation (camera_wb.json: {stem: [R_mul,G_mul,B_mul,G2_mul]}, rawpy camera_whitebalance)
+python3 eval_map_newrm_realwb.py --root ../../../data/sonynod_test --wb-table camera_wb.json \
+    --tag SonyNOD-RealWB --model yolov8n.pt --out ../results/map_newrm_sonynod_realwb_yolov8n.csv
 ```
