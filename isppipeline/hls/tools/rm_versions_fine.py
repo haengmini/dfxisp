@@ -79,12 +79,27 @@ def _tone8_knee(rgb16):
 
 
 # ---- factorial cells -------------------------------------------------------
-def _cell(bayer16, w, h, *, binned: bool, lut: np.ndarray, knee: bool, denoise: bool):
+def _avg_downsample_2x2(rgb8):
+    """2x2 area-average downsample HxW -> H/2 x W/2 (integer). Used to isolate
+    PIXEL COUNT from demosaic quality: a full-res proper-demosaic image reduced
+    to the same size the binned arm outputs (Codex finding 2)."""
+    h, w = rgb8.shape[:2]
+    h2, w2 = h - h % 2, w - w % 2
+    x = rgb8[:h2, :w2].astype(np.int32)
+    ds = (x[0::2, 0::2] + x[0::2, 1::2] + x[1::2, 0::2] + x[1::2, 1::2]) // 4
+    return ds.astype(np.uint8)
+
+
+def _cell(bayer16, w, h, *, binned: bool, lut: np.ndarray, knee: bool,
+          denoise: bool, downsample: bool = False):
     rgb16 = (V._bin_demosaic_rggb16 if binned else V._demosaic_rggb16)(bayer16, w, h)
     rgb8 = (_tone8_knee if knee else _tone8_plain)(rgb16)
     if denoise:
         rgb8 = RM.edge_preserve_3x3(rgb8)
-    return lut[rgb8]
+    out = lut[rgb8]
+    if downsample:                       # full-res demosaic, then reduce to H/2 x W/2
+        out = _avg_downsample_2x2(out)
+    return out
 
 
 _VST_DEFAULT = 4.0
@@ -105,6 +120,11 @@ FACTORIAL = {
     # bit-exact deployed-tone controls (Codex finding 1): floor(sqrt(255*v)) LUT
     "B_g20f": dict(binned=True,  lut=_LUT_G20F, knee=False, denoise=False),   # bit-exact DEPLOYED
     "F_g20f": dict(binned=False, lut=_LUT_G20F, knee=False, denoise=False),   # deployed tone, full-res
+    # pure-resolution control (Codex finding 2): full-res proper demosaic, deployed
+    # tone, then 2x2 area-downsample to H/2xW/2 -> same output size as binned, so
+    # F_g20f - F_g20ds isolates PIXEL COUNT, and F_g20ds - B_g20f isolates DEMOSAIC
+    # QUALITY (proper interp vs fused RGGB extraction) at equal detector input size.
+    "F_g20ds": dict(binned=False, lut=_LUT_G20F, knee=False, denoise=False, downsample=True),
 }
 
 VERSION_NAMES = {
@@ -118,6 +138,7 @@ VERSION_NAMES = {
     "B_vst_dn": "binned + VST + edge-denoise (== R2)",
     "B_g20f": "binned + floor-sqrt (BIT-EXACT deployed HLS tone)",
     "F_g20f": "full-res + floor-sqrt (deployed tone, binning removed)",
+    "F_g20ds": "full-res demosaic + floor-sqrt, then 2x2 downsample (pure-res control)",
 }
 
 # VST read-offset sensitivity sweep (full-res, no knee): principle 4.2 says the

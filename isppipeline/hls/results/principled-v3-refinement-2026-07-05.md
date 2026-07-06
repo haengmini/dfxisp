@@ -128,6 +128,28 @@ Codex가 지적한 대로 `_gamma_lut(2.0)`(round)는 배포 HLS `gamma2()`(floo
 
 **round LUT(§3.1) 대비 차이는 mAP <0.002** (COCO +0.0176→+0.0163, ExDark +0.0064→+0.0041) — 결론(binning 제거가 COCO 견고 우위·ExDark 소폭/wave) **불변**. Codex finding 1은 **라벨 정확성 이슈였고 결론을 바꾸지 않음**을 실측 확인. 이후 "배포 톤" 대조는 bit-exact `B_g20f`를 정본으로 한다.
 
+### 3.6 순수 해상도 vs demosaic 품질 분해 (Codex finding 2 해소 → 새 설계 통찰)
+
+Codex finding 2("full-res vs binned는 demosaic 의미론도 바꾼다")를 board-track에서 **당겨 해소**했다. `F_g20ds` = full-res proper demosaic → **2×2 area-downsample to H/2×W/2**(binned와 동일 출력 크기, bit-exact 배포 톤). 세 셀로 이득을 분해:
+
+| 셀 (bit-exact 배포 톤) | 출력 | ExDark (n=260) | COCO (n=347) |
+|---|---|---:|---:|
+| B_g20f (fused-RGGB binning) | H/2×W/2 | 0.0906 | 0.2680 |
+| **F_g20ds** (proper demosaic→downsample) | H/2×W/2 | **0.0951** | 0.2707 |
+| F_g20f (full-res) | H×W | 0.0947 | **0.2843** |
+
+**분해 (binning 제거 총이득 = F_g20f − B_g20f):**
+
+| 요인 | 격리 대비 | ExDark | COCO |
+|---|---|---:|---:|
+| **demosaic 품질** (proper vs fused-RGGB, 동일 크기) | F_g20ds − B_g20f | **+0.0045 (전량)** | +0.0027 (17%) |
+| **픽셀 수** (H/2×W/2 → H×W) | F_g20f − F_g20ds | −0.0004 (0) | **+0.0136 (83%)** |
+
+**핵심 통찰 (조도별로 이득의 성격이 다르다):**
+1. **COCO/정상조도: 이득은 픽셀 수다.** +0.0163 중 +0.0136(83%)가 해상도 그 자체 — COCO AP_small이 F_g20ds 0.058(≈binned)→F_g20f 0.197로 뛰는 것이 직접 증거. 정상조도 소형 객체는 픽셀이 있어야 검출된다.
+2. **ExDark/저조도: 이득은 demosaic 품질이고 픽셀 수는 무의미하다.** proper-demosaic→downsample(F_g20ds)이 이미 full-res(F_g20f)와 동급(0.0951 vs 0.0947)이고 둘 다 binning(0.0906)을 앞선다. 저조도에서 추가 픽셀은 노이즈 지배라 도움이 안 된다는 SNR 논리(원리 정본 §1)와 정합.
+3. **⇒ 저조도 RM의 진짜 약점은 "해상도 축소"가 아니라 "fused-RGGB binning-demosaic 품질"이다.** 따라서 저조도용으로 **proper-demosaic→2×2 downsample(F_g20ds)** 이 binning의 크기/throughput 이점을 유지하면서 품질 페널티를 제거하는 **새 후보**다 — 현행 binning보다 낫고, full-res보다 싸다(출력 H/2×W/2 유지). ExDark 검출기 의존성(§3.4)도 이 관점에서 재해석된다: yolov8s/SSD가 binning을 선호한 것은 "작은 입력"이 아니라 fused-RGGB의 산물일 수 있다.
+
 ## 4. Codex 고급 리뷰 결과 및 반영
 
 **실행 이력(정직):** 1차 Codex 리뷰(`task-mr7sq2gu`)는 21:58경 **리소스 경합으로 프로세스가 죽었다**(당시 병렬 mAP 실험들이 16코어·메모리를 점유). companion이 "running"으로 오인해 좀비 상태였고, 취소 후 mAP 작업 종료 뒤 **재실행(범위 축소)해 완료**했다. Codex 로그상 죽기 직전 조사 대상이 정확히 §1의 R0 tone confound("conclusions are stronger than the design supports")여서, 자체 재검토와 Codex의 착안점이 독립적으로 수렴했음이 확인된다.
@@ -154,7 +176,7 @@ Codex가 지적한 대로 `_gamma_lut(2.0)`(round)는 배포 HLS `gamma2()`(floo
 | 트랙 | 1차 권고 | **고도화 권고** | 근거 |
 |---|---|---|---|
 | Checker | C1 dark16>0.62 | **dark10~12 + 낮은 운영점**을 승격 후보로, 실센서 재보정 전엔 dark16>0.62 유지(dark10 A/B). C3/C4는 정직 CV·nested-CV에서 기각 확정. | §2 held-out J 최적이 16 미만; §4 finding6 |
-| Low-light RM | R1 VST-param LUT | **F_g20: binning 제거 + 기존 배포 sqrt 톤 유지** (새 VST LUT·soft-knee 불채택). 단 **저조도 이득은 검출기 의존** — 조건부 채택. | §3.4 COCO 견고 우위·ExDark wash; VST/knee 순효과 무의미 |
+| Low-light RM | R1 VST-param LUT | **저조도 mode = F_g20ds**(proper-demosaic→2×2 downsample, 배포 톤 유지): binning의 크기/throughput 유지하며 fused-RGGB 품질 페널티 제거. 소형객체·정상 mode는 F_g20(full-res). 새 VST LUT·soft-knee 불채택. | §3.6 저조도 이득=demosaic 품질(픽셀수 무의미); §3.4 검출기 의존 |
 | Denoise RM | R2 유보 | 유보 유지(real-RAW에서만) | §3.2 두 데이터셋 음수 |
 
 **핵심 정정:** 1차의 "R1(VST-param LUT) 3rd RM 채택 + small-obj +50% 무조건 우위" → **"F_g20(binning 제거, 톤 무변경)로 단순화. 이득은 COCO/정상조도에서 견고하고 소형객체 주도이나, 저조도(ExDark)에서는 검출기 의존적 wash."** VST-param LUT과 soft-knee는 순효과가 없어 불채택 — 배포 파이프라인은 이미 원리적 sqrt(VST계열) 톤을 쓰고 있었다.
@@ -179,4 +201,5 @@ Codex가 지적한 대로 `_gamma_lut(2.0)`(round)는 배포 HLS `gamma2()`(floo
 - CSV(RM 전수 yolov8n): `results/map_rmfine575_{coco,exdark}_yolov8n_2026-07-05.csv`
 - CSV(RM cross-detector yolov8s): `results/map_rmfine575_{coco,exdark}_yolov8s_2026-07-05.csv`
 - CSV(bit-exact 배포톤): `results/map_rmfine_deployexact_{coco,exdark}_yolov8n_2026-07-05.csv`
+- CSV(순수해상도 분해): `results/map_rmfine_pureres_{coco,exdark}_yolov8n_2026-07-05.csv`
 - 본 문서: `results/principled-v3-refinement-2026-07-05.md` (1차 정정: `principled-comparison-2026-07-05.md` 상단 배너)
