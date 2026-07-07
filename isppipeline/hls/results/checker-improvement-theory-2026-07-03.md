@@ -393,54 +393,72 @@ exposure/gain 메타데이터에 따라 host가 AXI-lite로 갱신하는 slow ad
 1. Neyman, J. & Pearson, E.S. (1933). "On the Problem of the Most Efficient Tests of
    Statistical Hypotheses." *Philosophical Transactions of the Royal Society A* 231:289–337.
    doi:10.1098/rsta.1933.0009
+   https://royalsocietypublishing.org/doi/10.1098/rsta.1933.0009
 2. Duda, R.O., Hart, P.E. & Stork, D.G. (2001). *Pattern Classification*, 2nd ed. Wiley.
    (Ch.2 Bayes decision theory; Ch.9 model complexity)
+   https://www.wiley.com/en-us/Pattern+Classification,+2nd+Edition-p-9780471056690
 3. Youden, W.J. (1950). "Index for Rating Diagnostic Tests." *Cancer* 3(1):32–35.
    doi:10.1002/1097-0142(1950)3:1<32::AID-CNCR2820030106>3.0.CO;2-3
    https://acsjournals.onlinelibrary.wiley.com/doi/10.1002/1097-0142(1950)3:1%3C32::AID-CNCR2820030106%3E3.0.CO;2-3
 4. Lehmann, E.L. & Romano, J.P. (2005). *Testing Statistical Hypotheses*, 3rd ed. Springer.
    (§3.4 Karlin–Rubin / MLR UMP tests)
+   https://link.springer.com/book/10.1007/0-387-27605-X
 5. Cover, T.M. & Thomas, J.A. (2006). *Elements of Information Theory*, 2nd ed. Wiley.
    (Thm 2.8.1 data-processing inequality; Ch.11 Chernoff–Stein)
+   https://onlinelibrary.wiley.com/doi/book/10.1002/047174882X
 6. Reinhard, E., Stark, M., Shirley, P. & Ferwerda, J. (2002). "Photographic Tone
    Reproduction for Digital Images." *ACM Transactions on Graphics* 21(3):267–276 (SIGGRAPH).
    https://www.cs.utah.edu/docs/techreports/2002/pdf/UUCS-02-001.pdf
 7. ISO 12232:2019. *Photography — Digital still cameras — Determination of exposure index,
    ISO speed ratings, standard output sensitivity, and recommended exposure index.* ISO.
+   https://www.iso.org/standard/73758.html
 8. European Machine Vision Association (2010). *EMVA Standard 1288 — Standard for
    Characterization of Image Sensors and Cameras*, Release 3.0.
    https://www.emva.org/wp-content/uploads/EMVA1288-3.0.pdf
    (해설: https://www.baslerweb.com/en/learning/emva-1288-standard/)
 9. Janesick, J.R. (2007). *Photon Transfer: DN → λ*. SPIE Press.
+    https://spie.org/publications/book/725073
 10. Rose, A. (1948). "The Sensitivity Performance of the Human Eye on an Absolute Scale."
     *Journal of the Optical Society of America* 38(2):196–208. (Rose criterion, SNR≈5)
+    https://opg.optica.org/josa/abstract.cfm?uri=josa-38-2-196
 11. Page, E.S. (1954). "Continuous Inspection Schemes." *Biometrika* 41(1/2):100–115.
     (CUSUM, average run length) https://en.wikipedia.org/wiki/CUSUM
 12. Moustakides, G.V. (1986). "Optimal Stopping Times for Detecting Changes in
     Distributions." *Annals of Statistics* 14(4):1379–1387.
+    https://projecteuclid.org/journals/annals-of-statistics/volume-14/issue-4/Optimal-Stopping-Times-for-Detecting-Changes-in-Distributions/10.1214/aos/1176350164.full
 13. Wald, A. (1945). "Sequential Tests of Statistical Hypotheses." *Annals of Mathematical
     Statistics* 16(2):117–186. (SPRT, sequential 판정의 원형)
+    https://projecteuclid.org/journals/annals-of-mathematical-statistics/volume-16/issue-2/Sequential-Tests-of-Statistical-Hypotheses/10.1214/aoms/1177731118.full
 14. Dixit, A. (1989). "Entry and Exit Decisions under Uncertainty." *Journal of Political
     Economy* 97(3):620–638. (전환비용 하 최적 hysteresis 밴드, 폭 ∝ 비용^(1/3))
+    https://www.journals.uchicago.edu/doi/abs/10.1086/261619 ([PDF](https://digilander.libero.it/vergalli/pdf/69.pdf))
 15. Rabiner, L.R. (1989). "A Tutorial on Hidden Markov Models and Selected Applications in
     Speech Recognition." *Proceedings of the IEEE* 77(2):257–286.
+    doi:10.1109/5.18626 (https://doi.org/10.1109/5.18626)
 16. Schmitt, O.H. (1938). "A Thermionic Trigger." *Journal of Scientific Instruments*
     15(1):24–26.
+    https://iopscience.iop.org/article/10.1088/0950-7671/15/1/305
 17. Brown, L.D., Cai, T.T. & DasGupta, A. (2001). "Interval Estimation for a Binomial
     Proportion." *Statistical Science* 16(2):101–133.
     https://projecteuclid.org/journals/statistical-science/volume-16/issue-2/Interval-Estimation-for-a-Binomial-Proportion/10.1214/ss/1009213286.full
 18. Hoeffding, W. (1963). "Probability Inequalities for Sums of Bounded Random Variables."
     *Journal of the American Statistical Association* 58(301):13–30.
+    https://www.tandfonline.com/doi/abs/10.1080/01621459.1963.10500830
 19. Cochran, W.G. (1977). *Sampling Techniques*, 3rd ed. Wiley. (Ch.8 systematic sampling)
+    https://www.wiley.com/en-us/Sampling+Techniques,+3rd+Edition-p-9780471162407
 20. Otsu, N. (1979). "A Threshold Selection Method from Gray-Level Histograms." *IEEE
     Transactions on Systems, Man, and Cybernetics* 9(1):62–66. doi:10.1109/TSMC.1979.4310076
+    (https://doi.org/10.1109/TSMC.1979.4310076)
 21. Kapur, J.N., Sahoo, P.K. & Wong, A.K.C. (1985). "A New Method for Gray-Level Picture
     Thresholding Using the Entropy of the Histogram." *Computer Vision, Graphics, and Image
     Processing* 29(3):273–285.
+    https://www.sciencedirect.com/science/article/abs/pii/0734189X85901252
 22. Kittler, J. & Illingworth, J. (1986). "Minimum Error Thresholding." *Pattern
     Recognition* 19(1):41–47.
+    doi:10.1016/0031-3203(86)90030-0 (https://doi.org/10.1016/0031-3203(86)90030-0)
 23. Gonzalez, R.C. & Woods, R.E. (2018). *Digital Image Processing*, 4th ed. Pearson.
     (§2.3 image formation I=R·E; §3.3 homomorphic; Ch.10 thresholding)
+    https://www.pearson.com/en-us/subject-catalog/p/digital-image-processing/P200000003224
 24. Bernacki, J. (2020). "Automatic Exposure Algorithms for Digital Photography."
     *Multimedia Tools and Applications* 79:12751–12776.
     https://link.springer.com/article/10.1007/s11042-019-08318-1
