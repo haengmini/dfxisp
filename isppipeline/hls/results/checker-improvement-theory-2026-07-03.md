@@ -390,7 +390,8 @@ exposure/gain 메타데이터에 따라 host가 AXI-lite로 갱신하는 slow ad
 
 ## References
 
-전체 서지(25편, 링크 포함)는 `references-index-2026-07-07.md` § A 참고.
+전체 서지(원 25편 + 2026-07-07 최신 응용사례 4편 추가, 링크 포함)는
+`references-index-2026-07-07.md` § A 참고.
 
 내부 근거 자료: `results/map_ablation2_{coco,exdark}_yolov8n.csv` (오판 비용 실측),
 `results/experiment_ver2_2026-07-02.md` (Youden sweep), `RESEARCH.md` §5,
