@@ -4,11 +4,15 @@ File   : isppipeline/hls/results/realraw-sonynod-benchmark-2026-07-06.md
 Date   : 2026-07-06
 Function: 실제 카메라 센서 raw(.ARW) + 사람이 단 GT로 새 mAP 벤치마크를 구성해
           SPEC.md §11-1의 "SW eval은 proxy(pseudo-RAW)" 한계를 raw 표현 축에서
-          부분적으로 해소. 후속으로 AWB domain-gap ablation 수행(§6bis).
+          부분적으로 해소. 후속으로 AWB domain-gap ablation(§6bis), 이어서 BLC
+          재보정 ablation(§6ter) 수행.
 Goal   : "Sony RAW dataset을 어떻게 활용할지" 요청에 대한 응답 -- 새로운 real-RAW
          mAP 벤치마크(SonyNOD)를 만들고 기존 pseudo-RAW(ExDark/COCO) 결과와 비교.
          이어서 "AWB domain-gap 분리 ablation 수행" 요청에 응답 -- 결과: AWB는
-         무관하고 BLC가 신호를 먼저 죽이는 것이 실제 원인(§6bis).
+         무관하고 BLC가 신호를 먼저 죽이는 것이 실제 원인(§6bis). 이어서 "BLC
+         재보정 ablation 수행" 요청에 응답 -- BLC_OFFSET을 16→0~2로 낮추면
+         mAP가 4.6~6.3배 회복되지만, lowlight>normal arm 순서 역전은 BLC와
+         무관하게 모든 BLC값에서 유지됨을 확인(§6ter).
 =============================================================================
 -->
 # Real-RAW 벤치마크: RAW-NOD Sony 서브셋 (2026-07-06)
@@ -139,6 +143,51 @@ BLC/gain/gamma/binning 등 나머지는 전부 고정 — AWB 소스만 바꾼 �
 야간 raw에는 맞지 않는다. **AWB가 아니라 BLC 재보정(혹은 shift8 재양자화 자체를
 real-RAW 동적범위에 맞게 재설계)이 다음으로 확인해야 할 도메인 갭이다.**
 
+## 6ter. BLC 재보정 ablation (2026-07-07)
+
+**방법:** §6bis가 지목한 원인("BLC_OFFSET=16이 AWB보다 먼저 신호를 죽인다")을
+직접 검증하기 위해 AWB/gain/gamma/demosaic/binning은 파이프라인 기존 고정값
+그대로 두고 `BLC_OFFSET`만 파라미터화(`newrm_pipeline_blcfix.py` +
+`eval_map_newrm_blcfix.py`, AWB ablation과 동일한 "변수 하나만 격리" 방식).
+`BLC_OFFSET ∈ {0,1,2,4,8,16}`을 321장 전체 × normal/lowlight/adaptive에 대해
+스윕(`none`은 이전과 동일한 이유로 제외).
+
+**사전 확인 (30장 샘플, shift8 8-bit 픽셀값):** median=2, p90=13, p99=121
+(가로등/헤드라이트 하이라이트 꼬리) — 현재 `BLC_OFFSET=16`은 전체 픽셀의
+**92.2%**를 0으로 깎는다(`frac<=16`).
+
+**결과 (yolov8n, n=321):**
+
+| BLC_OFFSET | normal mAP@.5:.95 | normal mAP@50 | lowlight/adaptive mAP@.5:.95 | lowlight/adaptive mAP@50 |
+|---:|---:|---:|---:|---:|
+| 0 | 0.1356 | 0.2526 | 0.1655 | 0.3089 |
+| 1 | 0.1270 | 0.2373 | 0.1871 | 0.3381 |
+| **2** | 0.1138 | 0.2174 | **0.2004** | **0.3598** |
+| 4 | 0.0892 | 0.1766 | 0.1676 | 0.3094 |
+| 8 | 0.0528 | 0.1112 | 0.0973 | 0.1916 |
+| 16 (현행) | 0.0216 | 0.0560 | 0.0356 | 0.0793 |
+
+**가설 검증됨 — BLC가 신호를 죽인다는 진단이 정량적으로 확인된다.** `normal` arm은
+BLC_OFFSET에 대해 **완전히 단조 감소**(0→16 사이 6.28배 차이, 0.1356→0.0216) —
+잘라내는 만큼 정확히 mAP가 깎인다. `lowlight`/`adaptive`는 BLC=2에서 정점을
+찍는 **비단조** 곡선(0.0356→0.2004, 5.63배)으로, binning으로 이미 SNR을 올린
+뒤에는 작은 양의 BLC(read-noise 바이어스 제거)가 여전히 도움이 되지만 4 이상부터는
+같은 방식으로 신호를 잘라내기 시작한다.
+
+**단, arm 순서 역전(§6-1)은 BLC와 무관하게 유지된다.** 스윕 전 구간에서
+`lowlight/adaptive > normal`이 성립한다(BLC=0조차 0.1655 > 0.1356). 즉 §6-1의
+"real-RAW 야간 장면에서 low-light RM(2x2 binning+gain+gamma)이 유리하다"는
+결론은 BLC 미스캘리브레이션의 인공물이 아니라 — BLC를 최적화해도 여전히
+성립하는 real 센서 low-light의 구조적 특성이다. BLC 재보정은 **손실된 신호를
+복구**하지만 **어느 arm이 이기는지는 바꾸지 않는다**.
+
+**남은 질문:** 이 실험은 파이프라인의 다른 모든 상수(AWB Q8, LL_GAIN=1.25,
+gamma-4.0)를 pseudo-RAW 튜닝값 그대로 둔 상태에서 BLC_OFFSET만 바꾼 순수
+ablation이다. "최적 BLC=2"가 실제 배포 값으로 적합한지는 (i) shift8 재양자화
+자체를 real-RAW 동적범위(black_level/white_level)에 맞게 재설계하는 편이
+더 원리적인지, (ii) gain/gamma도 함께 재튜닝하면 최적점이 이동하는지 추가
+검증이 필요하다(§7 한계 참조).
+
 ## 7. 알려진 한계
 
 - 단일 카메라(Sony RX100 VII)·단일 렌즈, 전부 저녁/야간 조건 — "정상조도"에
@@ -147,8 +196,9 @@ real-RAW 동적범위에 맞게 재설계)이 다음으로 확인해야 할 도�
   교차검증 아직 TODO.
 - HW/C-sim(12-bit raw12 경로)은 여전히 합성 fixture만 사용 — 이번 통합은
   SW eval 경로에 한정.
-- BLC 재보정 ablation은 아직 미실시(§6bis에서 원인으로 지목만 함) — 다음 후속
-  작업 후보.
+- BLC 재보정 ablation(§6ter)은 BLC_OFFSET만 격리한 순수 ablation — AWB/gain/
+  gamma를 pseudo-RAW 튜닝값에 고정한 채로 얻은 결과라, 실제 배포 시에는 이들을
+  함께 재튜닝하거나 shift8 재양자화 자체를 재설계할 필요가 있는지 아직 미검증.
 - `data/sonynod_test/`는 17GB(라벨 있는 321장 기준)라 `.gitignore`의 `data/`
   규칙에 따라 커밋하지 않음 — 재현하려면 `tools/build_sonynod_dataset.py` +
   Drive `dataset/Sony/Sony-ARW/` + GitHub `igor-morawski/RAW-NOD` 어노테이션.
@@ -167,4 +217,7 @@ python3 eval_map_newrm.py --root ../../../data/sonynod_test --tag SonyNOD \
 # 4) AWB domain-gap ablation (camera_wb.json: {stem: [R_mul,G_mul,B_mul,G2_mul]}, rawpy camera_whitebalance)
 python3 eval_map_newrm_realwb.py --root ../../../data/sonynod_test --wb-table camera_wb.json \
     --tag SonyNOD-RealWB --model yolov8n.pt --out ../results/map_newrm_sonynod_realwb_yolov8n.csv
+# 5) BLC recalibration ablation (BLC_OFFSET sweep, AWB/gain/gamma held fixed)
+python3 eval_map_newrm_blcfix.py --root ../../../data/sonynod_test --blc-offsets 0,1,2,4,8,16 \
+    --tag SonyNOD-BLCFix --model yolov8n.pt --out ../results/map_newrm_sonynod_blcfix_yolov8n.csv
 ```

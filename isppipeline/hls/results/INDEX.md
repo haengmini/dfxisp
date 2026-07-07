@@ -1,6 +1,6 @@
 # results/ INDEX — 실험·시뮬레이션 산출물 카탈로그
 
-**갱신:** 2026-07-06 · 이 폴더의 모든 파일을 주제별로 분류한 탐색용 인덱스.
+**갱신:** 2026-07-07 · 이 폴더의 모든 파일을 주제별로 분류한 탐색용 인덱스.
 정본 요약은 `ROADMAP.md`(진행 상태) / `SPEC.md`(사양) 참조. 파일은 인용 링크 보존을 위해 이동하지 않고 여기서 색인만 한다.
 
 ## 읽는 순서 (처음 오면 이 4개부터)
@@ -35,7 +35,7 @@
 | `checker-improvement-analysis-2026-07-04.md` | 07-04 | dark16 우월성 원인 규명 + 기존 결과 비교 |
 | `isp_analysis.md` / `isp_analysis.csv` | 06-29 | ISP variant proxy 분석 (detector 없음) |
 | `11-ssd-crosscheck-2026-06-29.md` | 06-29 | SSD 2차 detector 교차검증 |
-| `realraw-sonynod-benchmark-2026-07-06.md` | 07-06 | **real-RAW** 벤치마크 (RAW-NOD Sony, .ARW 원본+실측 GT, pseudo-RAW SW eval 한계 보완) |
+| `realraw-sonynod-benchmark-2026-07-06.md` | 07-06 (BLC ablation 07-07 추가) | **real-RAW** 벤치마크 (RAW-NOD Sony, .ARW 원본+실측 GT) + AWB(§6bis)/BLC(§6ter) domain-gap ablation |
 
 ## 3. HW 트랙 결과 (Stage 4~5)
 
