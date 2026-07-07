@@ -319,24 +319,14 @@ Neyman & Pearson 1933; Youden 1950; Lehmann & Romano 2005; Duda, Hart & Stork 20
 Cover & Thomas 2006; Reinhard et al. 2002; ISO 12232:2019; Gonzalez & Woods 2018;
 EMVA 1288 R3.0 (2010); Janesick 2007; Rose 1948; Hoeffding 1963; Brown/Cai/DasGupta
 2001; Cochran 1977; Schmitt 1938; Dixit 1989; Page 1954; Rabiner 1989.
-(전체 서지: `checker-improvement-theory-2026-07-03.md` References 1–25.)
+(전체 서지 + 대중적 설명 각주 링크는 `references-index-2026-07-07.md` § A, § B 참고.)
 
-[^youden]: Youden's J statistic. [Wikipedia](https://en.wikipedia.org/wiki/Youden's_J_statistic) (정의·ROC 기하학적 해석) ·
-    [Youden Index and the optimal threshold for markers with mass at zero — PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC2749250/) (0에 질량이 몰린 분포의 보정된 임계값, dark-ratio처럼 skewed한 지표에 특히 적합) ·
-    [A note on Youden's J and its cost ratio — PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC2959030/) (비대칭 비용 확장, 본 원리 1의 C_miss:C_FA=2.89:1 논의와 직결)
+[^youden]: Youden's J statistic — see `references-index-2026-07-07.md` § B.
 
-[^bayesopt]: Bayesian optimization. [Exploring Bayesian Optimization — Distill.pub](https://distill.pub/2020/bayesian-optimization/) (GP + acquisition function 인터랙티브 입문) ·
-    [Bayesian Optimization for Hyperparameters Tuning in Neural Networks, arXiv:2410.21886](https://arxiv.org/abs/2410.21886) · [Hyperparameter Tuning With Bayesian Optimization — Comet](https://www.comet.com/site/blog/hyperparameter-tuning-with-bayesian-optimization/) (Python 구현)
+[^bayesopt]: Bayesian optimization — see `references-index-2026-07-07.md` § B.
 
-[^logmean]: log-average luminance / Weber-Fechner. Reinhard et al. 2002 (Photographic Tone Reproduction for Digital Images) 원 논문 수식이 본문 인용; 배경 이론은
-    [Weber–Fechner law](https://kids.kiddle.co/Weber%E2%80%93Fechner_law) ·
-    [Weber's Law of perception is a consequence of resolving intensity with least error — Proc. Royal Society A (2023)](https://royalsocietypublishing.org/rspa/article/479/2271/20220626/54513/Weber-s-Law-of-perception-is-a-consequence-of) (로그 스케일의 수리적 정당화)
+[^logmean]: log-average luminance / Weber-Fechner — see `references-index-2026-07-07.md` § B.
 
-[^subsample]: 1/16 systematic subsampling. [Subsamplings — ScienceDirect Topics](https://www.sciencedirect.com/topics/engineering/subsamplings) (서브샘플링이 노이즈를 줄이고 통계 추정에 유리한 이유) ·
-    [Ch.3 Upsampling and Downsampling Images — Forsyth, UIUC lecture notes](http://luthuli.cs.uiuc.edu/~daf/Courses/CV2026/Notes/Jan27/Ch3updownsmooth.pdf) (decimation의 이론적 근거) ·
-    [21. Downsampling and Upsampling — MIT Foundations of Computer Vision](https://visionbook.mit.edu/upsamplig_downsampling_2.html)
+[^subsample]: 1/16 systematic subsampling — see `references-index-2026-07-07.md` § B.
 
-[^schmitt-dixit]: Schmitt trigger hysteresis: [Schmitt Trigger Hysteresis Provides Noise-free Switching — Cadence](https://resources.pcb.cadence.com/blog/2021-schmitt-trigger-hysteresis-provides-noise-free-switching-and-output) (UTP/LTP, 노이즈 마진 V_H/2 — checker의 진입/해제 밴드와 직접 대응) ·
-    [All About Circuits, Ch.7 Hysteresis](https://www.allaboutcircuits.com/textbook/semiconductors/chpt-7/hysteresis/).
-    Dixit optimal-inaction: Dixit, A. (1989), "Entry and Exit Decisions under Uncertainty," *Journal of Political Economy*, 97(3), 620–638,
-    [journals.uchicago.edu/doi/abs/10.1086/261619](https://www.journals.uchicago.edu/doi/abs/10.1086/261619) ([PDF](https://digilander.libero.it/vergalli/pdf/69.pdf)) — 전환비용 하 진입/이탈 임계가 벌어지는 hysteresis 밴드의 고전적 유도(Brownian 극한, 밴드 폭 ∝ 비용^(1/3)).
+[^schmitt-dixit]: Schmitt trigger hysteresis / Dixit optimal-inaction — see `references-index-2026-07-07.md` § B.

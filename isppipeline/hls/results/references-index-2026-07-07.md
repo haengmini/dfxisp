@@ -1,13 +1,13 @@
 # 참고문헌 링크 통합 인덱스 (2026-07-07)
 
 principled-v3 캠페인(체커 + 저조도 RM 이론)을 뒷받침하는 논문/표준/자료 링크가 3개 문서에
-흩어져 있어 하나로 모았다. 원 출처 문서는 그대로 두고, 이 문서는 링크만 모아 참조하기
-쉽게 만든 인덱스다. 개별 원리·발견과의 연결(어떤 근거가 어떤 결론을 뒷받침하는지)은 각
-원 문서 본문을 참고.
+흩어져 있던 것을 이 문서 하나로 모았다. 원 문서(아래 A/B/C)는 이제 서지 목록/각주 본문
+대신 이 인덱스로의 포인터만 남긴다 — 참고문헌 링크는 이 파일에만 존재한다. 개별 원리·
+발견과의 연결(어떤 근거가 어떤 결론을 뒷받침하는지)은 각 원 문서 본문을 참고.
 
-- 출처 A: `checker-improvement-theory-2026-07-03.md` References 1–25 (체커 5원칙의 학술 인용)
-- 출처 B: `checker-principles-2026-07-05.md` 각주 (Youden/Bayesian-opt/Weber-Fechner/subsampling/hysteresis — 대중적 설명 링크, 출처 A와 별개로 최근 추가됨)
-- 출처 C: `lowlight-mv-isp-survey-2026-07-03.md` References 1–33 (저조도 RM 원칙의 근거)
+- 출처 A: `checker-improvement-theory-2026-07-03.md` (체커 5원칙의 학술 인용, 원래 References 1–25)
+- 출처 B: `checker-principles-2026-07-05.md` (Youden/Bayesian-opt/Weber-Fechner/subsampling/hysteresis — 대중적 설명 각주, 출처 A와 별개로 최근 추가됨)
+- 출처 C: `lowlight-mv-isp-survey-2026-07-03.md` (저조도 RM 원칙의 근거, 원래 References 1–33)
 
 중복(같은 문헌이 두 출처에 인용된 경우)은 각 항목에 표시했다.
 
