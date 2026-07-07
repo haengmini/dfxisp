@@ -99,6 +99,7 @@ G4 (07-03, BLC 완화 최종): map_ver1_coco_yolov8n_blcfix.csv ★
 |---|---|
 | `PLAN-principled-checker-rm-2026-07-05.md` | 캠페인 계획 (버전정의·에이전트팀 배치) |
 | `checker-principles-2026-07-05.md` | **정본** checker 5원리 (결정이론/광도계/노이즈물리/샘플링/시간축) |
+| `references-index-2026-07-07.md` | **정본** 참고문헌 통합 인덱스 (theory/principles/survey 3개 문서의 서지·각주를 모두 여기로 이관) |
 | `checker-principled-versions-2026-07-05.md` | checker C0..C4 구현·실험 (winner C1 dark16>0.62) |
 | `lowlight-feature-principles-2026-07-05.md` | **정본** 저조도 feature 추출 원리 (SNR/VST/tone) |
 | `lowlight-rm-principled-versions-2026-07-05.md` | RM R0..R3 mAP+size-AP 실험 (winner R1 full-res VST) |
