@@ -201,5 +201,5 @@ z = y + σ(y)·ξ,   σ²(y) = a·y + b
 
 # References
 
-전체 서지(33편, 4개 그룹 — 물리/노이즈 모델, low-light detection 벤치마크, ISP-for-vision, 모듈별 —
-링크 포함)는 `references-index-2026-07-07.md` § C 참고.
+전체 서지(원 33편, 4개 그룹 — 물리/노이즈 모델, low-light detection 벤치마크, ISP-for-vision, 모듈별 —
++ 2026-07-07 최신 후속연구 4편 추가, 링크 포함)는 `references-index-2026-07-07.md` § C 참고.

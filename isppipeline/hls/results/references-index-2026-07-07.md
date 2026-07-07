@@ -7,7 +7,7 @@ principled-v3 캠페인(체커 + 저조도 RM 이론)을 뒷받침하는 논문/
 
 - 출처 A: `checker-improvement-theory-2026-07-03.md` (체커 5원칙의 학술 인용, 원래 References 1–25)
 - 출처 B: `checker-principles-2026-07-05.md` (Youden/Bayesian-opt/Weber-Fechner/subsampling/hysteresis — 대중적 설명 각주, 출처 A와 별개로 최근 추가됨)
-- 출처 C: `lowlight-mv-isp-survey-2026-07-03.md` (저조도 RM 원칙의 근거, 원래 References 1–33)
+- 출처 C: `lowlight-mv-isp-survey-2026-07-03.md` (저조도 RM 원칙의 근거, 원래 References 1–33 + 2026-07-07 최신 후속연구 4편 추가)
 
 중복(같은 문헌이 두 출처에 인용된 경우)은 각 항목에 표시했다.
 
@@ -171,6 +171,18 @@ principled-v3 캠페인(체커 + 저조도 RM 이론)을 뒷받침하는 논문/
 33. Li et al. (2021), "Assessing the Impact of DNN-based Image Denoising on Binary Signal Detection Tasks."
     https://arxiv.org/pdf/2104.14037
 
+**2020년대 최신 추가 (2026-07-07 갱신)** — 아래 4편은 원 문서(`lowlight-mv-isp-survey-2026-07-03.md`)
+작성 시점(2018–2021 수준)보다 해당 서브필드가 빠르게 갱신되어, 대체가 아니라 후속 SOTA로 보강.
+
+34. Cai, Bian, Lin, Wang, Timofte, Zhang (2023), "Retinexformer: One-stage Retinex-based Transformer for Low-light Image Enhancement," *ICCV* 2023.
+    https://arxiv.org/abs/2303.06705  *(→ #30 Zero-DCE(2020)의 후속. ICCV 2023 Top-10 Cited, NTIRE 2024–2026 챌린지 기준 baseline)*
+35. da Silva et al. (2023), "ISP meets Deep Learning: A Survey on Deep Learning Methods for Image Signal Processing," *ACM Computing Surveys*.
+    https://arxiv.org/abs/2305.11994  *(→ #16–21 ISP-for-vision 개별 논문들을 2019–2024 범위로 포괄하는 서베이)*
+36. Li, Jin, Sun, Guo, Cheng (2025), "AODRaw: Towards RAW Object Detection in Diverse Conditions," *CVPR* 2025 (Highlight).
+    https://arxiv.org/abs/2411.15678  *(→ #26 Xu et al. ROD(2023)보다 넓은 9종 조도·날씨 조건의 RAW 벤치마크·모델)*
+37. Li, Lahiri, Dai, Mayer (2023), "Joint Demosaicing and Denoising with Double Deep Image Priors" (JDD-DoubleDIP), *BMVC* 2023 (Oral).
+    https://arxiv.org/abs/2309.09426  *(→ #27 Gharbi et al.(2016)의 후속. 학습 데이터 없이 단일 RAW 이미지에서 동작)*
+
 ---
 
 ## 요약: 중복 문헌 (여러 출처에서 인용됨)
@@ -184,4 +196,4 @@ principled-v3 캠페인(체커 + 저조도 RM 이론)을 뒷받침하는 논문/
 | Schmitt (1938) | #16 | hysteresis 각주 | — |
 | Dixit (1989) | #14 | hysteresis 각주 | — |
 
-25(A) + 5그룹(B) + 33(C) = 문헌 실질 개수는 중복 제외 약 55개.
+25(A) + 5그룹(B) + 37(C, 2026-07-07 최신 추가 4편 포함) = 문헌 실질 개수는 중복 제외 약 59개.
