@@ -103,12 +103,16 @@ principled-v3 캠페인(체커 + 저조도 RM 이론)을 뒷받침하는 논문/
 - [Subsamplings — ScienceDirect Topics](https://www.sciencedirect.com/topics/engineering/subsamplings)
 - [Ch.3 Upsampling/Downsampling — Forsyth, UIUC lecture notes (PDF)](http://luthuli.cs.uiuc.edu/~daf/Courses/CV2026/Notes/Jan27/Ch3updownsmooth.pdf)
 - [21. Downsampling and Upsampling — MIT Foundations of Computer Vision](https://visionbook.mit.edu/upsamplig_downsampling_2.html)
+- [20. Image Sampling and Aliasing — MIT Foundations of Computer Vision](https://visionbook.mit.edu/sampling_and_aliasing.html) (Ch.21 바로 앞 장. decimation이 통계적으로 왜 손실이 적은지의 배경인 Nyquist/aliasing을 다룸 — 학부 개론 수준, 깊이는 얕음)
 
 **Schmitt trigger hysteresis / Dixit optimal-inaction**
 - Schmitt 1938 (→ 출처 A #16과 동일 문헌)
 - [Schmitt Trigger Hysteresis — Cadence](https://resources.pcb.cadence.com/blog/2021-schmitt-trigger-hysteresis-provides-noise-free-switching-and-output)
 - [All About Circuits, Ch.7 Hysteresis](https://www.allaboutcircuits.com/textbook/semiconductors/chpt-7/hysteresis/)
 - Dixit 1989 (→ 출처 A #14와 동일 문헌)
+
+**자연영상 통계 모델 (배경 — 노이즈 물리 원리의 입문 설명)**
+- [27. Statistical Image Models — MIT Foundations of Computer Vision](https://visionbook.mit.edu/stat_image_models_revised.html) (선형 필터 기반 자연영상 통계 규칙성 → denoising/synthesis 응용. §A #1(Foi et al. 2008)/#8(EMVA1288) 같은 전문 노이즈 물리 논문을 대체하진 않고, 그 배경이 되는 "왜 영상엔 통계적 규칙성이 있는가"를 5페이지 분량으로 소개하는 개론 자료)
 
 ---
 
