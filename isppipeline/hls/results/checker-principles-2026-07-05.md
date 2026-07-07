@@ -54,14 +54,15 @@ tools/checker_versions.py --csv results/scratch_frame_stats.csv`로 **직접 재
 
 Cᵢⱼ = "Hⱼ가 참인데 i로 판정"의 비용, πⱼ = prior. 세 판정기준의 위계:
 
-- **Youden's J** = TPR − FPR 최대화 (Youden 1950). 이는 **균등 prior(π₀=π₁) + 대칭
+- **Youden's J** = TPR − FPR 최대화 (Youden 1950)[^youden]. 이는 **균등 prior(π₀=π₁) + 대칭
   0-1 loss일 때의 Bayes 기준과 동치** — balanced error rate 최소화. 현행 80% 보정이
   암묵적으로 채택한 기준이다.
 - **Neyman–Pearson**: P_FA ≤ α 고정 하 P_D 최대화. PR로 인한 frame-drop budget이
   스펙에 명시될 때 올바른 프레임.
 - **Bayes risk 최소화**: 위 η. 비용·prior를 모두 반영하며, 시스템 목표(기대 mAP
   최대화)에 직접 대응하는 **유일한** 기준. 이것이 체커가 궁극적으로 최적화해야 할
-  목적함수다.
+  목적함수다. 이 η(C2, "Bayes-opt")를 그리드 대신 순차적 모델기반 탐색으로 잡는
+  일반론은 Bayesian optimization[^bayesopt] 참고.
 
 **충분통계량 조건 (dark-ratio는 언제 최적인가).** 픽셀을 iid로 보고 히스토그램
 count를 관측이라 하면 log-LR = `Σⱼ nⱼ·log(qⱼ/pⱼ)`. 이것이 단일 dark count 임계로
@@ -118,7 +119,7 @@ R = ½·(miss·C_miss + FT·C_FA),   miss = 1 − recall
 곱셈적 상 형성 `I = R·E`(reflectance × illumination; Gonzalez & Woods 2018 §2.3)에서
 log를 취하면 `log I = log R + log E` — 조도(exposure) 변화가 log-히스토그램의
 **평행이동**이 되어, 조도를 분류하려는 체커의 통계량은 log 공간에서 조도에
-equivariant해야 한다. 사진 측광의 표준 밝기 척도는 log-average luminance
+equivariant해야 한다. 사진 측광의 표준 밝기 척도는 log-average luminance[^logmean]
 (Reinhard et al. 2002):
 
 ```
@@ -212,7 +213,7 @@ metering은 shadow 해상도를 강조하는 log 도메인에서 하며, dark �
 
 ---
 
-## 원리 4 — 표본론: 전 픽셀 판독은 불필요하다 (1/16 subsample 무손실)
+## 원리 4 — 표본론: 전 픽셀 판독은 불필요하다 (1/16 subsample 무손실)[^subsample]
 
 ### 4.1 수학적 서술 (Hoeffding / 이항 표본오차)
 
@@ -245,7 +246,7 @@ P(|p̂−p|>ε) ≤ 2·exp(−2nε²)  →  ε=0.02, 신뢰 1−10⁻⁶에 n �
 
 ---
 
-## 원리 5 — 시간축: hysteresis는 전환비용 하 최적정책(Schmitt/Dixit)이며 δ=2%p로 flapping을 없앤다
+## 원리 5 — 시간축: hysteresis는 전환비용 하 최적정책(Schmitt/Dixit)이며 δ=2%p로 flapping을 없앤다[^schmitt-dixit]
 
 ### 5.1 수학적 서술 (Schmitt trigger / Dixit optimal-inaction)
 
@@ -319,3 +320,23 @@ Cover & Thomas 2006; Reinhard et al. 2002; ISO 12232:2019; Gonzalez & Woods 2018
 EMVA 1288 R3.0 (2010); Janesick 2007; Rose 1948; Hoeffding 1963; Brown/Cai/DasGupta
 2001; Cochran 1977; Schmitt 1938; Dixit 1989; Page 1954; Rabiner 1989.
 (전체 서지: `checker-improvement-theory-2026-07-03.md` References 1–25.)
+
+[^youden]: Youden's J statistic. [Wikipedia](https://en.wikipedia.org/wiki/Youden's_J_statistic) (정의·ROC 기하학적 해석) ·
+    [Youden Index and the optimal threshold for markers with mass at zero — PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC2749250/) (0에 질량이 몰린 분포의 보정된 임계값, dark-ratio처럼 skewed한 지표에 특히 적합) ·
+    [A note on Youden's J and its cost ratio — PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC2959030/) (비대칭 비용 확장, 본 원리 1의 C_miss:C_FA=2.89:1 논의와 직결)
+
+[^bayesopt]: Bayesian optimization. [Exploring Bayesian Optimization — Distill.pub](https://distill.pub/2020/bayesian-optimization/) (GP + acquisition function 인터랙티브 입문) ·
+    [Bayesian Optimization for Hyperparameters Tuning in Neural Networks, arXiv:2410.21886](https://arxiv.org/abs/2410.21886) · [Hyperparameter Tuning With Bayesian Optimization — Comet](https://www.comet.com/site/blog/hyperparameter-tuning-with-bayesian-optimization/) (Python 구현)
+
+[^logmean]: log-average luminance / Weber-Fechner. Reinhard et al. 2002 (Photographic Tone Reproduction for Digital Images) 원 논문 수식이 본문 인용; 배경 이론은
+    [Weber–Fechner law](https://kids.kiddle.co/Weber%E2%80%93Fechner_law) ·
+    [Weber's Law of perception is a consequence of resolving intensity with least error — Proc. Royal Society A (2023)](https://royalsocietypublishing.org/rspa/article/479/2271/20220626/54513/Weber-s-Law-of-perception-is-a-consequence-of) (로그 스케일의 수리적 정당화)
+
+[^subsample]: 1/16 systematic subsampling. [Subsamplings — ScienceDirect Topics](https://www.sciencedirect.com/topics/engineering/subsamplings) (서브샘플링이 노이즈를 줄이고 통계 추정에 유리한 이유) ·
+    [Ch.3 Upsampling and Downsampling Images — Forsyth, UIUC lecture notes](http://luthuli.cs.uiuc.edu/~daf/Courses/CV2026/Notes/Jan27/Ch3updownsmooth.pdf) (decimation의 이론적 근거) ·
+    [21. Downsampling and Upsampling — MIT Foundations of Computer Vision](https://visionbook.mit.edu/upsamplig_downsampling_2.html)
+
+[^schmitt-dixit]: Schmitt trigger hysteresis: [Schmitt Trigger Hysteresis Provides Noise-free Switching — Cadence](https://resources.pcb.cadence.com/blog/2021-schmitt-trigger-hysteresis-provides-noise-free-switching-and-output) (UTP/LTP, 노이즈 마진 V_H/2 — checker의 진입/해제 밴드와 직접 대응) ·
+    [All About Circuits, Ch.7 Hysteresis](https://www.allaboutcircuits.com/textbook/semiconductors/chpt-7/hysteresis/).
+    Dixit optimal-inaction: Dixit, A. (1989), "Entry and Exit Decisions under Uncertainty," *Journal of Political Economy*, 97(3), 620–638,
+    [journals.uchicago.edu/doi/abs/10.1086/261619](https://www.journals.uchicago.edu/doi/abs/10.1086/261619) ([PDF](https://digilander.libero.it/vergalli/pdf/69.pdf)) — 전환비용 하 진입/이탈 임계가 벌어지는 hysteresis 밴드의 고전적 유도(Brownian 극한, 밴드 폭 ∝ 비용^(1/3)).
