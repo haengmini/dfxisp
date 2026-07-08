@@ -20,6 +20,7 @@ deliverables/
 data/
 isppipeline/hls/data/
 isppipeline/hls/runs/
+sonynod_test/
 *_variant_work*
 *.pt
 *.pth
