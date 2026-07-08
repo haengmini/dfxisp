@@ -188,6 +188,28 @@ ablation이다. "최적 BLC=2"가 실제 배포 값으로 적합한지는 (i) sh
 더 원리적인지, (ii) gain/gamma도 함께 재튜닝하면 최적점이 이동하는지 추가
 검증이 필요하다(§7 한계 참조).
 
+**보충 — BLC_OFFSET=0이 "무보정"은 아니다.** `tools/build_sonynod_dataset.py`의
+u8 변환(`(raw-black_level)/(white_level-black_level)`)이 물리적
+`black_level=800`을 이미 제거한 상태로 shift8 도메인에 들어오므로,
+`baseline_core`의 `BLC_OFFSET=0`은 완전한 무보정이 아니라 그 위에 2차 감산을
+안 하는 것뿐이다. `lowlight`/`adaptive`가 0보다 2에서 더 나은 것은, binning이
+SNR을 올린 뒤 남는 잔여 양자화/노이즈 플로어를 소량 걷어내는 게 유리하기
+때문이라는 §6ter 본문 설명과 정합한다 — `normal`(binning 없음)에서 이 효과가
+없어 단조감소로만 나타나는 이유도 같은 논리로 설명된다.
+
+**보충 — checker는 이 ablation과 무관.** `newrm_pipeline_blcfix.py`의
+`run_arm_blcfix`는 `adaptive` arm의 dark_ratio 판정을 `demosaic_rggb`
+(BLC 적용 전) 출력으로 계산한다 — 즉 checker의 dark-ratio 임계값 권고
+(`checker-principles-2026-07-05.md`, dark16>0.62 등)는 BLC_OFFSET 재보정과
+독립적이며 이번 결과로 바뀌지 않는다.
+
+**후속 제안 — 정적 상수 대신 adaptive BLC.** 이번 스윕은 단일 카메라·전부
+야간(§7) 조건의 정적 최적값(≈2)만 준다. 노출/센서가 달라지면 최적점이
+이동할 수 있으므로, 고정 `BLC_OFFSET` 상수보다는 **AE(자동노출) 통계 기반으로
+프레임별 BLC를 추정**하는 편이 다음 후보다. 그리드도 {0,1,2,4,8,16}로
+성긴 편이라(피크가 완만해 실무 영향은 작을 것으로 판단하지만) 1~4 구간
+미세 스윕은 아직 하지 않았다.
+
 ## 7. 알려진 한계
 
 - 단일 카메라(Sony RX100 VII)·단일 렌즈, 전부 저녁/야간 조건 — "정상조도"에
