@@ -1,0 +1,4 @@
+dataset,version,name,mAP_50_95,ci_lo,ci_hi,ci_sd,mAP_50,AP_small,AP_medium,AP_large,model,n
+ExDark,B_g20,"binned + sqrt (DEPLOYED tone, honest control)",0.1163,0.1003,0.1434,0.0113,0.2465,0.0048,0.0517,0.1542,yolov8s.pt,260
+ExDark,F_g20,full-res + sqrt(gamma2.0),0.1100,0.0949,0.1368,0.0107,0.2427,0.0064,0.0622,0.1446,yolov8s.pt,260
+ExDark,F_vst_knee,full-res + VST + soft-knee (== R1),0.1119,0.0981,0.1420,0.0109,0.2481,0.0063,0.0589,0.1472,yolov8s.pt,260

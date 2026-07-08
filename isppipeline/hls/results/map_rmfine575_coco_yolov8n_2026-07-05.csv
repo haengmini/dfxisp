@@ -1,0 +1,6 @@
+dataset,version,name,mAP_50_95,ci_lo,ci_hi,ci_sd,mAP_50,AP_small,AP_medium,AP_large,model,n
+COCO,B_g25,binned + gamma2.5 (~old R0),0.2650,0.2376,0.3120,0.0193,0.3919,0.0451,0.1952,0.4707,yolov8n.pt,347
+COCO,B_g20,"binned + sqrt (DEPLOYED tone, honest control)",0.2671,0.2401,0.3128,0.0192,0.3942,0.0495,0.2019,0.4682,yolov8n.pt,347
+COCO,F_g20,full-res + sqrt(gamma2.0),0.2847,0.2547,0.3318,0.0191,0.4256,0.1958,0.2184,0.4594,yolov8n.pt,347
+COCO,F_vst_knee,full-res + VST + soft-knee (== R1),0.2814,0.2552,0.3305,0.0190,0.4224,0.1992,0.2207,0.4557,yolov8n.pt,347
+COCO,B_vst_dn,binned + VST + edge-denoise (== R2),0.2508,0.2255,0.2996,0.0195,0.3697,0.0466,0.1919,0.4444,yolov8n.pt,347

@@ -1,0 +1,4 @@
+dataset,version,name,mAP_50_95,ci_lo,ci_hi,ci_sd,mAP_50,AP_small,AP_medium,AP_large,model,n
+ExDark,B_g20f,binned + floor-sqrt (BIT-EXACT deployed HLS tone),0.0906,nan,nan,nan,0.1891,0.0019,0.0321,0.1203,yolov8n.pt,260
+ExDark,F_g20ds,"full-res demosaic + floor-sqrt, then 2x2 downsample (pure-res control)",0.0951,nan,nan,nan,0.2027,0.0051,0.0342,0.1279,yolov8n.pt,260
+ExDark,F_g20f,"full-res + floor-sqrt (deployed tone, binning removed)",0.0947,nan,nan,nan,0.1945,0.0044,0.0338,0.1281,yolov8n.pt,260

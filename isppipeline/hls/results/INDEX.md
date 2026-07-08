@@ -1,6 +1,6 @@
 # results/ INDEX — 실험·시뮬레이션 산출물 카탈로그
 
-**갱신:** 2026-07-03 · 이 폴더의 모든 파일을 주제별로 분류한 탐색용 인덱스.
+**갱신:** 2026-07-07 · 이 폴더의 모든 파일을 주제별로 분류한 탐색용 인덱스.
 정본 요약은 `ROADMAP.md`(진행 상태) / `SPEC.md`(사양) 참조. 파일은 인용 링크 보존을 위해 이동하지 않고 여기서 색인만 한다.
 
 ## 읽는 순서 (처음 오면 이 4개부터)
@@ -35,6 +35,7 @@
 | `checker-improvement-analysis-2026-07-04.md` | 07-04 | dark16 우월성 원인 규명 + 기존 결과 비교 |
 | `isp_analysis.md` / `isp_analysis.csv` | 06-29 | ISP variant proxy 분석 (detector 없음) |
 | `11-ssd-crosscheck-2026-06-29.md` | 06-29 | SSD 2차 detector 교차검증 |
+| `realraw-sonynod-benchmark-2026-07-06.md` | 07-06 (BLC ablation 07-07 추가) | **real-RAW** 벤치마크 (RAW-NOD Sony, .ARW 원본+실측 GT) + AWB(§6bis)/BLC(§6ter) domain-gap ablation |
 
 ## 3. HW 트랙 결과 (Stage 4~5)
 
@@ -89,6 +90,39 @@ G4 (07-03, BLC 완화 최종): map_ver1_coco_yolov8n_blcfix.csv ★
 | `resource_dfx_savings.csv` | DFX 시분할 대비 자원 절감 시나리오 |
 | `scheduler.csv` | checker/히스테리시스 단계별 효과 |
 | `scheduler_sweep.csv` | band×temporal×dwell 27조합 sweep |
+
+## 6.5 principled-v3 캠페인 (2026-07-05, 원리기반 checker+RM 재설계)
+
+정본 종합: `principled-comparison-2026-07-05.md` (여기부터 읽기). 브랜치 `exp/principled-checker-rm-2026-07-05`.
+
+| 파일 | 내용 |
+|---|---|
+| `PLAN-principled-checker-rm-2026-07-05.md` | 캠페인 계획 (버전정의·에이전트팀 배치) |
+| `checker-principles-2026-07-05.md` | **정본** checker 5원리 (결정이론/광도계/노이즈물리/샘플링/시간축) |
+| `references-index-2026-07-07.md` | **정본** 참고문헌 통합 인덱스 (theory/principles/survey 3개 문서의 서지·각주를 모두 여기로 이관) |
+| `checker-principled-versions-2026-07-05.md` | checker C0..C4 구현·실험 (winner C1 dark16>0.62) |
+| `lowlight-feature-principles-2026-07-05.md` | **정본** 저조도 feature 추출 원리 (SNR/VST/tone) |
+| `lowlight-rm-principled-versions-2026-07-05.md` | RM R0..R3 mAP+size-AP 실험 (winner R1 full-res VST) |
+| `rm-ssd-crosscheck-2026-07-05.md` | SSDLite 3차 검출기 교차검증 |
+| `principled-comparison-2026-07-05.md` | **정본** 이전버전 대비 종합 비교·결론 |
+| `map_rm_{exdark,coco}_yolov8{n,s}_2026-07-05.csv`, `map_rm_ssd_2026-07-05.csv` | RM 버전 mAP |
+| `scratch_frame_stats.csv`, `scratch_adaptive_map_principled.csv` | checker 통계·adaptive mAP |
+
+구현: `tools/checker_versions.py`, `tools/rm_versions.py`, `tools/eval_map_rmversions{,_ssd}.py`, `tools/scratch_adaptive_map_principled.py`.
+
+### principled-v3 refinement (2026-07-05, 재검토+Codex리뷰+세분화)
+
+정본: `principled-v3-refinement-2026-07-05.md` (1차 결론 정정 — RM 이득=binning 제거이고 COCO 견고·ExDark 검출기의존; 최적 checker 임계 dark8~10; C4 nested-CV 기각 확정).
+
+| 파일 | 내용 |
+|---|---|
+| `principled-v3-refinement-2026-07-05.md` | **정본** 재검토·Codex·세분화 종합 (자체 5갭 + Codex 7findings 반영) |
+| `checker_fine_2026-07-05.csv` | dark8~32 미세 sweep + 정직한 5-fold/nested CV |
+| `map_rmfine_{coco,exdark}_yolov8n_2026-07-05.csv` | 2×3 resolution×tone factorial (n=150) |
+| `map_rmfine575_{coco,exdark}_yolov8{n,s}_2026-07-05.csv` | 결정 셀 전수 + cross-detector |
+| `map_rmfine_deployexact_{coco,exdark}_yolov8n_2026-07-05.csv` | bit-exact 배포 톤(floor LUT) 확인 |
+
+구현: `tools/checker_versions_fine.py`, `tools/rm_versions_fine.py`, `tools/eval_map_rmversions_fine.py`.
 
 ## 7. 파일 명명 규칙 (앞으로도 이 규칙 유지)
 

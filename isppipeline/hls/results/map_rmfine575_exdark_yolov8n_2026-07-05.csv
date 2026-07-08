@@ -1,0 +1,6 @@
+dataset,version,name,mAP_50_95,ci_lo,ci_hi,ci_sd,mAP_50,AP_small,AP_medium,AP_large,model,n
+ExDark,B_g25,binned + gamma2.5 (~old R0),0.0849,0.0737,0.1103,0.0099,0.1769,0.0026,0.0284,0.1142,yolov8n.pt,260
+ExDark,B_g20,"binned + sqrt (DEPLOYED tone, honest control)",0.0898,0.0768,0.1148,0.0099,0.1897,0.0016,0.0333,0.1199,yolov8n.pt,260
+ExDark,F_g20,full-res + sqrt(gamma2.0),0.0962,0.0832,0.1223,0.0102,0.1995,0.0036,0.0353,0.1295,yolov8n.pt,260
+ExDark,F_vst_knee,full-res + VST + soft-knee (== R1),0.0967,0.0826,0.1248,0.0105,0.1953,0.0048,0.0330,0.1312,yolov8n.pt,260
+ExDark,B_vst_dn,binned + VST + edge-denoise (== R2),0.0787,0.0673,0.1027,0.0092,0.1655,0.0037,0.0272,0.1084,yolov8n.pt,260

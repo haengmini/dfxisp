@@ -201,43 +201,5 @@ z = y + σ(y)·ξ,   σ²(y) = a·y + b
 
 # References
 
-물리/노이즈 모델:
-1. Foi, A., Trimeche, M., Katkovnik, V., Egiazarian, K. "Practical Poissonian-Gaussian Noise Modeling and Fitting for Single-Image Raw-Data." *IEEE TIP* 17(10):1737–1754, 2008. https://webpages.tuni.fi/foi/papers/Foi-PoissonianGaussianClippedRaw-2007-IEEE_TIP.pdf
-2. Janesick, J. *Photon Transfer: DN → λ*. SPIE Press, 2007.
-3. EMVA. *EMVA Standard 1288: Standard for Characterization of Image Sensors and Cameras*, Release 3.0/4.0. https://www.emva.org/wp-content/uploads/EMVA1288-3.0.pdf
-4. Nakamura, J. (ed.) *Image Sensors and Signal Processing for Digital Still Cameras*. CRC Press, 2005.
-5. Gonzalez, R., Woods, R. *Digital Image Processing*, 4th ed. Pearson, 2018. (histogram/contrast 기초)
-6. Gnanasambandam, A., Chan, S. "Exposure-Referred Signal-to-Noise Ratio for Digital Image Sensors." 2022. https://arxiv.org/pdf/2112.05817
-7. Anscombe, F.J. "The transformation of Poisson, binomial and negative-binomial data." *Biometrika* 35, 1948.
-8. Mäkitalo, M., Foi, A. "Optimal Inversion of the Anscombe Transformation in Low-Count Poisson Image Denoising." *IEEE TIP* 20(1), 2011; "Optimal Inversion of the Generalized Anscombe Transformation for Poisson-Gaussian Noise." *IEEE TIP* 22(1), 2013. https://webpages.tuni.fi/foi/invansc/
-
-Low-light detection benchmarks/analysis:
-9. Loh, Y.P., Chan, C.S. "Getting to Know Low-light Images with the Exclusively Dark Dataset." *CVIU* 178:30–42, 2019. https://github.com/cs-chan/Exclusively-Dark-Image-Dataset
-10. Yang, W. et al. DARK FACE / UG2+ Challenge (CVPR Workshops 2019–2020). https://flyywh.github.io/CVPRW2019LowLight/
-11. Hong, Y., Wei, K., Chen, L., Fu, Y. "Crafting Object Detection in Very Low Light." *BMVC* 2021. https://kxwei.net/publication/bmvc21_lod/
-12. Rodríguez-Rodríguez, J.A. et al. "The Impact of Noise and Brightness on Object Detection Methods." *Sensors* 24(3):821, 2024. https://www.mdpi.com/1424-8220/24/3/821
-13. Dodge, S., Karam, L. "Understanding How Image Quality Affects Deep Neural Networks." *QoMEX* 2016. https://www.researchgate.net/publication/301876936
-14. Wu, X. et al. "Low-Light Enhancement Effect on Classification and Detection: An Empirical Study." 2024. https://arxiv.org/pdf/2409.14461
-15. "LIME-Eval: Rethinking Low-light Image Enhancement Evaluation via Object Detection." 2024. https://arxiv.org/pdf/2410.08810
-
-ISP-for-vision:
-16. Buckler, M., Jayasuriya, S., Sampson, A. "Reconfiguring the Imaging Pipeline for Computer Vision." *ICCV* 2017. https://openaccess.thecvf.com/content_iccv_2017/html/Buckler_Reconfiguring_the_Imaging_ICCV_2017_paper.html
-17. Hansen, P. et al. "ISP4ML: The Role of Image Signal Processing in Efficient Deep Learning Vision Systems." 2019. https://arxiv.org/abs/1911.07954
-18. Wu, C.-T. et al. "VisionISP: Repurposing the Image Signal Processor for Computer Vision Applications." *ICIP* 2019. https://arxiv.org/abs/1911.05931
-19. Yahiaoui, L., Horgan, J., Deegan, B. et al. "Optimization of ISP parameters for object detection algorithms." *Electronic Imaging AVM* 2019; "Overview and Empirical Analysis of ISP Parameter Tuning for Visual Perception in Autonomous Driving." *J. Imaging* 5(10):78, 2019. https://www.mdpi.com/2313-433X/5/10/78
-20. Mosleh, A. et al. "Hardware-in-the-Loop End-to-End Optimization of Camera Image Processing Pipelines." *CVPR* 2020. https://openaccess.thecvf.com/content_CVPR_2020/html/Mosleh_Hardware-in-the-Loop_End-to-End_Optimization_of_Camera_Image_Processing_Pipelines_CVPR_2020_paper.html
-21. Diamond, S., Sitzmann, V., Julca-Aguilar, F., Boyd, S., Wetzstein, G., Heide, F. "Dirty Pixels: Towards End-to-End Image Processing and Perception." *ACM TOG (SIGGRAPH)* 2021. https://light.princeton.edu/publication/dirty-pixels/
-22. Chen, C., Chen, Q., Xu, J., Koltun, V. "Learning to See in the Dark." *CVPR* 2018. https://arxiv.org/abs/1805.01934
-23. Ljungbergh, W., Johnander, J., Petersson, C., Felsberg, M. "Raw or Cooked? Object Detection on RAW Images." *SCIA* 2023. https://arxiv.org/abs/2301.08965
-24. Yoshimura, M. et al. "DynamicISP: Dynamically Controlled Image Signal Processor for Image Recognition." *ICCV* 2023. https://arxiv.org/abs/2211.01146
-25. Yoshimura, M. et al. "Rawgment: Noise-Accounted RAW Augmentation Enables Recognition in a Wide Variety of Environments." *CVPR* 2023. https://arxiv.org/pdf/2210.16046
-26. Xu, R. et al. "Toward RAW Object Detection: A New Benchmark and a New Model." *CVPR* 2023. https://openaccess.thecvf.com/content/CVPR2023/papers/Xu_Toward_RAW_Object_Detection_A_New_Benchmark_and_a_New_CVPR_2023_paper.pdf
-
-모듈별:
-27. Gharbi, M., Chaurasia, G., Paris, S., Durand, F. "Deep Joint Demosaicking and Denoising." *ACM TOG (SIGGRAPH Asia)* 2016. https://github.com/mgharbi/demosaicnet
-28. Jin, X., Hirakawa, K. "Analysis and processing of pixel binning for color image sensor." *EURASIP J. Adv. Signal Process.* 2012:125. https://asp-eurasipjournals.springeropen.com/articles/10.1186/1687-6180-2012-125
-29. Teledyne Vision Solutions. "Binning" (imaging fundamentals). https://www.teledynevisionsolutions.com/learn/learning-center/imaging-fundamentals/binning/
-30. Guo, C., Li, C. et al. "Zero-Reference Deep Curve Estimation for Low-Light Image Enhancement." *CVPR* 2020. https://openaccess.thecvf.com/content_CVPR_2020/html/Guo_Zero-Reference_Deep_Curve_Estimation_for_Low-Light_Image_Enhancement_CVPR_2020_paper.html
-31. Wang, Z. et al. "Improved YOLOX approach for low-light and small object detection: PPE on tunnel construction sites." *J. Comput. Des. Eng.* 10(3):1158–1175, 2023. https://academic.oup.com/jcde/article/10/3/1158/7177527
-32. Li, Q. et al. "WaveCNet: Wavelet Integrated CNNs to Suppress Aliasing Effect for Noise-Robust Image Classification." *IEEE TIP* 2021. https://arxiv.org/pdf/2107.13335
-33. Li, K. et al. "Assessing the Impact of Deep Neural Network-based Image Denoising on Binary Signal Detection Tasks." 2021. https://arxiv.org/pdf/2104.14037
+전체 서지(원 33편, 4개 그룹 — 물리/노이즈 모델, low-light detection 벤치마크, ISP-for-vision, 모듈별 —
++ 2026-07-07 최신 후속연구 4편 추가, 링크 포함)는 `references-index-2026-07-07.md` § C 참고.
