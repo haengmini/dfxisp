@@ -36,6 +36,7 @@
 | `isp_analysis.md` / `isp_analysis.csv` | 06-29 | ISP variant proxy 분석 (detector 없음) |
 | `11-ssd-crosscheck-2026-06-29.md` | 06-29 | SSD 2차 detector 교차검증 |
 | `realraw-sonynod-benchmark-2026-07-06.md` | 07-06 (BLC ablation 07-07 추가) | **real-RAW** 벤치마크 (RAW-NOD Sony, .ARW 원본+실측 GT) + AWB(§6bis)/BLC(§6ter) domain-gap ablation |
+| `isp-pipeline-recalibration-2026-07-08.md` | 07-08 | §6ter BLC 재보정 스윕 재측정 -- 구 SW-proxy 파이프라인의 gamma 버그(2.2/2.5/4.0 vs 배포 gamma-2.0) 수정 후 canonical-matched 파이프라인(`baseline_isp_pipeline.py`/`low_light_isp_pipeline.py`/`checker.py`)으로 재실행, arm 순서 역전은 유지(단 margin 축소)·normal 단조감소 결론은 정정(BLC=1 근방 정점) |
 
 ## 3. HW 트랙 결과 (Stage 4~5)
 

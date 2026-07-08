@@ -89,15 +89,24 @@ def _blc_wb_gain(rgb16, gnum, gden, blk_raw=BLK_RAW):
     return (np.clip(x >> SHIFT, 0, 255)).astype(np.uint8)  # -> 8-bit LAST (precision preserved)
 
 
-def run_normal(bayer16, w, h):
-    """NORMAL arm: demosaic -> BLC/WB/gain(1.25x) -> CCM(identity) -> gamma 2.0. -> H x W x 3 uint8."""
-    rgb8 = _blc_wb_gain(_demosaic_rggb16(bayer16, w, h), GAIN_NORMAL_NUM, GAIN_NORMAL_DEN)
+def run_normal(bayer16, w, h, blc_offset=None):
+    """NORMAL arm: demosaic -> BLC/WB/gain(1.25x) -> CCM(identity) -> gamma 2.0. -> H x W x 3 uint8.
+
+    blc_offset: optional override for the BLC constant, in the same units as
+    the module constant BLK_RAW is derived from (i.e. an 8-bit-equivalent
+    black-level value that gets shifted into the RAW16 domain via <<SHIFT).
+    When None (default), the existing module constant BLK_RAW is used
+    unchanged -- this is a purely additive, backward-compatible parameter
+    for the BLC recalibration ablation.
+    """
+    blk_raw = BLK_RAW if blc_offset is None else (int(blc_offset) << SHIFT)
+    rgb8 = _blc_wb_gain(_demosaic_rggb16(bayer16, w, h), GAIN_NORMAL_NUM, GAIN_NORMAL_DEN, blk_raw=blk_raw)
     return GAMMA2_LUT[rgb8]
 
 
-def run_arm(bayer16, w, h, arm):
+def run_arm(bayer16, w, h, arm, blc_offset=None):
     if arm == "none":
         return demosaic_rggb(bayer16, w, h)
     if arm == "normal":
-        return run_normal(bayer16, w, h)
+        return run_normal(bayer16, w, h, blc_offset=blc_offset)
     raise ValueError(arm)

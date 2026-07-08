@@ -74,14 +74,22 @@ def _blc_wb_gain(rgb16, gnum, gden, blk_raw=BLC_OFFSET_LOWLIGHT):
     return (np.clip(x >> SHIFT, 0, 255)).astype(np.uint8)  # -> 8-bit LAST (precision preserved)
 
 
-def run_lowlight(bayer16, w, h):
+def run_lowlight(bayer16, w, h, blc_offset=None):
     """LOW_LIGHT arm: 2x2 RAW bin-demosaic -> BLC/WB/gain(2.0x) -> CCM(identity)
-    -> gamma 2.0. -> (H/2) x (W/2) x 3 uint8."""
-    rgb8 = _blc_wb_gain(_bin_demosaic_rggb16(bayer16, w, h), GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN)
+    -> gamma 2.0. -> (H/2) x (W/2) x 3 uint8.
+
+    blc_offset: optional override for the BLC constant (8-bit-equivalent
+    black-level value, shifted into the RAW16 domain via <<SHIFT). When None
+    (default), the existing module constant BLC_OFFSET_LOWLIGHT is used
+    unchanged -- purely additive, backward-compatible parameter for the BLC
+    recalibration ablation.
+    """
+    blk_raw = BLC_OFFSET_LOWLIGHT if blc_offset is None else (int(blc_offset) << SHIFT)
+    rgb8 = _blc_wb_gain(_bin_demosaic_rggb16(bayer16, w, h), GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN, blk_raw=blk_raw)
     return GAMMA2_LUT[rgb8]
 
 
-def run_arm(bayer16, w, h, arm):
+def run_arm(bayer16, w, h, arm, blc_offset=None):
     if arm == "lowlight":
-        return run_lowlight(bayer16, w, h)
+        return run_lowlight(bayer16, w, h, blc_offset=blc_offset)
     raise ValueError(arm)
