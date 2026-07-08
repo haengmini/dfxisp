@@ -18,7 +18,7 @@ REPORT_MD := reports/latest.md
 HLS_SRC := src/dfxisp_accel.cpp include/dfxisp_accel.hpp
 HLS_TB := tests/test_dfxisp_csim.cpp $(GOLDEN_CSV)
 
-.PHONY: all csim golden verify cross-check report hls-report hls rm-golden rm-csim rm-verify scheduler analysis sw-stage clean
+.PHONY: all csim golden verify cross-check report hls-report hls rm-golden rm-csim rm-verify scheduler analysis sw-stage py-verify clean
 
 all: csim
 
@@ -92,6 +92,15 @@ analysis: | $(BUILD_DIR)
 
 # Full software stage (no board): variants bit-exact + scheduler + ISP analysis.
 sw-stage: verify rm-verify scheduler analysis
+
+# Lightweight Python-only gate (2026-07-08 Hermes robustness review, P2): compiles
+# every tools/*.py, re-runs the binning cross-check, the scheduler sweep, and the
+# tiny/odd-grid + demosaic boundary-clamp regression test. No C++/g++ needed.
+py-verify:
+	$(PYTHON) -m py_compile tools/*.py
+	cd tools && $(PYTHON) verify_binning_cross_check.py
+	$(PYTHON) tools/scheduler_sweep.py --out /tmp/scheduler_sweep.csv
+	cd tools && $(PYTHON) internal_edge_smoke.py
 
 clean:
 	rm -rf $(BUILD_DIR)

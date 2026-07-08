@@ -48,6 +48,21 @@ C-sim이 증명하는 불변식(RESEARCH.md §8.2):
 > (static / reg_only / dfx_bin / dfx_fp)에 별도로 있다. 현재 스캐폴드의 과거
 > post-RGB8 gain/lift 경로는 그 dfx 변종 세트로 이관되어 ablation으로만 남는다.
 
+## `tools/` 파일 상태 (canonical / proxy / legacy, 2026-07-08 Hermes 리뷰)
+
+golden/C-sim/cross-check 경로 자체는 견고하나, canonical golden ↔ SW-eval proxy ↔
+legacy/ver0 코드 사이 경계가 문서화되어 있지 않아 혼동 위험이 있었다. 아래 표가 그
+경계를 명시한다 — 새 코드는 이 표에 맞춰 어느 범주인지 표시할 것.
+
+| 파일 | 상태 | 용도 |
+|---|---|---|
+| `gen_golden_vectors.py` | **canonical golden** | `src/dfxisp_accel.cpp`의 bit-exact 미러 |
+| `verify_binning_cross_check.py` | **검증 gate** | binning-demosaic 독립 fuzz 교차검증 (`make verify`에 포함) |
+| `isp_pipeline_ver1.py` | **SW eval proxy** | 데이터셋 규모 mAP/이미지 지표 proxy. `dark_ratio`/`selected_mode`는 demosaic 후 luma 기반 checker proxy이며, canonical checker(`gen_golden_vectors.checker_select_mode`, raw 픽셀 기반)와는 다른 통계량임 — `checker_luma_proxy_for_dataset_eval` 별칭 참조 |
+| `newrm_pipeline.py` | **legacy/ver0** | 2026-07-02/07-03 reset 이전 파라미터(DARK_RATIO=0.40, gain 1.25x, gamma-4.0). 신규 작업에서 canonical로 취급 금지 — 과거 ablation 계보 참조용으로만 유지 |
+| `scheduler_sim.py` / `scheduler_sweep.py` | **정책 시뮬레이션** | hysteresis/temporal/min-dwell 스케줄러 트레이드오프 실험. synthetic luminance 시퀀스 사용 — checker 구현 자체의 검증이 아님 |
+| `internal_edge_smoke.py` | **회귀 테스트** | 1x1~8x8 극소/홀수 그리드 스모크 + demosaic 경계 clamp 회귀 테스트 (`make py-verify`) |
+
 ## 로컬 C-sim 실행
 
 ```bash

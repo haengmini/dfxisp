@@ -10,7 +10,10 @@
 #          and applying gamma in every mode (milder for low-light) should recover the
 #          mAP lost by the current post-demosaic order (ver0 = tools/newrm_pipeline.py).
 # Compare: ver0 (newrm_pipeline.py) = demosaic -> BLC -> AWB -> CCM, gamma LL-only.
-# Note   : SW proxy on dataset pseudo-RAW (RGGB16, shift8). Not the HW/C-sim GRBG path.
+# Note   : SW proxy on dataset pseudo-RAW (RGGB16, shift8). Since the 2026-07-02
+#          C-sim/dataset Bayer unification (SPEC.md §0), the HW/C-sim path is also
+#          RGGB; remaining differences from gen_golden_vectors.py are RAW-domain
+#          order/precision (§ above), not Bayer layout.
 # =============================================================================
 """ver1 ISP pipeline: RAW-domain-first ordering.
 
@@ -65,7 +68,12 @@ def _demosaic_rggb16(bayer16, w, h):
         return sum(a) // len(a)
 
     def shift(a, dy, dx):
-        return np.roll(np.roll(a, -dy, axis=0), -dx, axis=1)
+        # Clamp-to-edge (matches gen_golden_vectors.sample_clamped / src/dfxisp_accel.cpp).
+        # NOT np.roll(): a circular wrap would pull the opposite border's pixels
+        # into this array's border neighbors, which the HLS/golden path never does.
+        ys = np.clip(np.arange(h) + dy, 0, h - 1)
+        xs = np.clip(np.arange(w) + dx, 0, w - 1)
+        return a[ys[:, None], xs[None, :]]
 
     yy, xx = np.mgrid[0:h, 0:w]
     ey = (yy % 2 == 0); ex = (xx % 2 == 0)
@@ -115,6 +123,14 @@ def luminance(rgb):
 
 
 def dark_ratio(rgb):
+    """SW-dataset checker proxy: ratio of demosaiced 8-bit luma < DARK_Y.
+
+    Distinct from the canonical checker (gen_golden_vectors.checker_select_mode /
+    src/dfxisp_accel.cpp's checker_select_mode), which ratios *raw* pixels below
+    a raw threshold before any demosaic. Kept under the name `dark_ratio` for
+    backward compat with existing callers; see `checker_luma_proxy_for_dataset_eval`
+    below for an explicitly-named alias to import when the distinction matters.
+    """
     return float(np.mean(luminance(rgb) < DARK_Y))
 
 
@@ -138,3 +154,10 @@ def run_arm(bayer16, w, h, arm):
 
 def selected_mode(bayer16, w, h):
     return "lowlight" if dark_ratio(demosaic_rggb(bayer16, w, h)) > DARK_RATIO else "normal"
+
+
+# Explicit alias (2026-07-08 Hermes robustness review, P1): import this name
+# instead of `selected_mode` where the SW-proxy-vs-canonical distinction needs
+# to be visible at the call site. `selected_mode` itself is unchanged for the
+# ~10 existing callers across tools/.
+checker_luma_proxy_for_dataset_eval = selected_mode
