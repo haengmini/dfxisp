@@ -48,20 +48,32 @@ C-sim이 증명하는 불변식(RESEARCH.md §8.2):
 > (static / reg_only / dfx_bin / dfx_fp)에 별도로 있다. 현재 스캐폴드의 과거
 > post-RGB8 gain/lift 경로는 그 dfx 변종 세트로 이관되어 ablation으로만 남는다.
 
-## `tools/` 파일 상태 (canonical / proxy / legacy, 2026-07-08 Hermes 리뷰)
+## `tools/` 파일 상태 (canonical / proxy / legacy, 2026-07-08 Hermes 리뷰 + 같은 날 gamma 재정합)
 
 golden/C-sim/cross-check 경로 자체는 견고하나, canonical golden ↔ SW-eval proxy ↔
 legacy/ver0 코드 사이 경계가 문서화되어 있지 않아 혼동 위험이 있었다. 아래 표가 그
 경계를 명시한다 — 새 코드는 이 표에 맞춰 어느 범주인지 표시할 것.
 
+> **2026-07-08 같은 날 두 번째 갱신:** Hermes 리뷰(위 표의 최초 버전)와 독립적으로,
+> `isp_pipeline_ver1.py`/`newrm_pipeline.py`의 gamma 곡선이 canonical(양쪽 모드
+> 공유 gamma-2.0 정수 sqrt LUT)과 다르다는 문제(gamma 2.2/2.5/없음)가 발견되어,
+> 이 두 파일은 `tools/archive/`로 이동하고 `baseline_isp_pipeline.py`
+> (normal)/`low_light_isp_pipeline.py` (low-light)/`checker.py` (dark-ratio
+> checker, 디커플)로 대체됐다. Hermes가 고친 demosaic wrap-around 버그
+> (`np.roll` → clamp-to-edge)는 새 파일들에도 동일하게 이식됐다 — 두 수정이
+> 서로 다른 실제 버그를 독립적으로 잡았고, rebase 시 병합됐다. 자세한 내용은
+> `results/isp-pipeline-recalibration-2026-07-08.md` 참조.
+
 | 파일 | 상태 | 용도 |
 |---|---|---|
 | `gen_golden_vectors.py` | **canonical golden** | `src/dfxisp_accel.cpp`의 bit-exact 미러 |
-| `verify_binning_cross_check.py` | **검증 gate** | binning-demosaic 독립 fuzz 교차검증 (`make verify`에 포함) |
-| `isp_pipeline_ver1.py` | **SW eval proxy** | 데이터셋 규모 mAP/이미지 지표 proxy. `dark_ratio`/`selected_mode`는 demosaic 후 luma 기반 checker proxy이며, canonical checker(`gen_golden_vectors.checker_select_mode`, raw 픽셀 기반)와는 다른 통계량임 — `checker_luma_proxy_for_dataset_eval` 별칭 참조 |
-| `newrm_pipeline.py` | **legacy/ver0** | 2026-07-02/07-03 reset 이전 파라미터(DARK_RATIO=0.40, gain 1.25x, gamma-4.0). 신규 작업에서 canonical로 취급 금지 — 과거 ablation 계보 참조용으로만 유지 |
+| `verify_binning_cross_check.py` | **검증 gate** | binning-demosaic 독립 fuzz 교차검증 (`make verify`에 포함). `low_light_isp_pipeline.py`의 `_bin_demosaic_rggb16`과 교차검증(2026-07-08 이전엔 `isp_pipeline_ver1.py` 대상) |
+| `baseline_isp_pipeline.py` | **SW eval proxy (canonical-matched)** | normal arm: BLC+WB+gain(1.25x)+gamma-2.0, gain/gamma까지 `dfxisp_accel.cpp`와 일치하도록 재작성(2026-07-08). `isp_pipeline_ver1.py` 대체 |
+| `low_light_isp_pipeline.py` | **SW eval proxy (canonical-matched)** | low-light arm: 2x2 bin-demosaic+BLC+WB+gain(2.0x)+gamma-2.0(normal과 동일 LUT 공유, canonical과 일치). BLC_OFFSET 재보정값은 미확정 상태로 명시(파일 내 주석 참조) |
+| `checker.py` | **SW eval proxy (canonical-matched)** | dark-ratio 기반 adaptive 모드 선택기, 두 파이프라인 파일과 독립(상호 import 없음) |
+| `newrm_pipeline.py` / `isp_pipeline_ver1.py` | **archived (2026-07-08)** | `tools/archive/`로 이동. gamma가 canonical과 달라(2.2/2.5/없음) 위 3개 파일로 대체됨 — 신규 작업에서 참조 금지, 과거 ablation 계보 참조용으로만 보존 |
 | `scheduler_sim.py` / `scheduler_sweep.py` | **정책 시뮬레이션** | hysteresis/temporal/min-dwell 스케줄러 트레이드오프 실험. synthetic luminance 시퀀스 사용 — checker 구현 자체의 검증이 아님 |
-| `internal_edge_smoke.py` | **회귀 테스트** | 1x1~8x8 극소/홀수 그리드 스모크 + demosaic 경계 clamp 회귀 테스트 (`make py-verify`) |
+| `internal_edge_smoke.py` | **회귀 테스트** | 1x1~8x8 극소/홀수 그리드 스모크 + demosaic 경계 clamp 회귀 테스트 (`make py-verify`). `baseline_isp_pipeline.py`/`checker.py` 양쪽의 독립 demosaic 사본을 각각 검사(2026-07-08 이전엔 `isp_pipeline_ver1.py` 대상) |
 
 ## 로컬 C-sim 실행
 

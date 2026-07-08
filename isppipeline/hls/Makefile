@@ -35,10 +35,11 @@ golden:
 	$(PYTHON) tools/gen_golden_vectors.py --out $(GOLDEN_CSV)
 
 # Independent third-reference gate (improvement-strategy-2026-07-03.md Phase 0.1):
-# fuzzes gen_golden_vectors.py's binning-demosaic against isp_pipeline_ver1.py's
-# independently-authored implementation of the same algorithm. Catches the class
-# of bug that bit-exact C-sim/golden comparison structurally cannot (both sides
-# mirroring the same mistake) -- see SPEC.md §11.5/§11.8.
+# fuzzes gen_golden_vectors.py's binning-demosaic against low_light_isp_pipeline.py's
+# independently-authored implementation of the same algorithm (repointed 2026-07-08
+# from the now-archived isp_pipeline_ver1.py). Catches the class of bug that
+# bit-exact C-sim/golden comparison structurally cannot (both sides mirroring the
+# same mistake) -- see SPEC.md §11.5/§11.8.
 cross-check:
 	cd tools && $(PYTHON) verify_binning_cross_check.py
 

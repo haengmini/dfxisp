@@ -39,7 +39,12 @@ def _demosaic_rggb16(bayer16, w, h):
         return sum(a) // len(a)
 
     def shift(a, dy, dx):
-        return np.roll(np.roll(a, -dy, axis=0), -dx, axis=1)
+        # Clamp-to-edge (matches gen_golden_vectors.sample_clamped / src/dfxisp_accel.cpp).
+        # NOT np.roll(): a circular wrap would pull the opposite border's pixels
+        # into this array's border neighbors, which the HLS/golden path never does.
+        ys = np.clip(np.arange(h) + dy, 0, h - 1)
+        xs = np.clip(np.arange(w) + dx, 0, w - 1)
+        return a[ys[:, None], xs[None, :]]
 
     yy, xx = np.mgrid[0:h, 0:w]
     ey = (yy % 2 == 0); ex = (xx % 2 == 0)
