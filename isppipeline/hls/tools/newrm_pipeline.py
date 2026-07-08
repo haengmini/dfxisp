@@ -1,5 +1,16 @@
 #!/usr/bin/env python3
-"""Vectorized (numpy) reference of the reset architecture for SW experiments.
+"""LEGACY ver0 SW pipeline -- not the canonical DFXISP reference.
+
+Superseded by the 2026-07-02/07-03 reset (RAW-domain-first order, DARK_RATIO
+0.80, low-light gain 2.0x, gamma2-style tone, relaxed low-light BLC=8). This
+file still reflects the pre-reset parameters (DARK_RATIO=0.40, gain 1.25x,
+gamma-4.0, post-demosaic BLC/AWB, BLC_OFFSET=16 fixed) and is kept only for
+historical ablations/comparisons that intentionally reference ver0 behavior
+(e.g. tools/eval_map_ablation.py lineage). Use gen_golden_vectors.py for
+HLS-golden bit-exact behavior and isp_pipeline_ver1.py for current
+dataset-scale SW proxy -- do not treat this file as canonical for new work.
+
+Vectorized (numpy) reference of the reset architecture for SW experiments.
 
 shared baseline ISP core + mutually exclusive tone RM slot (RESEARCH.md). This
 mirrors the *semantics* of src/dfxisp_accel.cpp for dataset-scale evaluation
