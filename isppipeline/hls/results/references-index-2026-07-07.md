@@ -5,7 +5,7 @@ principled-v3 캠페인(체커 + 저조도 RM 이론)을 뒷받침하는 논문/
 대신 이 인덱스로의 포인터만 남긴다 — 참고문헌 링크는 이 파일에만 존재한다. 개별 원리·
 발견과의 연결(어떤 근거가 어떤 결론을 뒷받침하는지)은 각 원 문서 본문을 참고.
 
-- 출처 A: `checker-improvement-theory-2026-07-03.md` (체커 5원칙의 학술 인용, 원래 References 1–25)
+- 출처 A: `checker-improvement-theory-2026-07-03.md` (체커 5원칙의 학술 인용, 원래 References 1–25 + 2026-07-07 최신 응용사례 4편 추가)
 - 출처 B: `checker-principles-2026-07-05.md` (Youden/Bayesian-opt/Weber-Fechner/subsampling/hysteresis — 대중적 설명 각주, 출처 A와 별개로 최근 추가됨)
 - 출처 C: `lowlight-mv-isp-survey-2026-07-03.md` (저조도 RM 원칙의 근거, 원래 References 1–33 + 2026-07-07 최신 후속연구 4편 추가)
 
@@ -67,6 +67,19 @@ principled-v3 캠페인(체커 + 저조도 RM 이론)을 뒷받침하는 논문/
 25. Loh & Chan (2019), "Getting to Know Low-light Images with the Exclusively Dark Dataset," *CVIU* 178:30–42.
     http://cs-chan.com/doc/cviu.pdf  *(→ 출처 C #9와 동일 문헌, GitHub 링크는 다름)*
 
+**2020년대 최신 연구 사례 (2026-07-07 추가)** — 위 1–25는 체커가 기대는 근간 이론(주로
+1930–2007). 아래 4편은 그 이론을 실제로 적용해 연구한 최신 사례 — 이론 자체를 대체하는
+것이 아니라, "이 원리들이 지금도 활발히 쓰이고 있다"는 근거.
+
+26. Wang, Xu, Zhang, Xue, Gu (2024), "AdaptiveISP: Learning an Adaptive Image Signal Processor for Object Detection," *NeurIPS* 2024.
+    https://arxiv.org/abs/2410.22939  *(→ 원리 1(결정이론)+원리 5(시간축 전환)의 실제 적용: RL로 프레임별 ISP 파이프라인/파라미터를 선택해 detection을 최적화. 체커의 "장면통계→모드전환" 문제와 동일 구조이며, 판정 주체가 rule-based checker 대신 학습된 정책이라는 점이 다름)*
+27. Ahad, Davenport, Xie (2024), "Data-Adaptive Symmetric CUSUM for Sequential Change Detection," *Sequential Analysis* 43(1):1–27.
+    https://arxiv.org/abs/2210.17353  *(→ #11 Page(1954) CUSUM의 현대적 확장: 평균·분산이 모두 바뀌는 스트리밍 신호에서 단일 임계값으로 다중 변화점을 탐지 — 체커의 dark-ratio 스트리밍 판정과 같은 문제 구조)*
+28. El Bouazzaoui, Hadjoudja, Mouhib (2023/2024), "Real-Time Adaptive Neural Network on FPGA: Enhancing Adaptability through Dynamic Classifier Selection."
+    https://arxiv.org/abs/2311.09516  *(→ FPGA partial reconfiguration + 샘플별 적응형 분류기 선택을 결합 — DFXISP의 "체커 판정→PR trigger" 아키텍처와 동일한 패턴을 다른 도메인(분류기 앙상블)에 적용한 사례)*
+29. C-Rella & Vilar (2025), "Flexible multi-class cost-sensitive thresholding," *Advances in Data Analysis and Classification*.
+    https://link.springer.com/article/10.1007/s11634-025-00651-8  *(→ #1–2(Neyman-Pearson/Bayes 결정이론)의 다중클래스 확장: 단일 score에서 비용최적 다중클래스 임계 규칙을 도출 — 체커가 향후 NORMAL/LOW_LIGHT 이진에서 다중 RM으로 확장될 때 바로 적용 가능)*
+
 ---
 
 ## B. 체커 이론 — 대중적 설명 각주 (출처 B: checker-principles-2026-07-05.md, 최근 추가된 각주)
@@ -90,12 +103,16 @@ principled-v3 캠페인(체커 + 저조도 RM 이론)을 뒷받침하는 논문/
 - [Subsamplings — ScienceDirect Topics](https://www.sciencedirect.com/topics/engineering/subsamplings)
 - [Ch.3 Upsampling/Downsampling — Forsyth, UIUC lecture notes (PDF)](http://luthuli.cs.uiuc.edu/~daf/Courses/CV2026/Notes/Jan27/Ch3updownsmooth.pdf)
 - [21. Downsampling and Upsampling — MIT Foundations of Computer Vision](https://visionbook.mit.edu/upsamplig_downsampling_2.html)
+- [20. Image Sampling and Aliasing — MIT Foundations of Computer Vision](https://visionbook.mit.edu/sampling_and_aliasing.html) (Ch.21 바로 앞 장. decimation이 통계적으로 왜 손실이 적은지의 배경인 Nyquist/aliasing을 다룸 — 학부 개론 수준, 깊이는 얕음)
 
 **Schmitt trigger hysteresis / Dixit optimal-inaction**
 - Schmitt 1938 (→ 출처 A #16과 동일 문헌)
 - [Schmitt Trigger Hysteresis — Cadence](https://resources.pcb.cadence.com/blog/2021-schmitt-trigger-hysteresis-provides-noise-free-switching-and-output)
 - [All About Circuits, Ch.7 Hysteresis](https://www.allaboutcircuits.com/textbook/semiconductors/chpt-7/hysteresis/)
 - Dixit 1989 (→ 출처 A #14와 동일 문헌)
+
+**자연영상 통계 모델 (배경 — 노이즈 물리 원리의 입문 설명)**
+- [27. Statistical Image Models — MIT Foundations of Computer Vision](https://visionbook.mit.edu/stat_image_models_revised.html) (선형 필터 기반 자연영상 통계 규칙성 → denoising/synthesis 응용. §A #1(Foi et al. 2008)/#8(EMVA1288) 같은 전문 노이즈 물리 논문을 대체하진 않고, 그 배경이 되는 "왜 영상엔 통계적 규칙성이 있는가"를 5페이지 분량으로 소개하는 개론 자료)
 
 ---
 
@@ -196,4 +213,5 @@ principled-v3 캠페인(체커 + 저조도 RM 이론)을 뒷받침하는 논문/
 | Schmitt (1938) | #16 | hysteresis 각주 | — |
 | Dixit (1989) | #14 | hysteresis 각주 | — |
 
-25(A) + 5그룹(B) + 37(C, 2026-07-07 최신 추가 4편 포함) = 문헌 실질 개수는 중복 제외 약 59개.
+29(A, 2026-07-07 최신 응용사례 4편 포함) + 5그룹(B) + 37(C, 2026-07-07 최신 추가 4편 포함)
+= 문헌 실질 개수는 중복 제외 약 63개.
