@@ -21,7 +21,12 @@ Goal   : "ROADMAP.md를 stage1~stage6까지 모두 작성해줘" 요청에 대�
 **정본 문서:** 아키텍처 `RESEARCH.md`, 시스템 스펙 `SPEC.md`, Stage 계획
 `isppipeline/hls/results/experiment-stages-2026-07-02.md`. 이 문서는 그
 계획 대비 진행 상태 추적용.
-**마지막 갱신:** 2026-07-09 (트랙별 세부 진행 표 추가)
+**마지막 갱신:** 2026-07-09 — 트랙별 세부 진행 표 추가 + 2026-07-04~08 사이
+main에 병합된 후속 사건 반영: checker principled-v3(5원리, C1 권장)와
+RM 서사 정정(binning 제거가 실이득, PR #4), SonyNOD 실센서 BLC ablation
+(R3b), canonical-matched 파이프라인 재보정으로 Stage 3 수치 재검증(R4,
+PR #8), Hermes 병렬 리뷰(PR #6)와 PR #3 복구(PR #5). 상세는 각 Stage
+절의 "후속/정정/R3b/R4" 항목과 "즉시 다음"의 신규 우선순위 참고.
 
 ## 상태 범례
 
@@ -51,7 +56,7 @@ Vivado로 완료, **Stage 6만 실물 보드가 필요해 유일하게 남았다
 Stage 0  SW golden + shared baseline core 확정        ✅  2026-07-01 ~ 07-03(누적 보강)
 Stage 1  checker + N-frame 히스테리시스                ✅  2026-07-01 ~ 02
 Stage 2  tone RM 산술 확정 + 이미지 지표               ✅  2026-07-01 ~ 02
-Stage 3  정확도(mAP) 평가 + 알고리즘 개정(ver1/2/BLC)  ✅  2026-07-01 ~ 07-03(3라운드)
+Stage 3  정확도(mAP) 평가 + 알고리즘 개정(ver1/2/BLC)  ✅  2026-07-01 ~ 07-08(4라운드, canonical 재검증 포함)
 Stage 4  HLS 합성 + C/RTL Co-sim                       ✅⚠️ 2026-07-02 ~ 07-03(cosim 자동비교 미완주)
 Stage 5  DFX(PR) 구현 + pr_verify + latency/PR 컨트롤러 ✅⚠️🔄 2026-07-02 ~ 07-03(4라운드, PR컨트롤러 1차만)
 Stage 6  보드 실장 + DPU end-to-end                    ⬜  미착수(유일하게 남은 단계)
@@ -67,10 +72,14 @@ Stage 3/4/5는 여러 라운드(round)로 나뉘어 진행됐다. 아래 표는 
 |---|---|---|---|---|---|
 | SW | Stage 0 | (단일) | golden(Python) ↔ C-sim(C++) bit-exact 확정, 아키텍처 gate 6종 + 독립 교차검증 게이트(binning fuzz 500회) | ✅ 완료 | 2026-07-03 (2026-07-01~03 누적 보강) |
 | SW | Stage 1 | (단일) | dark-ratio 기반 checker + N-frame 히스테리시스, 스케줄러 파라미터 스윕(narrow band+N=3 최적), 전환 임계값 재보정(0.40→0.80) | ✅ 완료 | 2026-07-02 |
+| SW | Stage 1 | 후속 | principled-v3: 체커 5원리 정본화 + C0~C4 후보 비교, C1(dark16>0.62) 채택 권장 | ✅ 완료(권장; 배포는 보류) | 2026-07-05 |
 | SW | Stage 2 | (단일) | tone RM 산술 확정(Policy A, H/2×W/2), arm별 이미지 지표(Y mean/std/포화율/dark-ratio), gain·gamma 중복없음 확인 | ✅ 완료 | 2026-07-02 |
+| SW | Stage 2 | 정정 | RM 저조도 이득의 실제 원인 규명 — 톤커브(VST) 아님, binning 제거(해상도 보존)가 지배. 권장 arm `F_g20`로 변경 | ✅ 완료(1차 서사 정정) | 2026-07-05 |
 | SW | Stage 3 | R1 | 최초 조건표 A~G, 3-detector(YOLOv8n/s+SSDLite) 교차검증 → 모든 조건 `none` 최고, guardrail 최초 탈락 확인 | ✅ 완료 | 2026-07-02 |
 | SW | Stage 3 | R2 | ver1(RAW-domain-first, exposure gain 추가) + ver2(checker 재보정) 알고리즘 개정 → 개선됐으나 여전히 `none`이 최고 | ✅ 완료 | 2026-07-02 |
 | SW | Stage 3 | R3 | 저조도 root-cause 규명(BLC가 손실의 70%, 해상도 손실은 −1.4%) + BLC 완화(`BLC_OFFSET12_LOWLIGHT=128`) 반영 → ExDark lowlight mAP +78%, 최초로 normal 상회 | ✅ 완료 | 2026-07-03 |
+| SW | Stage 3 | R3b | SonyNOD 실센서 RAW(321장)로 BLC ablation 최초 실행 → 역전이 합성데이터뿐 아니라 실센서에서도 재현 확인 | ✅ 완료 | 2026-07-07 |
+| SW | Stage 3 | R4 | canonical-matched 파이프라인 재보정("Hermes" 리뷰가 발견한 SW-eval/HW gamma 불일치 수정) → 정성적 결론 유지, 마진 축소(+76%→+12.6%), "normal 단조감소" 정정 | ✅ 완료(수치 재검증됨) | 2026-07-08 |
 | HW | Stage 4 | R1 | 최초 실합성(streaming line buffer 리팩터, gamma Newton→ROM LUT화), unified+RM독립 top 2종 Fmax 273.97MHz 실측 | ✅⚠️ 완료(cosim 자동비교 미완주) | 2026-07-02 |
 | HW | Stage 4 | R2 | adversarial 수정(binning 스칼라평균 버그, 메타데이터 미검증 포인터) 반영 재합성 → LUT 대폭 감소(unified −26.3%, low-light RM −41.3%) | ✅ 완료 | 2026-07-02 |
 | HW | Stage 4 | R3 | BLC 완화 반영 재합성 → 3개 top 자원 완전 불변(순수 파라미터 변경이라 mAP 개선이 HW 비용 없이 달성됨을 확인) | ✅ 완료 | 2026-07-03 |
@@ -84,6 +93,18 @@ Stage 3/4/5는 여러 라운드(round)로 나뉘어 진행됐다. 아래 표는 
 | HW | Stage 6 | 4 | 절대 전력(W) 측정, Arm1/2/3 비교 | ⬜ 미착수 | — (보드 필요) |
 | HW | Stage 6 | 5 | DPU/검출기 end-to-end 실행(Vitis-AI, real-RAW, RGB32 직결) | ⬜ 미착수 | — (보드 필요) |
 | HW | Stage 6 | 6 | Stage 3 BLC 완화가 real-RAW에서도 유효한지 최종 확인(DPU mAP vs SW 예측 정합) | ⬜ 미착수 | — (보드 필요) |
+| SW | Stage 3 후속 | 🔄 | checker SOTA 강화: 히스토그램 LRT 시도(정직하게 기각, dark16이 이미 정보 소진 확인) + AODRaw 어댑터 선작성(셀프테스트 통과, 데이터 다운로드 대기) | 🔄 진행 중(미병합) | 2026-07-09 |
+| 거버넌스 | — | — | "Hermes" 병렬 리뷰 → Python robustness 수정(canonical/proxy/legacy 경계 문서화, edge-clamp demosaic 버그) | ✅ 완료(PR #6) | 2026-07-08 |
+| 거버넌스 | — | — | PR #3(references) 브랜치 삭제로 자동 종료 → 리베이스 후 PR #5로 복구, 데이터 유실 없음 | ✅ 완료 | 2026-07-08 |
+
+> **표 밖 참고:** "SW | Stage 3 후속" 행은 브랜치 `exp/principled-checker-rm-2026-07-05`
+> (오늘 이 저장소가 체크아웃된 브랜치)에만 있고 아직 `main`에 병합되지
+> 않은 작업이다. 같은 브랜치가 이미 PR #4(위 Stage 1/2 후속·정정 내용)로
+> 2026-07-08에 병합된 뒤에도 계속 커밋이 쌓였고, 그 사이 `main`에는 PR
+> #5~#8(참고문헌 정리, Hermes 수정, canonical 파이프라인 재보정)이 추가로
+> 병합됐다 — 즉 이 브랜치는 지금 **main보다 4커밋 앞서면서 동시에
+> 4~5커밋 뒤처진 상태**다. 병합 전 main 기준으로 리베이스가 필요하다
+> (아래 "즉시 다음" 참고).
 
 ---
 
@@ -123,6 +144,17 @@ gamma-4.0)의 결정적 golden 모델을 확정하고, C-sim이 이를 bit-exact
 
 **근거:** `isppipeline/hls/results/stage1-3-results-2026-07-02.md`.
 
+**후속(2026-07-04~05, principled-v3, 브랜치 `exp/principled-checker-rm-2026-07-05`,
+PR #4로 2026-07-08 main 병합):** checker를 결정이론·광도계·노이즈물리·표본론·
+시간축 5개 원리로 정본화하고 후보 C0(현행 dark50>0.80) ~ C4(2-feature)를
+1,150프레임(COCO+ExDark) 전수로 비교. **C1(dark16>0.62, 히스테리시스
+δ=2%p) 채택 권장** — 전 지표에서 C0 지배 + HW 변경 0. **단, 이 권장은 아직
+배포되지 않았다**: `src/dfxisp_accel.cpp`의 `DARK_RATIO_PCT`는 여전히 80
+(dark50 기준)이며, 실센서 재보정(τ(s,g) 적응) 및 오라클 라벨 재검증을
+선결 조건으로 남겨둔 상태다(2026-07-09 진행 중, 아래 "체커 SOTA 강화" 참고).
+**근거:** `results/checker-principles-2026-07-05.md`,
+`results/checker-principled-versions-2026-07-05.md`.
+
 ---
 
 ## Stage 2 — tone RM 산술 확정 + 이미지 지표 ✅
@@ -136,9 +168,18 @@ RM_NORMAL_TONE(identity/옵션 gain·γ)의 파라미터를 이미지 지표로 
 
 **근거:** `isppipeline/hls/results/stage1-3-results-2026-07-02.md`.
 
+**정정(2026-07-05, principled-v3 refinement, 위와 동일 PR #4로 병합):**
+1차 서사("저조도 RM 이득은 VST 톤커브 덕분")가 **베이스라인 혼입 오류**로
+판명됐다 — 1차 비교 대상이 실제 배포된 sqrt/gamma-2.0이 아니라 약한
+gamma-2.5였다. 정정된 결론: **저조도 RM의 유의미한 이득은 톤커브가 아니라
+2x2 binning 제거(해상도 보존)에서 온다** — COCO AP_small 0.0495→0.1958
+(+296%, 소형 객체 회복이 지배 메커니즘). 권장 arm이 `F_g20`(binning만
+제거한 full-res+sqrt)으로 변경됨. **근거:**
+`results/principled-v3-refinement-2026-07-05.md`.
+
 ---
 
-## Stage 3 — 정확도(mAP) 평가: arm & 조건표 + 알고리즘 개정 ✅ (3라운드)
+## Stage 3 — 정확도(mAP) 평가: arm & 조건표 + 알고리즘 개정 ✅ (4라운드)
 
 **목표:** H1(적응 이득)·H2(중복제거해도 정확도 유지)를 조건별 mAP로 검증하고,
 탈락 시 원인을 규명해 알고리즘을 개정.
@@ -172,6 +213,40 @@ SSDLite-MNv3) 교차검증. **모든 조건에서 `none`(무처리)이 최고**,
 `results/lowlight-rm-map-rootcause-2026-07-02.md`,
 `results/phase0-2-execution-2026-07-03.md`,
 `results/blc-fix-resynthesis-2026-07-03.md`.
+
+**라운드 3b — SonyNOD 실센서 RAW로 BLC 재보정 ablation (2026-07-07):**
+지금까지의 BLC 결론은 전부 합성 pseudo-RAW(COCO/ExDark 역감마) 기준이었다.
+**진짜 카메라 RAW(Sony RX100 VII, 321장)**로 같은 BLC 스윕을 처음 실행 —
+`lowlight/adaptive > normal` 역전이 **모든 BLC 값에서 재현**됨을 확인,
+Stage 3 R3 결론이 합성 데이터의 인공물이 아니라 실센서에서도 성립함을
+독립 검증. **근거:** `results/realraw-sonynod-benchmark-2026-07-06.md` §6ter.
+
+**라운드 4 — canonical-matched 파이프라인 재보정 (2026-07-08, PR #8):**
+후속 코드 리뷰("Hermes" 병렬 검토)에서 R1~R3와 R3b의 mAP 계산에 쓰인
+SW-eval 도구(`newrm_pipeline*.py`, `isp_pipeline_ver1.py` 등)가 **실제
+배포 HW의 gamma 곡선과 어긋나 있었음**이 드러났다(HW는 공유 `GAMMA2_LUT`
+sqrt/감마-2.0인데, SW eval은 파일마다 2.2/2.5/4.0/무감마를 혼용). 18개
+구 도구를 `tools/archive/`로 옮기고, HW 상수를 그대로 미러링하는 3종
+canonical 파일(`baseline_isp_pipeline.py`/`low_light_isp_pipeline.py`/
+`checker.py`) + `eval_map_isp.py`를 신설, R3b의 SonyNOD 스윕을 재실행:
+- **정성적 결론 유지:** `lowlight/adaptive > normal` 역전은 BLC 0~16 전
+  구간에서 그대로 성립(이중으로 견고해짐).
+- **정량 마진은 축소:** BLC=2에서 역전폭이 +76%→**+12.6%**로 줄었다 —
+  구 마진의 상당 부분이 잘못된 gamma 곡선의 인공물이었음이 밝혀짐.
+- **부차 결론 정정:** "`normal`은 BLC에 대해 무조건 단조감소"라는 R3의
+  주장이 철회됨 — 올바른 gamma에서는 `normal`도 BLC≈1에서 약한 정점을
+  찍는 비단조 곡선.
+- **미결 항목:** archive된 `isp_pipeline_ver1.py` 계열이 golden model
+  대비 R/B 채널 단일탭 보간(bilinear 아님)을 쓰고 있다는 별도 정합성
+  격차가 발견됐으나 **의도적으로 미수정**(다시 mAP 수치가 바뀔 수 있어
+  사용자 결정 대기 중).
+- **범위:** 이 재보정은 SW 평가 도구만 바꿨다 — Stage 4/5의 HLS/Vivado
+  수치는 재합성 대상이 아니며(알고리즘 상수 자체는 불변), Stage 3의
+  R1~R3·R3b **정성적 결론은 재확인**됐으나 그 **정밀 mAP 수치는 canonical
+  파이프라인 기준으로 대체(superseded)**된 것으로 취급한다.
+
+**근거:** `results/isp-pipeline-recalibration-2026-07-08.md`,
+`daily-reports/2026-07-08.md`, PR #6(`fix/python-robustness-hermes-2026-07-08`).
 
 ---
 
@@ -318,7 +393,7 @@ arm 비교표.
 [x] Stage 0  SW golden + baseline core 정합            (gate 6종 + cross-check 게이트)
 [x] Stage 1  checker + 히스테리시스 시퀀스              (narrow band + N=3 최적)
 [x] Stage 2  tone RM 산술 + 이미지 지표                 (Policy A 확정)
-[x] Stage 3  정확도 mAP arm/조건표 + 알고리즘 개정       (3라운드: 최초→ver1/2→BLC완화, lowlight가 처음 normal 상회)
+[x] Stage 3  정확도 mAP arm/조건표 + 알고리즘 개정       (4라운드: 최초→ver1/2→BLC완화→canonical재보정, lowlight가 처음 normal 상회, 이후 실센서+canonical로 재확인)
 [x] Stage 4  HLS 합성 + C/RTL Co-sim                    (csynth 3라운드 완료; cosim 자동비교만 미완주)
 [x] Stage 5  DFX PR 구현 + pr_verify + latency/컨트롤러  (4라운드, pr_verify 매 라운드 PASS; PR컨트롤러는 1차만)
 [ ] Stage 6  보드 실장 + DPU end-to-end                  (보드 필요 — 유일하게 남은 단계)
@@ -326,23 +401,51 @@ arm 비교표.
 ```
 
 > **핵심 발견(SW, Stage 0~3):** 모든 조건에서 `none`(무처리)이 mAP 최고라는
-> 결론은 3라운드 내내 불변(SW proxy 천장 가설) — 그러나 BLC 완화로 `lowlight`가
-> 처음으로 `normal`을 앞질렀고 격차가 크게 좁혀짐. DFX 정당화는 여전히
-> 자원/전력이 우선이어야 함(방향 A 유지).
+> 결론은 4라운드 내내 불변(SW proxy 천장 가설) — 그러나 BLC 완화로 `lowlight`가
+> 처음으로 `normal`을 앞질렀고 격차가 크게 좁혀짐. 이 역전은 실센서 RAW(R3b)와
+> canonical-matched 파이프라인(R4)으로 각각 독립 재확인됐으나, **정량 마진은
+> R4에서 크게 축소**(+76%→+12.6%, 이전 마진의 상당부분이 gamma 곡선 불일치의
+> 인공물이었음). DFX 정당화는 여전히 자원/전력이 우선이어야 함(방향 A 유지).
 > **핵심 발견(HW, Stage 4~5):** gamma를 런타임 sqrt→ROM LUT로 바꿔 자원
 > −88%/−78%; adversarial 수정으로 저조도 RM 자원 추가 −41.3%; **pr_verify는
 > 4라운드 전부 PASS**로 DFX 전환 가능함을 실측 확인; pblock 확장(용량 2배)은
-> partial bitstream·재구성 지연을 2.1배로 늘리는 명시적 트레이드오프.
+> partial bitstream·재구성 지연을 2.1배로 늘리는 명시적 트레이드오프. **HW
+> 소스(`src/dfxisp_accel.cpp`)는 이 SW 재보정과 무관하게 전 라운드 불변.**
+> **핵심 발견(SW, Stage 1~3 후속, 2026-07-04~09):** checker 5원리
+> 정본화로 C1(dark16>0.62) 채택 권장(미배포)했고, RM 이득의 실제 원인이
+> 톤커브가 아니라 binning 제거임을 규명(1차 서사 정정, 권장 arm `F_g20`로
+> 변경). 이후 checker를 SOTA 기준으로 더 강화하는 후속 작업(히스토그램
+> LRT는 정직하게 기각, AODRaw 실센서 데이터 어댑터는 선작성 완료)이 별도
+> 브랜치에서 진행 중.
 
 ## 즉시 다음 (우선순위)
 
-1. **Stage 6 착수 선결 과제** — PR 컨트롤러의 `drain_ready`를 실제 RM
+**신규(2026-07-09 파악, 최우선):**
+
+1. **브랜치 정리** — `exp/principled-checker-rm-2026-07-05`가 이미 병합된
+   PR #4 이후로도 계속 커밋되고 있어, main의 PR #5~#8(참고문헌 정리,
+   Hermes 수정, canonical 파이프라인 재보정)과 별도로 갈라진 상태다.
+   다음 병합 전에 main 기준 리베이스 필요.
+2. **Stage 3 수치 재확인 대상 정리** — 2026-07-08 이전에 계산된 mAP
+   수치(R1~R3, R3b 포함)는 canonical 파이프라인 기준으로 최종 확정된 것이
+   아니므로, 앞으로 이 수치들을 인용할 때는 R4(`isp-pipeline-recalibration
+   -2026-07-08.md`)로 대체(superseded)됐음을 명시할 것.
+3. **미결 결정 — archive된 `isp_pipeline_ver1.py` 정합성 격차** — R/B
+   채널 단일탭 보간(golden model의 bilinear와 다름)이 발견됐으나 의도적
+   으로 미수정 상태. 고칠지, 고치면 어떤 mAP 재검증이 필요한지 결정 필요.
+4. **checker SOTA 강화 후속** — AODRaw 다운로드 완료 시 어댑터로 오라클
+   라벨 재정의(#4) 및 센서 적응 임계 τ(#1) 착수 (`checker-sota-strategy
+   -2026-07-09.md` 참고).
+
+**기존(Stage 6 착수 준비, 순서 유지):**
+
+5. **Stage 6 착수 선결 과제** — PR 컨트롤러의 `drain_ready`를 실제 RM
    `ap_idle`에 연결, BRAM 시뮬레이션 소스를 실제 SD/DDR 경로로 교체.
-2. **Stage 6 순서 1~2** — PS/DDR 통합(Block Design) → 신 pblock 기준
+6. **Stage 6 순서 1~2** — PS/DDR 통합(Block Design) → 신 pblock 기준
    clock/reset 핀 배정 + WNS 재검증.
-3. **(선택) Stage 5 open item** — partition pin 수 15→3 감소 원인 조사
+7. **(선택) Stage 5 open item** — partition pin 수 15→3 감소 원인 조사
    (SPEC.md §10에 미조사로 기록됨).
-4. **(선택) Stage 4 cosim 완주** — WSL2+XSIM 하네스 SIGSEGV 원인(struct-pointer
+8. **(선택) Stage 4 cosim 완주** — WSL2+XSIM 하네스 SIGSEGV 원인(struct-pointer
    인터페이스 추정) 해소.
 
 ## 주의 (지어내지 않기)
@@ -352,6 +455,14 @@ arm 비교표.
   있으나 보드 실측으로 반드시 재검증해야 한다.
 - 구 08/11(2026-06-29 이전) mAP 수치는 ablation arm(구 variant) 기준 —
   현재 서사(Stage 3 최종 라운드)에 직접 인용 금지.
+- **2026-07-08 이전에 계산된 Stage 3 mAP 수치(R1~R3, R3b 포함)는 SW-eval
+  도구가 배포 HW의 gamma 곡선과 어긋난 상태에서 얻어졌다** — 정성적 결론
+  (`lowlight`가 `normal`을 앞지름, `none`이 여전히 최고)은 R4에서 재확인
+  됐지만, 정밀한 숫자를 인용할 때는 반드시 R4(`isp-pipeline-recalibration
+  -2026-07-08.md`)의 재보정 값을 우선하고 구 값은 "당시 서술"로만 취급할 것.
+- `data/aodraw_test`는 아직 다운로드 완료 전이라 존재하지 않는다 —
+  `tools/aodraw_adapter.py`의 실 `.ARW` 디코드 경로는 셀프테스트로만
+  검증됐고 실파일로는 아직 실행되지 않았음을 인용 시 명시할 것.
 
 ---
 
