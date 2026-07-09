@@ -37,7 +37,9 @@ PR #8), Hermes 병렬 리뷰(PR #6)와 PR #3 복구(PR #5). 상세는 각 Stage
 | 🔄 | 부분 진행 — 1차 결과 있음, 후속 필요 |
 | ⬜ | 미착수 — 대부분 실물 보드가 필요해서 지금 못 함 |
 
-## 트랙 구조 (정본, experiment-stages-2026-07-02.md)
+## 트랙 구조 (정본 계획, experiment-stages-2026-07-02.md)
+
+**계획상의 트랙(선형):** 두 트랙이 golden 정합에서 합류한다.
 
 ```text
 SW 트랙 (data/, model/, tools/)            HW 트랙 (isppipeline/hls, Vivado)
@@ -47,65 +49,101 @@ SW 트랙 (data/, model/, tools/)            HW 트랙 (isppipeline/hls, Vivado)
   Stage 3 정확도(mAP) arm/조건표        ─┘                          Stage 6 보드 실장 + end-to-end
 ```
 
-SW 트랙(0~3)은 보드 없이 수행 가능 — **전부 완료**. HW 트랙(4~6) 중 4~5는
-Vivado로 완료, **Stage 6만 실물 보드가 필요해 유일하게 남았다**.
+## 실제 진행 모델 (나선형 — 이게 현재 상황이다)
+
+**실제 실행은 선형이 아니라 나선형이다.** Stage를 0→5까지 올라간 뒤,
+어떤 발견이 나오면 **SW의 Stage 3(정확도 재검증)으로 되돌아와** 알고리즘을
+고치고, 그 수정이 다시 HW 재합성(Stage 4/5)으로 전파된다. **Stage 3은
+한 번 통과하고 끝나는 관문이 아니라, 새 발견이 들어올 때마다 재진입하는
+"정확도 재검증 허브"**다. 지금(2026-07-10)도 이 상태다 — Stage 5까지
+올라갔다가 SW로 내려와 checker/ISP 파이프라인을 고치는 중.
+
+```text
+   [정본 척추]  Stage 0 → 1 → 2 → 3 ──합류──▶ 4 → 5 → 6(보드)
+                                  ▲
+                                  │  되먹임(re-validate): SW Stage 3으로 회귀
+                                  │
+   되먹임 트리거 3종 (실제로 발생한 것):
+     ① HW 합성 중 버그 발견        → Stage 0/4 재검증 (binning 스칼라평균 버그, 07-02)
+     ② 실센서 RAW 데이터 도착      → Stage 3 R3b 재검증 (SonyNOD, 07-07)
+     ③ 병렬 코드리뷰/정합성 감사   → Stage 3 R4·R5 재검증 (Hermes gamma·demosaic, 07-08~09)
+```
+
+**함의:** "SW 트랙 완료"는 **절차를 한 바퀴 다 돌렸다**는 뜻이지 **수치가
+동결됐다**는 뜻이 아니다. Stage 3의 정성적 결론(guardrail: `none` 최고,
+`lowlight`가 `normal` 상회)은 되먹임을 여러 번 거치며 오히려 **더 견고해졌지만**,
+정밀 mAP 수치는 매 되먹임마다 갱신되어 왔고 지금도 R5(demosaic 수정 반영)가
+GPU 대기 중이다. HW 트랙(4~5)은 Vivado로 완료됐고 **Stage 6(보드)만 실물
+장비가 필요해 유일하게 미착수**지만, 위 되먹임이 알고리즘을 바꿀 때마다
+Stage 4 재합성이 원칙적으로 다시 필요할 수 있다(단 지금까지의 SW 수정은
+전부 HW 상수 불변이라 재합성 불필요였음 — Stage 4 절 참고).
 
 ## 전체 진행률 한눈에
 
 ```text
-Stage 0  SW golden + shared baseline core 확정        ✅  2026-07-01 ~ 07-03(누적 보강)
-Stage 1  checker + N-frame 히스테리시스                ✅  2026-07-01 ~ 02
-Stage 2  tone RM 산술 확정 + 이미지 지표               ✅  2026-07-01 ~ 02
-Stage 3  정확도(mAP) 평가 + 알고리즘 개정(ver1/2/BLC)  ✅⚠️ 2026-07-01 ~ 07-08(4라운드, R5 mAP 재검증 GPU 대기)
-Stage 4  HLS 합성 + C/RTL Co-sim                       ✅⚠️ 2026-07-02 ~ 07-03(cosim 자동비교 미완주)
-Stage 5  DFX(PR) 구현 + pr_verify + latency/PR 컨트롤러 ✅⚠️🔄 2026-07-02 ~ 07-03(4라운드, PR컨트롤러 1차만)
-Stage 6  보드 실장 + DPU end-to-end                    ⬜  미착수(유일하게 남은 단계)
+Stage 0  SW golden + shared baseline core 확정        ✅   2026-07-01 ~ 07-03(누적 보강)
+Stage 1  checker + N-frame 히스테리시스                ✅+  2026-07-01 ~ 07-05(+principled-v3 후속, C1 권장·미배포)
+Stage 2  tone RM 산술 확정 + 이미지 지표               ✅+  2026-07-01 ~ 07-05(+RM 이득원인 정정: binning 제거)
+Stage 3  정확도(mAP) 평가 + 알고리즘 개정              🔄⚠️ 2026-07-01 ~ 진행중(R1~R4 완료 + R5 mAP 재검증 GPU 대기 — 재검증 허브)
+Stage 4  HLS 합성 + C/RTL Co-sim                       ✅⚠️ 2026-07-02 ~ 07-03(3라운드; cosim 자동비교 미완주)
+Stage 5  DFX(PR) 구현 + pr_verify + latency/PR 컨트롤러 ✅⚠️🔄 2026-07-02 ~ 07-03(4라운드; PR컨트롤러 1차만)
+Stage 6  보드 실장 + DPU end-to-end                    ⬜   미착수(실물 보드 필요 — 유일하게 시작조차 못한 단계)
+
+범례: ✅ 완료 · ✅+ 완료 후 후속 개정 있었음 · 🔄 재진입/진행중 · ⚠️ 알려진 한계 · ⬜ 미착수
 ```
+
+**한 줄로:** 척추(0→5)는 다 올라갔다. 지금은 **Stage 3으로 되돌아와 SW를
+재검증·수정하는 나선의 한 바퀴 안**에 있고(demosaic 수정 → R5 대기), 보드가
+필요한 Stage 6만 아직 시작 못했다.
 
 ## 트랙별 세부 진행 표 (Stage + 라운드 단위)
 
-Stage 3/4/5는 여러 라운드(round)로 나뉘어 진행됐다. 아래 표는 그 라운드
-하나하나를 진행 순서대로 펼쳐, 트랙·내용·상태·최종 작업 날짜를 한 번에
-보여준다. 각 행의 근거 문서는 해당 Stage 절의 "근거:" 목록을 참조.
+아래 표는 계획 Stage를 실제 실행된 라운드(round) 단위로 펼친 것이다.
+**"되먹임" 열은 그 행이 왜 생겼는가** — 처음 계획대로 나온 행인지(계획),
+아니면 위 나선 모델의 트리거 ①/②/③ 중 무엇 때문에 SW로 되돌아온
+재검증 행인지 — 를 표시한다. 각 행의 근거 문서는 해당 Stage 절의
+"근거:" 목록 참조.
 
-| 트랙 | Stage | 순서 | 내용 | 상태 | 최종 작업 날짜 |
+| 트랙 | Stage·순서 | 내용 | 되먹임 | 상태 | 최종 작업일 |
 |---|---|---|---|---|---|
-| SW | Stage 0 | (단일) | golden(Python) ↔ C-sim(C++) bit-exact 확정, 아키텍처 gate 6종 + 독립 교차검증 게이트(binning fuzz 500회) | ✅ 완료 | 2026-07-03 (2026-07-01~03 누적 보강) |
-| SW | Stage 1 | (단일) | dark-ratio 기반 checker + N-frame 히스테리시스, 스케줄러 파라미터 스윕(narrow band+N=3 최적), 전환 임계값 재보정(0.40→0.80) | ✅ 완료 | 2026-07-02 |
-| SW | Stage 1 | 후속 | principled-v3: 체커 5원리 정본화 + C0~C4 후보 비교, C1(dark16>0.62) 채택 권장 | ✅ 완료(권장; 배포는 보류) | 2026-07-05 |
-| SW | Stage 2 | (단일) | tone RM 산술 확정(Policy A, H/2×W/2), arm별 이미지 지표(Y mean/std/포화율/dark-ratio), gain·gamma 중복없음 확인 | ✅ 완료 | 2026-07-02 |
-| SW | Stage 2 | 정정 | RM 저조도 이득의 실제 원인 규명 — 톤커브(VST) 아님, binning 제거(해상도 보존)가 지배. 권장 arm `F_g20`로 변경 | ✅ 완료(1차 서사 정정) | 2026-07-05 |
-| SW | Stage 3 | R1 | 최초 조건표 A~G, 3-detector(YOLOv8n/s+SSDLite) 교차검증 → 모든 조건 `none` 최고, guardrail 최초 탈락 확인 | ✅ 완료 | 2026-07-02 |
-| SW | Stage 3 | R2 | ver1(RAW-domain-first, exposure gain 추가) + ver2(checker 재보정) 알고리즘 개정 → 개선됐으나 여전히 `none`이 최고 | ✅ 완료 | 2026-07-02 |
-| SW | Stage 3 | R3 | 저조도 root-cause 규명(BLC가 손실의 70%, 해상도 손실은 −1.4%) + BLC 완화(`BLC_OFFSET12_LOWLIGHT=128`) 반영 → ExDark lowlight mAP +78%, 최초로 normal 상회 | ✅ 완료 | 2026-07-03 |
-| SW | Stage 3 | R3b | SonyNOD 실센서 RAW(321장)로 BLC ablation 최초 실행 → 역전이 합성데이터뿐 아니라 실센서에서도 재현 확인 | ✅ 완료 | 2026-07-07 |
-| SW | Stage 3 | R4 | canonical-matched 파이프라인 재보정("Hermes" 리뷰가 발견한 SW-eval/HW gamma 불일치 수정) → 정성적 결론 유지, 마진 축소(+76%→+12.6%), "normal 단조감소" 정정 | ✅ 완료(수치 재검증됨) | 2026-07-08 |
-| SW | Stage 3 | R5 | demosaic bilinear 수정(PR #9) 반영 mAP 재실행 — 코드·bit-exact 검증은 완료, mAP 재실행은 GPU 대기 | 🔄 대기 중(미착수) | — (GPU 필요) |
-| HW | Stage 4 | R1 | 최초 실합성(streaming line buffer 리팩터, gamma Newton→ROM LUT화), unified+RM독립 top 2종 Fmax 273.97MHz 실측 | ✅⚠️ 완료(cosim 자동비교 미완주) | 2026-07-02 |
-| HW | Stage 4 | R2 | adversarial 수정(binning 스칼라평균 버그, 메타데이터 미검증 포인터) 반영 재합성 → LUT 대폭 감소(unified −26.3%, low-light RM −41.3%) | ✅ 완료 | 2026-07-02 |
-| HW | Stage 4 | R3 | BLC 완화 반영 재합성 → 3개 top 자원 완전 불변(순수 파라미터 변경이라 mAP 개선이 HW 비용 없이 달성됨을 확인) | ✅ 완료 | 2026-07-03 |
-| HW | Stage 5 | R1 | 최초 DFX 구현(config1 static+NORMAL / config2 static+LOW_LIGHT), 트러블슈팅 5건 해결, pr_verify PASS | ✅ 완료 | 2026-07-02 |
-| HW | Stage 5 | R2 | adversarial 수정 반영 재구현 → pr_verify PASS 유지, partition pin 2→15(메타데이터 수정이 물리 계층에 반영된 증거) | ✅ 완료 | 2026-07-02 |
-| HW | Stage 5 | R3 | Vivado 시뮬레이션 latency 실측 시도(한계 확인) + pblock 클럭리전 편중 원인 규명 + PR 컨트롤러 1차 FSM 설계·시뮬레이션(word-count 기반) + pblock 재floorplan(용량 2배) | ✅⚠️🔄 완료(latency 실측 한계, PR컨트롤러 1차만) | 2026-07-02~03 |
-| HW | Stage 5 | R4 | BLC fix + pblock 확장 결합 최종 재구현 → pr_verify PASS 유지, partial bitstream 2.11배 증가(자원여유 vs 재구성지연 트레이드오프 기록) | ✅ 완료 | 2026-07-03 |
-| HW | Stage 6 | 1 | PS/DDR 통합(Block Design), GIC+DMA+PR 루프 드라이버 (Stage 5 PR컨트롤러 1차 설계 완성이 선결) | ⬜ 미착수 | — (보드 필요) |
-| HW | Stage 6 | 2 | 실제 clock/reset 핀 배정 + 타이밍 제약(신 pblock 기준 WNS 재검증 포함) | ⬜ 미착수 | — (보드 필요) |
-| HW | Stage 6 | 3 | 실제 PR latency 실측(trigger→완료, ICAP 실효 대역폭, XSA+JTAG+ILA) | ⬜ 미착수 | — (보드 필요) |
-| HW | Stage 6 | 4 | 절대 전력(W) 측정, Arm1/2/3 비교 | ⬜ 미착수 | — (보드 필요) |
-| HW | Stage 6 | 5 | DPU/검출기 end-to-end 실행(Vitis-AI, real-RAW, RGB32 직결) | ⬜ 미착수 | — (보드 필요) |
-| HW | Stage 6 | 6 | Stage 3 BLC 완화가 real-RAW에서도 유효한지 최종 확인(DPU mAP vs SW 예측 정합) | ⬜ 미착수 | — (보드 필요) |
-| SW | Stage 3 후속 | 🔄 | checker SOTA 강화: 히스토그램 LRT 시도(정직하게 기각, dark16이 이미 정보 소진 확인) + AODRaw 어댑터 선작성(셀프테스트 통과, 데이터 다운로드 대기) | 🔄 진행 중(미병합) | 2026-07-09 |
-| 거버넌스 | — | — | "Hermes" 병렬 리뷰 → Python robustness 수정(canonical/proxy/legacy 경계 문서화, edge-clamp demosaic 버그) | ✅ 완료(PR #6) | 2026-07-08 |
-| 거버넌스 | — | — | PR #3(references) 브랜치 삭제로 자동 종료 → 리베이스 후 PR #5로 복구, 데이터 유실 없음 | ✅ 완료 | 2026-07-08 |
+| SW | Stage 0 | golden(Python) ↔ C-sim(C++) bit-exact 확정, 아키텍처 gate 6종 + 독립 교차검증 게이트(binning fuzz 500회) | 계획 | ✅ 완료 | 07-03 |
+| SW | Stage 1 | dark-ratio checker + N-frame 히스테리시스, 스케줄러 스윕(narrow+N=3), 임계값 재보정(0.40→0.80) | 계획 | ✅ 완료 | 07-02 |
+| SW | Stage 1 후속 | principled-v3: 체커 5원리 정본화 + C0~C4 비교, C1(dark16>0.62) 권장 | 트리거③(감사) | ✅ 완료(권장; 배포 보류) | 07-05 |
+| SW | Stage 2 | tone RM 산술 확정(Policy A), arm별 이미지 지표, gain·gamma 중복없음 | 계획 | ✅ 완료 | 07-02 |
+| SW | Stage 2 정정 | RM 저조도 이득 원인 규명 — 톤커브 아님, binning 제거(해상도)가 지배. 권장 arm `F_g20` | 트리거③(감사) | ✅ 완료(1차 서사 정정) | 07-05 |
+| SW | Stage 3 · R1 | 최초 조건표 A~G, 3-detector 교차검증 → 전 조건 `none` 최고, guardrail 최초 탈락 | 계획 | ✅ 완료 | 07-02 |
+| SW | Stage 3 · R2 | ver1(RAW-domain-first) + ver2(checker 재보정) 개정 → 개선됐으나 여전히 `none` 최고 | 계획(R1 되짚기) | ✅ 완료 | 07-02 |
+| SW | Stage 3 · R3 | 저조도 root-cause(BLC=손실 70%) + BLC 완화 반영 → ExDark lowlight +78%, 최초로 normal 상회 | 계획(R2 되짚기) | ✅ 완료 | 07-03 |
+| SW | Stage 3 · R3b | SonyNOD 실센서 RAW(321장) BLC ablation → 역전이 실센서에서도 재현 | **트리거②(실데이터)** | ✅ 완료 | 07-07 |
+| SW | Stage 3 · R4 | canonical 파이프라인 재보정(Hermes가 발견한 SW/HW gamma 불일치 수정) → 결론 유지, 마진 +76%→+12.6%, "normal 단조감소" 정정 | **트리거③(감사)** | ✅ 완료(수치 재검증) | 07-08 |
+| SW | Stage 3 · R5 | demosaic R/B bilinear 수정(PR #9) 반영 mAP 재실행 — **코드·bit-exact 검증 완료, mAP 재실행만 GPU 대기** | **트리거③(감사)** | 🔄 대기(미착수) | — (GPU 필요) |
+| HW | Stage 4 · R1 | 최초 실합성(streaming line buffer 리팩터, gamma Newton→ROM LUT), unified+RM독립 top 2종 Fmax 273.97MHz | 계획 | ✅⚠️ 완료(cosim 자동비교 미완주) | 07-02 |
+| HW | Stage 4 · R2 | adversarial 수정(binning 스칼라평균 버그, 메타데이터 포인터) 재합성 → LUT −26.3%/−41.3% | **트리거①(HW감사)** | ✅ 완료 | 07-02 |
+| HW | Stage 4 · R3 | BLC 완화 반영 재합성 → 3개 top 자원 완전 불변(순수 파라미터 변경) | R3(SW)에서 전파 | ✅ 완료 | 07-03 |
+| HW | Stage 5 · R1 | 최초 DFX 구현(config1/config2), 트러블슈팅 5건 해결, pr_verify PASS | 계획 | ✅ 완료 | 07-02 |
+| HW | Stage 5 · R2 | adversarial 수정 반영 재구현 → pr_verify PASS, partition pin 2→15 | **트리거①(HW감사)** | ✅ 완료 | 07-02 |
+| HW | Stage 5 · R3 | latency 실측 시도(한계) + pblock 편중 원인규명 + PR 컨트롤러 1차 FSM(word-count) + pblock 재floorplan(용량 2배) | 계획(심화) | ✅⚠️🔄 완료(latency 한계, 컨트롤러 1차만) | 07-02~03 |
+| HW | Stage 5 · R4 | BLC fix + pblock 확장 결합 최종 재구현 → pr_verify PASS, partial bitstream 2.11배↑(트레이드오프 기록) | R3(SW)에서 전파 | ✅ 완료 | 07-03 |
+| HW | Stage 6 · 1 | PS/DDR 통합(Block Design), GIC+DMA+PR 루프 드라이버(PR컨트롤러 1차 완성이 선결) | 계획 | ⬜ 미착수 | — (보드) |
+| HW | Stage 6 · 2 | 실제 clock/reset 핀 배정 + 타이밍 제약(신 pblock WNS 재검증) | 계획 | ⬜ 미착수 | — (보드) |
+| HW | Stage 6 · 3 | 실제 PR latency 실측(trigger→완료, ICAP 대역폭, XSA+JTAG+ILA) | 계획 | ⬜ 미착수 | — (보드) |
+| HW | Stage 6 · 4 | 절대 전력(W) 측정, Arm1/2/3 비교 | 계획 | ⬜ 미착수 | — (보드) |
+| HW | Stage 6 · 5 | DPU/검출기 end-to-end(Vitis-AI, real-RAW, RGB32 직결) | 계획 | ⬜ 미착수 | — (보드) |
+| HW | Stage 6 · 6 | Stage 3 BLC 완화가 real-RAW에서도 유효한지 최종 확인(DPU mAP vs SW 예측 정합) | 계획 | ⬜ 미착수 | — (보드) |
+| SW | Stage 3 후속(SOTA) | checker SOTA 강화: 히스토그램 LRT(정직하게 기각) + AODRaw 어댑터 선작성(셀프테스트 통과, 데이터 대기) | 트리거③(감사) | 🔄 진행중(미병합) | 07-09 |
+| 거버넌스 | — | "Hermes" 병렬 리뷰 → Python robustness 수정(경계 문서화, edge-clamp demosaic 버그) | 트리거③ 원천 | ✅ 완료(PR #6) | 07-08 |
+| 거버넌스 | — | PR #3(references) 브랜치 삭제로 자동 종료 → 리베이스 후 PR #5로 복구, 데이터 유실 없음 | 프로세스 | ✅ 완료 | 07-08 |
 
-> **표 밖 참고:** "SW | Stage 3 후속" 행은 브랜치 `exp/principled-checker-rm-2026-07-05`
-> (오늘 이 저장소가 체크아웃된 브랜치)에만 있고 아직 `main`에 병합되지
-> 않은 작업이다. 같은 브랜치가 이미 PR #4(위 Stage 1/2 후속·정정 내용)로
-> 2026-07-08에 병합된 뒤에도 계속 커밋이 쌓였고, 그 사이 `main`에는 PR
-> #5~#8(참고문헌 정리, Hermes 수정, canonical 파이프라인 재보정)이 추가로
-> 병합됐다 — 즉 이 브랜치는 지금 **main보다 4커밋 앞서면서 동시에
-> 4~5커밋 뒤처진 상태**다. 병합 전 main 기준으로 리베이스가 필요하다
-> (아래 "즉시 다음" 참고).
+> **표 밖 참고 — 브랜치 상태(2026-07-10 기준):** 되먹임 작업이 두 브랜치로
+> 갈라져 있다.
+> - **`exp/principled-checker-rm-2026-07-05`** (이 문서가 있는 브랜치): 위
+>   "Stage 3 후속(SOTA)" 및 이 로드맵 갱신들이 여기 쌓여 있다. `main`보다
+>   **11커밋 앞, 4커밋 뒤** — PR #4로 한 번 병합된 뒤에도 계속 커밋됐고 그
+>   사이 main에 PR #5~#8이 들어왔기 때문. 병합 전 main 리베이스 필요.
+> - **`fix/canonical-demosaic-bilinear-2026-07-09`** (PR #9, 열림·병합가능):
+>   R5의 demosaic 수정. `main`에 있는 canonical 파일이 대상이라 main 기준
+>   분기했다. 이게 먼저 병합돼야 R5 mAP 재검증이 정본 위에서 돌아간다.
+> 정리 순서는 아래 "즉시 다음" 참고.
 
 ---
 
@@ -426,14 +464,18 @@ arm 비교표.
 
 ```text
 [x] Stage 0  SW golden + baseline core 정합            (gate 6종 + cross-check 게이트)
-[x] Stage 1  checker + 히스테리시스 시퀀스              (narrow band + N=3 최적)
-[x] Stage 2  tone RM 산술 + 이미지 지표                 (Policy A 확정)
-[x] Stage 3  정확도 mAP arm/조건표 + 알고리즘 개정       (4라운드 완료 + R5 대기: demosaic bilinear 수정 mAP 재검증이 GPU 대기 중 — ⚠️ 아래 Stage 3 절 참고)
+[x] Stage 1  checker + 히스테리시스 시퀀스              (narrow band + N=3 최적; +principled-v3 후속 C1 권장)
+[x] Stage 2  tone RM 산술 + 이미지 지표                 (Policy A 확정; +RM 이득원인 정정)
+[~] Stage 3  정확도 mAP arm/조건표 + 알고리즘 개정       (재검증 허브 — R1~R4 완료, R5 대기: demosaic 수정 mAP 재실행이 GPU 대기 ⚠️ 아래 Stage 3 절)
 [x] Stage 4  HLS 합성 + C/RTL Co-sim                    (csynth 3라운드 완료; cosim 자동비교만 미완주)
 [x] Stage 5  DFX PR 구현 + pr_verify + latency/컨트롤러  (4라운드, pr_verify 매 라운드 PASS; PR컨트롤러는 1차만)
-[ ] Stage 6  보드 실장 + DPU end-to-end                  (보드 필요 — 유일하게 남은 단계)
-범례: [x] 완료(⚠️/🔄 세부 한계 있어도 완료로 집계) · [ ] 미착수
+[ ] Stage 6  보드 실장 + DPU end-to-end                  (보드 필요 — 유일하게 시작조차 못한 단계)
+범례: [x] 절차 완료 · [~] 재진입/재검증 진행중 · [ ] 미착수 · (⚠️/🔄 = 세부 한계)
 ```
+
+> **읽는 법:** `[x]`는 "절차를 다 돌렸다"이지 "수치 동결"이 아니다. Stage
+> 3이 `[~]`인 것은 위 나선 모델대로 새 발견(demosaic 수정)이 들어와 다시
+> 재검증 중이기 때문 — 정성적 결론은 안 바뀌고, 정밀 mAP만 R5에서 갱신된다.
 
 > **핵심 발견(SW, Stage 0~3):** 모든 조건에서 `none`(무처리)이 mAP 최고라는
 > 결론은 4라운드 내내 불변(SW proxy 천장 가설) — 그러나 BLC 완화로 `lowlight`가
