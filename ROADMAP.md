@@ -532,8 +532,11 @@ arm 비교표.
    (a) normal이 PASCAL RAW, lowlight가 LOD RAW에서 각각 우위인지(교차 우위
    = 전환 필요성), (b) 혼합 스트림에서 adaptive가 최적 단일 static 상회인지.
    저조도 모듈 이득표(`lowlight-module-techniques-2026-07-10.md`)의 실측
-   열을 이 real-RAW 수치로 대체. 데이터셋 어댑터 필요(기존 `aodraw_adapter.py`
-   재활용 검토 — AODRaw 대비 PASCAL/LOD 포맷 차이 확인).
+   열을 이 real-RAW 수치로 대체. **어댑터: 저조도 LOD는 Sony `.ARW`라
+   기존 `aodraw_adapter.py`의 rawpy 경로가 그대로 적용된다**(sonynod 선례와
+   동일 포맷; 파일별 흑레벨/화이트레벨/베이어를 rawpy에서 읽으므로 하드코딩
+   불필요). PASCAL RAW(밝음)도 rawpy가 처리하는 RAW 포맷이면 같은 경로 —
+   실 다운로드 파일로 `read_raw()` 한 함수만 확인하면 된다.
 5. **checker SOTA 강화 후속** — 오라클 라벨 재정의(#4)·센서 적응 임계 τ(#1)는
    위 real-RAW 데이터셋 위에서 착수 (`checker-sota-strategy-2026-07-09.md`).
 

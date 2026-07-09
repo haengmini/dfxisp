@@ -73,3 +73,9 @@ recalibration-2026-07-08.md`) 및 demosaic 수정(R5, GPU 대기)으로 갱신
 adaptive)을 재실행해 위 표의 실측이득 열을 real-RAW 정본 수치로 대체한다.
 그때 ①binning의 조건부 판정이 "LOD에서 순이득"으로 확정되는지가 저조도
 모듈 서사의 관문이다.
+
+**어댑터 참고:** 저조도 LOD 데이터셋은 Sony `.ARW`(sonynod와 동일 포맷)라
+`tools/aodraw_adapter.py`의 rawpy 디코드 경로가 그대로 쓰인다 — 파일별
+흑레벨/화이트레벨/베이어 위상을 rawpy에서 읽고 shift8 규약으로 정규화하는
+설계이므로 센서 상수 하드코딩이 필요 없다(어댑터 설계·검증은
+`aodraw-adapter-2026-07-09.md`).
