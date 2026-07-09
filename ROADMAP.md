@@ -21,7 +21,7 @@ Goal   : "ROADMAP.md를 stage1~stage6까지 모두 작성해줘" 요청에 대�
 **정본 문서:** 아키텍처 `RESEARCH.md`, 시스템 스펙 `SPEC.md`, Stage 계획
 `isppipeline/hls/results/experiment-stages-2026-07-02.md`. 이 문서는 그
 계획 대비 진행 상태 추적용.
-**마지막 갱신:** 2026-07-03
+**마지막 갱신:** 2026-07-09 (트랙별 세부 진행 표 추가)
 
 ## 상태 범례
 
@@ -56,6 +56,34 @@ Stage 4  HLS 합성 + C/RTL Co-sim                       ✅⚠️ 2026-07-02 ~ 
 Stage 5  DFX(PR) 구현 + pr_verify + latency/PR 컨트롤러 ✅⚠️🔄 2026-07-02 ~ 07-03(4라운드, PR컨트롤러 1차만)
 Stage 6  보드 실장 + DPU end-to-end                    ⬜  미착수(유일하게 남은 단계)
 ```
+
+## 트랙별 세부 진행 표 (Stage + 라운드 단위)
+
+Stage 3/4/5는 여러 라운드(round)로 나뉘어 진행됐다. 아래 표는 그 라운드
+하나하나를 진행 순서대로 펼쳐, 트랙·내용·상태·최종 작업 날짜를 한 번에
+보여준다. 각 행의 근거 문서는 해당 Stage 절의 "근거:" 목록을 참조.
+
+| 트랙 | Stage | 순서 | 내용 | 상태 | 최종 작업 날짜 |
+|---|---|---|---|---|---|
+| SW | Stage 0 | (단일) | golden(Python) ↔ C-sim(C++) bit-exact 확정, 아키텍처 gate 6종 + 독립 교차검증 게이트(binning fuzz 500회) | ✅ 완료 | 2026-07-03 (2026-07-01~03 누적 보강) |
+| SW | Stage 1 | (단일) | dark-ratio 기반 checker + N-frame 히스테리시스, 스케줄러 파라미터 스윕(narrow band+N=3 최적), 전환 임계값 재보정(0.40→0.80) | ✅ 완료 | 2026-07-02 |
+| SW | Stage 2 | (단일) | tone RM 산술 확정(Policy A, H/2×W/2), arm별 이미지 지표(Y mean/std/포화율/dark-ratio), gain·gamma 중복없음 확인 | ✅ 완료 | 2026-07-02 |
+| SW | Stage 3 | R1 | 최초 조건표 A~G, 3-detector(YOLOv8n/s+SSDLite) 교차검증 → 모든 조건 `none` 최고, guardrail 최초 탈락 확인 | ✅ 완료 | 2026-07-02 |
+| SW | Stage 3 | R2 | ver1(RAW-domain-first, exposure gain 추가) + ver2(checker 재보정) 알고리즘 개정 → 개선됐으나 여전히 `none`이 최고 | ✅ 완료 | 2026-07-02 |
+| SW | Stage 3 | R3 | 저조도 root-cause 규명(BLC가 손실의 70%, 해상도 손실은 −1.4%) + BLC 완화(`BLC_OFFSET12_LOWLIGHT=128`) 반영 → ExDark lowlight mAP +78%, 최초로 normal 상회 | ✅ 완료 | 2026-07-03 |
+| HW | Stage 4 | R1 | 최초 실합성(streaming line buffer 리팩터, gamma Newton→ROM LUT화), unified+RM독립 top 2종 Fmax 273.97MHz 실측 | ✅⚠️ 완료(cosim 자동비교 미완주) | 2026-07-02 |
+| HW | Stage 4 | R2 | adversarial 수정(binning 스칼라평균 버그, 메타데이터 미검증 포인터) 반영 재합성 → LUT 대폭 감소(unified −26.3%, low-light RM −41.3%) | ✅ 완료 | 2026-07-02 |
+| HW | Stage 4 | R3 | BLC 완화 반영 재합성 → 3개 top 자원 완전 불변(순수 파라미터 변경이라 mAP 개선이 HW 비용 없이 달성됨을 확인) | ✅ 완료 | 2026-07-03 |
+| HW | Stage 5 | R1 | 최초 DFX 구현(config1 static+NORMAL / config2 static+LOW_LIGHT), 트러블슈팅 5건 해결, pr_verify PASS | ✅ 완료 | 2026-07-02 |
+| HW | Stage 5 | R2 | adversarial 수정 반영 재구현 → pr_verify PASS 유지, partition pin 2→15(메타데이터 수정이 물리 계층에 반영된 증거) | ✅ 완료 | 2026-07-02 |
+| HW | Stage 5 | R3 | Vivado 시뮬레이션 latency 실측 시도(한계 확인) + pblock 클럭리전 편중 원인 규명 + PR 컨트롤러 1차 FSM 설계·시뮬레이션(word-count 기반) + pblock 재floorplan(용량 2배) | ✅⚠️🔄 완료(latency 실측 한계, PR컨트롤러 1차만) | 2026-07-02~03 |
+| HW | Stage 5 | R4 | BLC fix + pblock 확장 결합 최종 재구현 → pr_verify PASS 유지, partial bitstream 2.11배 증가(자원여유 vs 재구성지연 트레이드오프 기록) | ✅ 완료 | 2026-07-03 |
+| HW | Stage 6 | 1 | PS/DDR 통합(Block Design), GIC+DMA+PR 루프 드라이버 (Stage 5 PR컨트롤러 1차 설계 완성이 선결) | ⬜ 미착수 | — (보드 필요) |
+| HW | Stage 6 | 2 | 실제 clock/reset 핀 배정 + 타이밍 제약(신 pblock 기준 WNS 재검증 포함) | ⬜ 미착수 | — (보드 필요) |
+| HW | Stage 6 | 3 | 실제 PR latency 실측(trigger→완료, ICAP 실효 대역폭, XSA+JTAG+ILA) | ⬜ 미착수 | — (보드 필요) |
+| HW | Stage 6 | 4 | 절대 전력(W) 측정, Arm1/2/3 비교 | ⬜ 미착수 | — (보드 필요) |
+| HW | Stage 6 | 5 | DPU/검출기 end-to-end 실행(Vitis-AI, real-RAW, RGB32 직결) | ⬜ 미착수 | — (보드 필요) |
+| HW | Stage 6 | 6 | Stage 3 BLC 완화가 real-RAW에서도 유효한지 최종 확인(DPU mAP vs SW 예측 정합) | ⬜ 미착수 | — (보드 필요) |
 
 ---
 
