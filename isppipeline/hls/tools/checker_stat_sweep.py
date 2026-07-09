@@ -110,11 +110,11 @@ def frame_stats(a: np.ndarray) -> dict[str, float]:
 
 
 def golden_y50_ratio(a: np.ndarray) -> float:
-    """Exact ver1 golden-model checker view: demosaic -> Y -> ratio(Y<50)."""
+    """Exact golden-model checker view: demosaic -> Y -> ratio(Y<50)."""
     sys.path.insert(0, str(REPO / "isppipeline" / "hls" / "tools"))
-    import isp_pipeline_ver1 as P  # noqa: PLC0415
+    import checker as C  # noqa: PLC0415
     h, w = a.shape
-    return P.dark_ratio(P.demosaic_rggb(a, w, h))
+    return C.dark_ratio(C.demosaic_rggb(a, w, h))
 
 
 def compute(csv_path: Path) -> None:

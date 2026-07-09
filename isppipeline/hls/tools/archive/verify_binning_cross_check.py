@@ -1,21 +1,17 @@
 # =============================================================================
 # File   : isppipeline/hls/tools/verify_binning_cross_check.py
-# Date   : 2026-07-03 (repointed 2026-07-08 at low_light_isp_pipeline.py)
+# Date   : 2026-07-03
 # Time   : 01:00 KST
 # Function: Independent cross-check gate (improvement-strategy-2026-07-03.md
 #           Phase 0.1) -- fuzzes tools/gen_golden_vectors.py's
 #           bin_demosaic_rggb12 (the function whose earlier scalar-average bug
-#           the adversarial review caught) against
-#           tools/low_light_isp_pipeline.py's _bin_demosaic_rggb16 (an
-#           independently-authored, canonical-gain/gamma-matched implementation
-#           of the SAME algorithm -- this file used to cross-check against the
-#           now-archived isp_pipeline_ver1.py, which had the same
-#           _bin_demosaic_rggb16 function; only the import target changed, the
-#           algorithm/semantics are identical) on many random RGGB grids. This
-#           is the CI gate that "make verify" was missing: the original
-#           color-collapse bug survived because the golden CSV generator and
-#           the C++ implementation mirrored the SAME mistake -- a single
-#           self-consistent pair can never catch that. A THIRD,
+#           the adversarial review caught) against tools/isp_pipeline_ver1.py's
+#           _bin_demosaic_rggb16 (an independently-authored, already mAP/SW-eval
+#           -vetted implementation of the SAME algorithm) on many random RGGB
+#           grids. This is the CI gate that "make verify" was missing: the
+#           original color-collapse bug survived because the golden CSV
+#           generator and the C++ implementation mirrored the SAME mistake --
+#           a single self-consistent pair can never catch that. A THIRD,
 #           independently-written reference closes that gap.
 # Goal   : exit 1 on any mismatch so this can be wired into `make verify`.
 # =============================================================================
@@ -27,7 +23,7 @@ import random
 import sys
 
 import gen_golden_vectors as G
-import low_light_isp_pipeline as P
+import isp_pipeline_ver1 as P
 import numpy as np
 
 
@@ -40,7 +36,7 @@ def check_one(rng: random.Random, w: int, h: int, bits: int) -> tuple[bool, str]
     raw = random_grid(rng, w, h, bits)
     bayer_np = np.array(raw, dtype=np.int64).reshape(h, w)
 
-    # low_light_isp_pipeline's _bin_demosaic_rggb16 is vectorized over the whole
+    # isp_pipeline_ver1's _bin_demosaic_rggb16 is vectorized over the whole
     # grid at once -- compute it once per grid, not per cell.
     sw_result = P._bin_demosaic_rggb16(bayer_np, w, h)  # (bh, bw, 3) int32
 
@@ -55,7 +51,7 @@ def check_one(rng: random.Random, w: int, h: int, bits: int) -> tuple[bool, str]
                 return False, (
                     f"MISMATCH at grid {w}x{h} cell (bx={bx},by={by}): "
                     f"golden(gen_golden_vectors.bin_demosaic_rggb12)=({golden_r},{golden_g},{golden_b}) "
-                    f"!= sw(low_light_isp_pipeline._bin_demosaic_rggb16)=({sw_r},{sw_g},{sw_b})"
+                    f"!= sw(isp_pipeline_ver1._bin_demosaic_rggb16)=({sw_r},{sw_g},{sw_b})"
                 )
     return True, ""
 
@@ -90,7 +86,7 @@ def main() -> int:
 
     print(f"[verify_binning_cross_check] PASS: {args.cases} random grids, "
           f"{tested_cells} binned cells, gen_golden_vectors.bin_demosaic_rggb12 "
-          f"== low_light_isp_pipeline._bin_demosaic_rggb16 (independent implementations, bit-exact)")
+          f"== isp_pipeline_ver1._bin_demosaic_rggb16 (independent implementations, bit-exact)")
     return 0
 
 
