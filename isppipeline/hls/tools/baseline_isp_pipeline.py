@@ -31,6 +31,21 @@ gen_golden_vectors.py/dfxisp_accel.cpp -- this was a real bug in the archived
 isp_pipeline_ver1.py this file was derived from (fixed independently in both
 places: here, and in the archived copy via a parallel 2026-07-08 review).
 See internal_edge_smoke.py for the regression test.
+
+Demosaic fidelity (2026-07-09 fix): `_demosaic_rggb16` now bilinear-averages
+the R/B planes (2 taps at the opposite-color G position, 4-tap diagonal
+average at the opposite-color native position) to match
+`gen_golden_vectors.demosaic_rggb12` / `dfxisp_accel.cpp`'s `demosaic_rggb12`
+exactly -- verified bit-exact against the former on random RGGB grids (see
+`tools/verify_demosaic_bilinear_cross_check.py`). Previously this used a
+single nearest tap for the R/B cross-color positions (G was already correct
+at 4-tap average) -- a real, independently-confirmed SW-proxy/HW mismatch
+that the edge-clamp fix above did NOT cover (see internal_edge_smoke.py's own
+docstring, which explicitly flagged this as a separate, then-unfixed gap).
+See `results/demosaic-bilinear-fix-2026-07-09.md` for the before/after
+analysis and blast-radius assessment (limited to the normal/none arms; the
+low-light arm's binning-demosaic in low_light_isp_pipeline.py was already
+verified bit-exact and is unaffected).
 """
 from __future__ import annotations
 
@@ -54,7 +69,12 @@ GAMMA2_LUT = np.array([isqrt(255 * v) for v in range(256)], dtype=np.uint8)
 
 
 def _demosaic_rggb16(bayer16, w, h):
-    """RGGB nearest demosaic, kept in the RAW16 domain (no >>8). Returns int32 planes."""
+    """RGGB bilinear demosaic, kept in the RAW16 domain (no >>8). Returns int32
+    planes. Matches gen_golden_vectors.demosaic_rggb12 / dfxisp_accel.cpp's
+    demosaic_rggb12 tap-for-tap: G is a 4-tap average at the R/B native
+    positions; R/B are 2-tap averages at the opposite-color G position and a
+    4-tap diagonal average at the opposite-color native position (2026-07-09
+    fix -- previously single-nearest-tap for R/B, see module docstring)."""
     b = bayer16.astype(np.int32)
     R = np.zeros((h, w), np.int32); G = np.zeros((h, w), np.int32); B = np.zeros((h, w), np.int32)
 
@@ -71,17 +91,21 @@ def _demosaic_rggb16(bayer16, w, h):
 
     yy, xx = np.mgrid[0:h, 0:w]
     ey = (yy % 2 == 0); ex = (xx % 2 == 0)
+    left, right = shift(b, 0, -1), shift(b, 0, 1)
+    up, down = shift(b, -1, 0), shift(b, 1, 0)
+    ul, ur, dl, dr = shift(b, -1, -1), shift(b, -1, 1), shift(b, 1, -1), shift(b, 1, 1)
+
     R[ey & ex] = b[ey & ex]
-    R[ey & ~ex] = shift(b, 0, -1)[ey & ~ex]
-    R[~ey & ex] = shift(b, -1, 0)[~ey & ex]
-    R[~ey & ~ex] = shift(b, -1, -1)[~ey & ~ex]
+    R[ey & ~ex] = avg(left, right)[ey & ~ex]
+    R[~ey & ex] = avg(up, down)[~ey & ex]
+    R[~ey & ~ex] = avg(ul, ur, dl, dr)[~ey & ~ex]
     B[~ey & ~ex] = b[~ey & ~ex]
-    B[~ey & ex] = shift(b, 0, 1)[~ey & ex]
-    B[ey & ~ex] = shift(b, 1, 0)[ey & ~ex]
-    B[ey & ex] = shift(b, 1, 1)[ey & ex]
+    B[~ey & ex] = avg(left, right)[~ey & ex]
+    B[ey & ~ex] = avg(up, down)[ey & ~ex]
+    B[ey & ex] = avg(ul, ur, dl, dr)[ey & ex]
     G[(ey & ~ex) | (~ey & ex)] = b[(ey & ~ex) | (~ey & ex)]
     gmiss = (ey & ex) | (~ey & ~ex)
-    G[gmiss] = avg(shift(b, 0, 1), shift(b, 0, -1), shift(b, 1, 0), shift(b, -1, 0))[gmiss]
+    G[gmiss] = avg(left, right, up, down)[gmiss]
     return np.stack([R, G, B], -1)   # int32, RAW16 domain
 
 
