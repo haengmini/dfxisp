@@ -31,22 +31,72 @@ RM slot은 **상호 배타적(mutually exclusive)** 이다. Normal frame과 low-
 
 ## 1. 연구 목표
 
-DFXISP는 FPGA Dynamic Function eXchange가 머신비전용 ISP pipeline을 조도 조건에 따라 adaptive하게 만들 수 있는지를 연구한다.
+### 1.0 논지 (thesis) — 왜 이 연구를 하는가
 
-핵심 연구 질문은 다음이다.
+컴퓨터 비전(CV) 검출기는 **조도 조건에 따라 서로 다른 이미지 전처리**를
+요구한다. 하나의 static ISP pipeline으로 밝은 장면과 어두운 장면을 모두
+처리하면, 어느 한쪽(특히 저조도)에서 CV 성능·효율이 떨어진다. 따라서
+**CV를 위한 ISP는 저조도에 특화된 vision processor 경로를 별도로 갖고,
+상황에 맞는 모듈로 전환**해야 한다는 것이 본 연구의 논지다.
 
-> 공유 baseline ISP core에 상호 배타적인 tone RM slot을 결합하고, normal scene에서는 `RM_NORMAL_TONE`, dark scene에서는 `RM_LOW_LIGHT_TONE`으로 전환하면, baseline core 안에 gain/gamma logic을 중복 배치하지 않으면서 low-light 머신비전 robustness를 개선할 수 있는가?
+이 논지를 **두 개의 최종 목표**로 나눈다.
 
-이 질문은 실험적으로 분리해야 할 세 가지 주장으로 이어진다.
+- **목표 1 (필요성 — 저조도 특화 모듈):** 저조도 환경에서 static/일반
+  ISP 경로는 CV(검출기)에 대한 성능이 떨어진다. **저조도에 특화된 모듈이
+  더 적합**하며, 각 모듈은 자기 조건의 데이터셋에서 상대 모듈보다 높은
+  CV 성능을 낸다(§7 arm 비교, §10 데이터셋).
+- **목표 2 (전환 — DFX 적응):** 조건이 바뀌므로 어느 한 모듈을 고정으로
+  쓸 수 없다 — **상황에 맞춰 모듈을 전환(adaptive)**해야 하고, 이 전환을
+  FPGA Dynamic Function eXchange(DFX)로 구현하면 static/always-on 설계
+  대비 **자원·전력 효율**까지 개선한다.
 
-1. **알고리즘 주장**  
-   Mode-specific tone processing은 gain/gamma를 두 번 적용하지 않고도 normal scene과 dark scene의 image conditioning을 지원할 수 있다. Low-light preprocessing은 binning + low-light gain + low-light gamma를 사용한다.
+**핵심 연구 질문:** 공유 baseline ISP core에 상호 배타적인 tone RM slot을
+결합해 normal scene에서는 `RM_NORMAL_TONE`, dark scene에서는
+`RM_LOW_LIGHT_TONE`으로 (체커가 판단해) 전환하면, gain/gamma를 core에
+중복 배치하지 않으면서 (목표 1) 저조도 CV 성능을 살리고 (목표 2) DFX로
+효율을 얻을 수 있는가?
 
-2. **아키텍처 주장**  
-   Gain/gamma를 공유 baseline ISP core에서 제거하고, 상호 배타적인 tone RM인 `RM_NORMAL_TONE`과 `RM_LOW_LIGHT_TONE`으로 분리할 수 있다.
+### 1.1 증명 전략 — 필요성 → 전환, SW 먼저 → HW
 
-3. **DFX 효율 주장**  
-   Register-only 또는 always-on adaptive 설계와 비교했을 때, DFX는 허용 가능한 reconfiguration overhead를 지불하는 대신 static resource pressure 또는 power를 줄일 수 있다.
+논증 순서는 다음과 같다.
+
+1. **필요성(목표 1):** 단일 모듈이 **각각 자기 조건의 데이터셋에서 최고**임을
+   보인다 — normal 모듈은 밝은 조도 RAW(§10: PASCAL RAW)에서, low-light
+   모듈은 저조도 RAW(§10: LOD RAW)에서. 한 모듈이 두 조건을 모두 이기지
+   못하므로 **고정 단일 모듈은 부적합 → 전환이 필요**하다는 결론이 나온다.
+2. **전환(목표 2):** 따라서 체커가 조건을 판단해 모듈을 고르는 adaptive
+   경로가 두 조건이 섞인 스트림에서 **최적 단일 static을 상회**함을 보인다.
+3. **SW → HW 순서:** 위 두 주장을 먼저 **SW(golden/파이썬 mAP)로 확립**한
+   뒤, **HW(HLS 합성 → DFX 부분재구성 → 보드)로 이식**한다. HW 트랙의
+   고유 기여는 **효율(자원/전력)** — 특히 보드(Stage 6)에서 DFX가 always-on
+   대비 static 자원·전력을 줄인다는 것을 실측한다.
+
+### 1.2 비교 범위 (arm) — `none`은 제외
+
+CV 성능 비교의 arm은 **`normal` / `lowlight` / `adaptive`** 세 가지다.
+**demosaic만 하고 baseline core(BLC/AWB/CCM)·톤을 전혀 거치지 않는
+`none`(무처리) arm은 본 연구의 비교 대상에서 제외**한다 — `none`은 색
+보정된 배포 가능한 ISP 출력이 아니라(AWB/CCM 미적용, 색편향 잔존) 별개
+계열의 문제이기 때문이다. 이후 모든 arm 비교·결론은 이 세 arm 안에서만
+이루어진다.
+
+### 1.3 실험적으로 분리하는 세 주장 (위 목표에 매핑)
+
+1. **알고리즘 주장 (목표 1의 성능 근거)**  
+   Mode-specific tone processing은 gain/gamma를 두 번 적용하지 않고도
+   normal/dark 각 조건의 image conditioning을 지원한다. **Low-light 모듈은
+   binning + low-light gain + low-light gamma + 완화된 black-level**을
+   쓰며, 각 조건 데이터셋에서 상대 모듈 대비 CV 성능 우위를 낸다(구체
+   기술·기대이득·실측이득은 `results/lowlight-module-techniques-2026-07-10.md`).
+
+2. **아키텍처 주장 (목표 1·2의 구조 근거)**  
+   Gain/gamma를 공유 baseline ISP core에서 제거하고, 상호 배타적인 tone RM
+   `RM_NORMAL_TONE`/`RM_LOW_LIGHT_TONE`으로 분리해 체커가 하나만 선택한다.
+
+3. **DFX 효율 주장 (목표 2의 효율 근거)**  
+   Register-only 또는 always-on adaptive 설계와 비교했을 때, DFX는 허용
+   가능한 reconfiguration overhead를 지불하는 대신 static resource pressure
+   또는 power를 줄인다(보드 실측은 Stage 6).
 
 ---
 
@@ -604,21 +654,36 @@ NORMAL x3 -> LOW_LIGHT x3 -> NORMAL x1
 - Recovery 검증.
 - Bit-exact debugging을 쉽게 유지.
 
-### 10.2 Real/pseudo-real datasets
+### 10.2 평가 데이터셋 — 조건별 real-RAW 쌍 (정본)
 
-사용 dataset:
+**§1.1 증명 전략(단일 모듈이 각각 자기 조건에서 최고 → 전환 필요)을
+그대로 실험으로 옮기려면, 밝은 조도와 저조도 각각의 real-RAW 데이터셋
+쌍이 필요하다.** 정본 평가 쌍은 다음과 같다.
 
 ```text
-COCO_5000        normal/bright condition
-ExDark_5000      dark condition
-COCO_5000_raw    pseudo-RAW normal
-ExDark_5000_raw  pseudo-RAW dark
+밝은 조도(bright):  PASCAL RAW dataset   -> normal 모듈이 최고를 낼 조건
+저조도(low-light):  LOD RAW dataset      -> low-light 모듈이 최고를 낼 조건
 ```
 
+- 둘 다 **real Bayer sensor RAW** 기반 검출 데이터셋이다 — pseudo-RAW
+  (sRGB 역감마 합성)와 달리 실제 Poisson-Gaussian 센서 노이즈를 담고
+  있어, low-light 모듈의 핵심 연산인 **binning(광량 적분/SNR 회복)의
+  정당성**을 비로소 제대로 검증할 수 있다(pseudo-RAW에는 binning이 회수할
+  실제 노이즈가 없다 — `results/principled-v3-refinement-2026-07-05.md` §3.4).
+- **필요성(목표 1) 검증:** PASCAL RAW에서 `normal` arm이, LOD RAW에서
+  `lowlight` arm이 각각 상대 arm보다 높은 mAP를 내는지(교차 우위)를 본다.
+- **전환(목표 2) 검증:** 두 데이터셋을 섞은(또는 조건 라벨이 붙은) 스트림
+  에서 `adaptive`(체커 라우팅)가 최적 단일 static arm을 상회하는지를 본다.
+
+**이력(superseded proxy):** 초기 실험은 COCO/ExDark를 JPEG→pseudo-RAW로
+역감마해 사용했고(§Stage 3 R1~R4), 실센서 검증은 SonyNOD(RAW-NOD, .ARW)로
+수행했다(R3b/R4). 이 결과들은 정성적 근거로 유효하나, **정본 평가는 위
+PASCAL RAW / LOD RAW 쌍으로 재수립**한다.
+
 주의:
-- JPEG/PNG dataset은 이미 ISP 처리된 데이터다.
-- 이미 처리된 image에 RAW-style ISP를 적용하면 double-processing artifact가 생길 수 있다.
-- 더 강한 주장은 최종적으로 pseudo-RAW 또는 real Bayer sensor data를 사용해야 한다.
+- JPEG/PNG dataset은 이미 ISP 처리된 데이터라 RAW-style ISP를 다시 적용하면
+  double-processing artifact가 생긴다 — pseudo-RAW/real-RAW를 써야 하는 이유.
+- arm 비교는 `normal`/`lowlight`/`adaptive` 세 가지로 한정한다(§1.2, `none` 제외).
 
 ---
 

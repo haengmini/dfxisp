@@ -70,13 +70,24 @@ SW 트랙 (data/, model/, tools/)            HW 트랙 (isppipeline/hls, Vivado)
 ```
 
 **함의:** "SW 트랙 완료"는 **절차를 한 바퀴 다 돌렸다**는 뜻이지 **수치가
-동결됐다**는 뜻이 아니다. Stage 3의 정성적 결론(guardrail: `none` 최고,
-`lowlight`가 `normal` 상회)은 되먹임을 여러 번 거치며 오히려 **더 견고해졌지만**,
-정밀 mAP 수치는 매 되먹임마다 갱신되어 왔고 지금도 R5(demosaic 수정 반영)가
+동결됐다**는 뜻이 아니다. Stage 3의 정성적 결론(`lowlight`가 dark 조건에서
+`normal` 상회)은 되먹임을 여러 번 거치며 오히려 **더 견고해졌지만**, 정밀
+mAP 수치는 매 되먹임마다 갱신되어 왔고 지금도 R5(demosaic 수정 반영)가
 GPU 대기 중이다. HW 트랙(4~5)은 Vivado로 완료됐고 **Stage 6(보드)만 실물
 장비가 필요해 유일하게 미착수**지만, 위 되먹임이 알고리즘을 바꿀 때마다
 Stage 4 재합성이 원칙적으로 다시 필요할 수 있다(단 지금까지의 SW 수정은
 전부 HW 상수 불변이라 재합성 불필요였음 — Stage 4 절 참고).
+
+> **연구 프레이밍 (2026-07-10 갱신, 정본은 RESEARCH.md §1):** 이 로드맵의
+> 모든 결론은 두 목표에 종속된다 — **목표 1**(저조도 특화 모듈이 CV에
+> 필요; 단일 모듈은 각각 자기 조건 데이터셋에서 최고 → 전환 필요),
+> **목표 2**(DFX로 상황별 모듈 전환 → 효율·성능 개선, SW→HW 순 증명).
+> 이에 따른 결정 3가지: **(a) `none`(무처리) arm은 비교에서 제외**(색보정
+> 안 된 배포 불가 출력 — 아래 R1/R2 기록의 "none 최고"는 **당시 관찰일
+> 뿐 기여 비교 대상 아님**). **(b) 정본 평가 데이터셋 = PASCAL RAW(밝음)
+> + LOD RAW(저조도)** real-RAW 쌍(§Stage 3, 이전 COCO/ExDark/SonyNOD는
+> superseded proxy). **(c) 저조도 모듈의 기술·기대·실측 이득은
+> `results/lowlight-module-techniques-2026-07-10.md`에 정본화.**
 
 ## 전체 진행률 한눈에
 
@@ -220,13 +231,15 @@ gamma-2.5였다. 정정된 결론: **저조도 RM의 유의미한 이득은 톤�
 
 ## Stage 3 — 정확도(mAP) 평가: arm & 조건표 + 알고리즘 개정 ✅⚠️ (4라운드 + R5 대기)
 
-> **상태 주의:** 정성적 결론(guardrail: `none`이 여전히 최고, `lowlight`가
-> `normal`을 앞지름)은 안정적으로 재확인되어 왔으나, **R4까지의 정밀 mAP
-> 수치는 아직 한 번 더 바뀔 예정이다.** PR #9(demosaic bilinear 수정,
-> R4 절 하단 참고)가 SW 평가 도구를 한 번 더 고쳤고, 그 mAP 재검증
-> (R5)이 GPU 대기 중이라 **아직 실행되지 않았다.** "완료"는 SW 트랙의
-> 실험 사이클(가설→탈락→원인규명→개정)이 순환을 멈췄다는 뜻이 아니라,
-> 보드 없이 할 수 있는 절차가 전부 최소 한 번씩 실행됐다는 뜻으로 읽을 것.
+> **상태 주의:** 비교 arm은 normal/lowlight/adaptive다(`none` 제외 —
+> 상단 프레이밍 노트). 목표 1 관점의 결론(**저조도 모듈이 dark 조건에서
+> `normal` 상회**)은 안정적으로 재확인돼 왔으나, **R4까지의 정밀 mAP는
+> 아직 두 번 더 갱신될 예정이다:** (1) PR #9 demosaic 수정 반영(R5, GPU
+> 대기), (2) **정본 데이터셋(PASCAL RAW/LOD RAW) 재평가** — 아래 R1~R4는
+> COCO/ExDark pseudo-RAW + 단일센서 SonyNOD 기반이라, real-RAW 쌍에서의
+> 교차 우위(normal@PASCAL / lowlight@LOD)로 재수립해야 목표 1의 최종
+> 근거가 된다. "완료"는 보드 없이 할 수 있는 절차가 최소 한 번씩 실행됐다는
+> 뜻이지 수치·데이터셋이 동결됐다는 뜻이 아니다.
 
 **목표:** H1(적응 이득)·H2(중복제거해도 정확도 유지)를 조건별 mAP로 검증하고,
 탈락 시 원인을 규명해 알고리즘을 개정.
@@ -477,15 +490,16 @@ arm 비교표.
 > 3이 `[~]`인 것은 위 나선 모델대로 새 발견(demosaic 수정)이 들어와 다시
 > 재검증 중이기 때문 — 정성적 결론은 안 바뀌고, 정밀 mAP만 R5에서 갱신된다.
 
-> **핵심 발견(SW, Stage 0~3):** 모든 조건에서 `none`(무처리)이 mAP 최고라는
-> 결론은 4라운드 내내 불변(SW proxy 천장 가설) — 그러나 BLC 완화로 `lowlight`가
-> 처음으로 `normal`을 앞질렀고 격차가 크게 좁혀짐. 이 역전은 실센서 RAW(R3b)와
-> canonical-matched 파이프라인(R4)으로 각각 독립 재확인됐으나, **정량 마진은
-> R4에서 크게 축소**(+76%→+12.6%, 이전 마진의 상당부분이 gamma 곡선 불일치의
-> 인공물이었음). **R4의 수치도 최종이 아니다** — demosaic bilinear 수정
-> (PR #9)의 mAP 재검증(R5)이 GPU 대기 중이라, Stage 3의 정밀 mAP는 아직
-> 한 번 더 바뀔 예정이다(정성적 결론 반전 가능성은 낮음, §Stage 3 참고).
-> DFX 정당화는 여전히 자원/전력이 우선이어야 함(방향 A 유지).
+> **핵심 발견(SW, Stage 0~3) — 목표 1 관점:** 비교 arm은 normal/lowlight/
+> adaptive다(`none` 제외, 위 프레이밍 노트). **저조도 모듈이 dark 조건에서
+> `normal`을 앞지른다**는 것이 핵심 성과 — 완화 BLC가 결정타였다(ExDark
+> `lowlight` 처음으로 `normal` 상회). 이 역전은 실센서 RAW(R3b)·canonical
+> 파이프라인(R4)으로 독립 재확인됐고, **정량 마진은 R4에서 축소**(+76%→
+> +12.6%, 이전 마진 상당부분이 gamma 불일치 인공물). **아직 최종 아님** —
+> demosaic 수정(R5) mAP 재검증 GPU 대기 + **정본 근거는 PASCAL RAW(normal
+> 우위)↔LOD RAW(lowlight 우위) 교차 우위**로 재수립 예정(그게 "전환 필요"
+> = 목표 1→2 연결의 실증). 정성적 결론 반전 가능성은 낮음. DFX 정당화는
+> 자원/전력(목표 2 효율)이 우선(방향 A 유지).
 > **핵심 발견(HW, Stage 4~5):** gamma를 런타임 sqrt→ROM LUT로 바꿔 자원
 > −88%/−78%; adversarial 수정으로 저조도 RM 자원 추가 −41.3%; **pr_verify는
 > 4라운드 전부 PASS**로 DFX 전환 가능함을 실측 확인; pblock 확장(용량 2배)은
@@ -513,9 +527,15 @@ arm 비교표.
 3. **PR #9 (`fix/canonical-demosaic-bilinear-2026-07-09`) 리뷰·병합** —
    R/B 채널 단일탭→bilinear 수정은 완료·검증됐으나(Stage 3 R4 절 정정
    참고) main 미병합. 병합 후 GPU 가용 시 mAP 재검증(R5) 착수.
-4. **checker SOTA 강화 후속** — AODRaw 다운로드 완료 시 어댑터로 오라클
-   라벨 재정의(#4) 및 센서 적응 임계 τ(#1) 착수 (`checker-sota-strategy
-   -2026-07-09.md` 참고).
+4. **정본 데이터셋 재평가(목표 1·2의 핵심 실증)** — PASCAL RAW(밝음)/
+   LOD RAW(저조도) real-RAW 쌍으로 세 arm(normal/lowlight/adaptive) 재실행:
+   (a) normal이 PASCAL RAW, lowlight가 LOD RAW에서 각각 우위인지(교차 우위
+   = 전환 필요성), (b) 혼합 스트림에서 adaptive가 최적 단일 static 상회인지.
+   저조도 모듈 이득표(`lowlight-module-techniques-2026-07-10.md`)의 실측
+   열을 이 real-RAW 수치로 대체. 데이터셋 어댑터 필요(기존 `aodraw_adapter.py`
+   재활용 검토 — AODRaw 대비 PASCAL/LOD 포맷 차이 확인).
+5. **checker SOTA 강화 후속** — 오라클 라벨 재정의(#4)·센서 적응 임계 τ(#1)는
+   위 real-RAW 데이터셋 위에서 착수 (`checker-sota-strategy-2026-07-09.md`).
 
 **기존(Stage 6 착수 준비, 순서 유지):**
 

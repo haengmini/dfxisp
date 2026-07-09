@@ -36,6 +36,7 @@
 | `isp_analysis.md` / `isp_analysis.csv` | 06-29 | ISP variant proxy 분석 (detector 없음) |
 | `11-ssd-crosscheck-2026-06-29.md` | 06-29 | SSD 2차 detector 교차검증 |
 | `realraw-sonynod-benchmark-2026-07-06.md` | 07-06 (BLC ablation 07-07 추가) | **real-RAW** 벤치마크 (RAW-NOD Sony, .ARW 원본+실측 GT) + AWB(§6bis)/BLC(§6ter) domain-gap ablation |
+| `lowlight-module-techniques-2026-07-10.md` | 07-10 | **정본** 저조도 모듈(RM_LOW_LIGHT_TONE) 제안 기술 4종(binning/gain/gamma/완화BLC) × 기대 vs 실측 이득. 주효인=완화BLC(+78%), binning=조건부(real-RAW 대기), 별도 톤=기각. RESEARCH.md §1.3 주장1 상세근거 |
 
 ## 3. HW 트랙 결과 (Stage 4~5)
 
