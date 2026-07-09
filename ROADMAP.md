@@ -56,7 +56,7 @@ Vivado로 완료, **Stage 6만 실물 보드가 필요해 유일하게 남았다
 Stage 0  SW golden + shared baseline core 확정        ✅  2026-07-01 ~ 07-03(누적 보강)
 Stage 1  checker + N-frame 히스테리시스                ✅  2026-07-01 ~ 02
 Stage 2  tone RM 산술 확정 + 이미지 지표               ✅  2026-07-01 ~ 02
-Stage 3  정확도(mAP) 평가 + 알고리즘 개정(ver1/2/BLC)  ✅  2026-07-01 ~ 07-08(4라운드, canonical 재검증 포함)
+Stage 3  정확도(mAP) 평가 + 알고리즘 개정(ver1/2/BLC)  ✅⚠️ 2026-07-01 ~ 07-08(4라운드, R5 mAP 재검증 GPU 대기)
 Stage 4  HLS 합성 + C/RTL Co-sim                       ✅⚠️ 2026-07-02 ~ 07-03(cosim 자동비교 미완주)
 Stage 5  DFX(PR) 구현 + pr_verify + latency/PR 컨트롤러 ✅⚠️🔄 2026-07-02 ~ 07-03(4라운드, PR컨트롤러 1차만)
 Stage 6  보드 실장 + DPU end-to-end                    ⬜  미착수(유일하게 남은 단계)
@@ -80,6 +80,7 @@ Stage 3/4/5는 여러 라운드(round)로 나뉘어 진행됐다. 아래 표는 
 | SW | Stage 3 | R3 | 저조도 root-cause 규명(BLC가 손실의 70%, 해상도 손실은 −1.4%) + BLC 완화(`BLC_OFFSET12_LOWLIGHT=128`) 반영 → ExDark lowlight mAP +78%, 최초로 normal 상회 | ✅ 완료 | 2026-07-03 |
 | SW | Stage 3 | R3b | SonyNOD 실센서 RAW(321장)로 BLC ablation 최초 실행 → 역전이 합성데이터뿐 아니라 실센서에서도 재현 확인 | ✅ 완료 | 2026-07-07 |
 | SW | Stage 3 | R4 | canonical-matched 파이프라인 재보정("Hermes" 리뷰가 발견한 SW-eval/HW gamma 불일치 수정) → 정성적 결론 유지, 마진 축소(+76%→+12.6%), "normal 단조감소" 정정 | ✅ 완료(수치 재검증됨) | 2026-07-08 |
+| SW | Stage 3 | R5 | demosaic bilinear 수정(PR #9) 반영 mAP 재실행 — 코드·bit-exact 검증은 완료, mAP 재실행은 GPU 대기 | 🔄 대기 중(미착수) | — (GPU 필요) |
 | HW | Stage 4 | R1 | 최초 실합성(streaming line buffer 리팩터, gamma Newton→ROM LUT화), unified+RM독립 top 2종 Fmax 273.97MHz 실측 | ✅⚠️ 완료(cosim 자동비교 미완주) | 2026-07-02 |
 | HW | Stage 4 | R2 | adversarial 수정(binning 스칼라평균 버그, 메타데이터 미검증 포인터) 반영 재합성 → LUT 대폭 감소(unified −26.3%, low-light RM −41.3%) | ✅ 완료 | 2026-07-02 |
 | HW | Stage 4 | R3 | BLC 완화 반영 재합성 → 3개 top 자원 완전 불변(순수 파라미터 변경이라 mAP 개선이 HW 비용 없이 달성됨을 확인) | ✅ 완료 | 2026-07-03 |
@@ -179,7 +180,15 @@ gamma-2.5였다. 정정된 결론: **저조도 RM의 유의미한 이득은 톤�
 
 ---
 
-## Stage 3 — 정확도(mAP) 평가: arm & 조건표 + 알고리즘 개정 ✅ (4라운드)
+## Stage 3 — 정확도(mAP) 평가: arm & 조건표 + 알고리즘 개정 ✅⚠️ (4라운드 + R5 대기)
+
+> **상태 주의:** 정성적 결론(guardrail: `none`이 여전히 최고, `lowlight`가
+> `normal`을 앞지름)은 안정적으로 재확인되어 왔으나, **R4까지의 정밀 mAP
+> 수치는 아직 한 번 더 바뀔 예정이다.** PR #9(demosaic bilinear 수정,
+> R4 절 하단 참고)가 SW 평가 도구를 한 번 더 고쳤고, 그 mAP 재검증
+> (R5)이 GPU 대기 중이라 **아직 실행되지 않았다.** "완료"는 SW 트랙의
+> 실험 사이클(가설→탈락→원인규명→개정)이 순환을 멈췄다는 뜻이 아니라,
+> 보드 없이 할 수 있는 절차가 전부 최소 한 번씩 실행됐다는 뜻으로 읽을 것.
 
 **목표:** H1(적응 이득)·H2(중복제거해도 정확도 유지)를 조건별 mAP로 검증하고,
 탈락 시 원인을 규명해 알고리즘을 개정.
@@ -259,6 +268,20 @@ canonical 파일(`baseline_isp_pipeline.py`/`low_light_isp_pipeline.py`/
 
 **근거:** `results/isp-pipeline-recalibration-2026-07-08.md`,
 `daily-reports/2026-07-08.md`, PR #6(`fix/python-robustness-hermes-2026-07-08`).
+
+**라운드 5 — demosaic bilinear 수정 반영 mAP 재검증 🔄 대기 중 (착수 미정):**
+PR #9(위 R4 절의 2026-07-09 정정)가 canonical `_demosaic_rggb16`의 R/B
+단일탭 버그를 고쳤다. 코드 수정과 bit-exact 교차검증은 완료됐지만
+(`results/demosaic-bilinear-fix-2026-07-09.md`), **이 수정을 반영한 mAP
+재실행은 아직 하지 않았다** — R4와 같은 카테고리의 재보정이 한 번 더
+필요하다는 뜻이며, 이번에도 SW 트랙 소관이다. 착수 조건: (1) PR #9
+main 병합, (2) GPU 가용 세션(07-08 R4는 RTX 5060에서 4.5시간 소요 —
+이 저장소 작업이 이뤄진 샌드박스는 CUDA 불가라 완료 못함). 예상 결과
+(픽셀 단위 사전측정 기반): 정성적 결론 반전 가능성은 낮고, R4의 정밀
+수치(마진 +12.6% 등)가 다시 소폭 이동할 것으로 예상.
+
+**근거:** `results/demosaic-bilinear-fix-2026-07-09.md`,
+PR #9(`fix/canonical-demosaic-bilinear-2026-07-09`, 리뷰 대기).
 
 ---
 
@@ -405,7 +428,7 @@ arm 비교표.
 [x] Stage 0  SW golden + baseline core 정합            (gate 6종 + cross-check 게이트)
 [x] Stage 1  checker + 히스테리시스 시퀀스              (narrow band + N=3 최적)
 [x] Stage 2  tone RM 산술 + 이미지 지표                 (Policy A 확정)
-[x] Stage 3  정확도 mAP arm/조건표 + 알고리즘 개정       (4라운드: 최초→ver1/2→BLC완화→canonical재보정, lowlight가 처음 normal 상회, 이후 실센서+canonical로 재확인)
+[x] Stage 3  정확도 mAP arm/조건표 + 알고리즘 개정       (4라운드 완료 + R5 대기: demosaic bilinear 수정 mAP 재검증이 GPU 대기 중 — ⚠️ 아래 Stage 3 절 참고)
 [x] Stage 4  HLS 합성 + C/RTL Co-sim                    (csynth 3라운드 완료; cosim 자동비교만 미완주)
 [x] Stage 5  DFX PR 구현 + pr_verify + latency/컨트롤러  (4라운드, pr_verify 매 라운드 PASS; PR컨트롤러는 1차만)
 [ ] Stage 6  보드 실장 + DPU end-to-end                  (보드 필요 — 유일하게 남은 단계)
@@ -417,7 +440,10 @@ arm 비교표.
 > 처음으로 `normal`을 앞질렀고 격차가 크게 좁혀짐. 이 역전은 실센서 RAW(R3b)와
 > canonical-matched 파이프라인(R4)으로 각각 독립 재확인됐으나, **정량 마진은
 > R4에서 크게 축소**(+76%→+12.6%, 이전 마진의 상당부분이 gamma 곡선 불일치의
-> 인공물이었음). DFX 정당화는 여전히 자원/전력이 우선이어야 함(방향 A 유지).
+> 인공물이었음). **R4의 수치도 최종이 아니다** — demosaic bilinear 수정
+> (PR #9)의 mAP 재검증(R5)이 GPU 대기 중이라, Stage 3의 정밀 mAP는 아직
+> 한 번 더 바뀔 예정이다(정성적 결론 반전 가능성은 낮음, §Stage 3 참고).
+> DFX 정당화는 여전히 자원/전력이 우선이어야 함(방향 A 유지).
 > **핵심 발견(HW, Stage 4~5):** gamma를 런타임 sqrt→ROM LUT로 바꿔 자원
 > −88%/−78%; adversarial 수정으로 저조도 RM 자원 추가 −41.3%; **pr_verify는
 > 4라운드 전부 PASS**로 DFX 전환 가능함을 실측 확인; pblock 확장(용량 2배)은
