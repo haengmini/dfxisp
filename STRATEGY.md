@@ -2,6 +2,13 @@
 
 > **For Hermes:** Use subagent-driven-development skill to implement this plan task-by-task.
 
+> **정본 프레이밍 (2026-07-10):** 연구 목표는 RESEARCH.md §1이 정본이다 —
+> 목표 1(저조도 특화 모듈 필요성, 단일 모듈이 각각 자기 조건 데이터셋에서
+> 최고 → 전환 필요) + 목표 2(DFX 전환으로 효율·성능, SW→HW 증명). 본
+> Vitis-first 재정렬은 이 두 목표를 **HW 구현 측면에서 뒷받침하는 리팩터
+> 방향**이며, Base(Vitis)=공유 core, Check=체커, Dark=저조도 모듈, DFX
+> Ctrl=전환에 각각 대응한다. arm은 normal/lowlight/adaptive(`none` 제외).
+
 **Goal:** 현재 DFXISP 파일들을 “Vitis Vision Library 기준 baseline + 그 위에 DFXISP 확장 모듈” 구조로 재정렬한다.
 
 **Architecture:** AMD Vitis Vision L1 `xf::cv` ISP stage를 **Base**로 두고, DFXISP 고유 기능은 Base 앞/뒤/주변에 붙는 짧은 모듈로 분리한다. 즉 “자체 ISP를 새로 만든다”가 아니라 “Vitis Base를 고정하고, Check/Dark/DFX Ctrl을 확장한다”가 새 방향이다.

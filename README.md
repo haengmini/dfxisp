@@ -8,17 +8,26 @@ board: dfxisp
 created: 2026-06-23
 owner: 이형민
 tags: [fpga, dfx, isp, machine-vision, zynq-ultrascale, low-light]
-updated: 2026-07-03
+updated: 2026-07-10
 ---
 
 # DFXISP
 
-DFXISP는 Zynq UltraScale+ ZCU104에서 **shared baseline ISP core**를 공통 경로로 유지하고, 조도 조건에 따라 **mode-specific tone Reconfigurable Module(RM)** 을 선택하는 Dynamic Function eXchange 기반 AI-ISP 연구 프로젝트다. 평상시에는 `RM_NORMAL_TONE` 또는 identity bypass를 사용하고, 어두운 환경에서는 `RM_LOW_LIGHT_TONE`을 트리거한다.
+DFXISP는 Zynq UltraScale+ ZCU104에서 **shared baseline ISP core**를 공통 경로로 유지하고, 조도 조건에 따라 **mode-specific tone Reconfigurable Module(RM)** 을 선택하는 Dynamic Function eXchange 기반 AI-ISP 연구 프로젝트다. 평상시에는 `RM_NORMAL_TONE`, 어두운 환경에서는 `RM_LOW_LIGHT_TONE`을 (체커가 판단해) 트리거한다.
+
+## 연구 목표 (정본: RESEARCH.md §1)
+
+컴퓨터 비전(CV) 검출기는 조도에 따라 다른 전처리를 요구한다. 하나의 static ISP로 밝은·어두운 장면을 모두 처리하면 저조도에서 CV 성능·효율이 떨어진다. 따라서:
+
+- **목표 1 — 필요성:** 저조도에 특화된 ISP 모듈이 CV에 더 적합하다. 단일 모듈은 각각 **자기 조건의 데이터셋에서 상대 모듈보다 높은 성능**을 낸다(normal→밝은 조도, low-light→저조도). 한 모듈로 두 조건을 다 이기지 못하므로 전환이 필요하다.
+- **목표 2 — 전환:** 상황에 맞춰 모듈을 전환(adaptive)하고, 이를 **DFX 부분재구성**으로 구현해 always-on 대비 **자원·전력 효율**까지 얻는다.
+
+**증명 순서: SW(golden/mAP)로 필요성·전환을 먼저 확립 → HW(HLS→DFX→보드)로 이식**, HW/보드의 고유 기여는 효율이다. CV 성능 비교 arm은 **`normal`/`lowlight`/`adaptive`** 세 가지이며, 색보정을 거치지 않는 `none`(무처리)은 배포 가능한 ISP 출력이 아니므로 **비교에서 제외**한다.
 
 ## Active architecture
 
 ```text
-Input Bayer / pseudo-RAW / RGB fixture
+Input real-RAW Bayer (PASCAL RAW 밝음 / LOD RAW 저조도; 초기엔 pseudo-RAW proxy)
   -> Scene checker
        - 평상시: normal tone RM 또는 identity bypass
        - 어두운 환경: low-light tone RM trigger
@@ -36,15 +45,15 @@ Input Bayer / pseudo-RAW / RGB fixture
 2. **Gain/gamma는 baseline core에 중복 배치하지 않고 mode-specific tone RM으로 분리한다.**
 3. **Normal tone RM과 low-light tone RM은 mutually exclusive다.**
 4. **Checker가 어두운 장면을 감지했을 때만 low-light tone RM을 트리거한다.**
-5. **Low-light tone RM의 1차 명세는 `binning + gain + gamma`다.**
+5. **Low-light tone RM은 `binning + gain + gamma + 완화 BLC`다.** 이득 귀속(기대 vs 실측)은 `results/lowlight-module-techniques-2026-07-10.md` — 주효인은 완화 BLC, binning은 real-RAW에서 조건부, 별도 톤 LUT는 기각.
 6. DFX 실증 전에는 C-Sim/Python golden으로 산술 정합을 먼저 고정한다.
 
-## Current status (2026-07-03)
+## Current status (2026-07-10)
 
-- **Stage 0~3 (SW 트랙): 완료** — golden/baseline core 확정, checker+히스테리시스, tone RM 산술, mAP 평가(ver1/ver2/BLC 완화 3라운드).
-- **Stage 4~5 (HW 트랙): 완료(한계 기록됨)** — Vitis HLS 합성 + C/RTL Co-sim, Vivado DFX 구현 + pr_verify + PR latency 분석.
-- **Stage 6 (보드 실장 + DPU end-to-end): 미착수** — 실물 ZCU104 필요, 유일하게 남은 단계.
-- 상세 진행 상태와 근거 문서는 `ROADMAP.md` 참조.
+- **SW 트랙 (Stage 0~3): 절차 완료, Stage 3 재검증 진행중** — golden/baseline core, checker(+principled-v3 SOTA 후속), tone RM 산술+이득귀속, mAP 평가. **Stage 3은 "정확도 재검증 허브"**로 되먹임마다 재진입한다 — 현재 demosaic 수정 반영(R5, GPU 대기)과 **정본 데이터셋(PASCAL RAW/LOD RAW) 재평가**가 미완. 정성적 결론(저조도 모듈이 dark 조건에서 normal 상회)은 견고.
+- **HW 트랙 (Stage 4~5): 완료(한계 기록됨)** — Vitis HLS 합성 + C/RTL Co-sim, Vivado DFX 구현 + pr_verify + PR latency 분석.
+- **Stage 6 (보드 실장 + DPU end-to-end): 미착수** — 실물 ZCU104 필요. 목표 2의 효율(전력) 실증이 여기 걸림.
+- 실제 진행은 선형이 아니라 **나선형**(Stage 5까지 올라갔다 SW Stage 3으로 되돌아오는 되먹임 반복) — 상세는 `ROADMAP.md`.
 
 ## Next direction
 

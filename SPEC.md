@@ -65,12 +65,27 @@ RAW 비트 표현(HW 12-bit vs SW 8-bit shift8)뿐이며, 이로 인해 데이�
 ## 2. 입력 사양
 
 ### 2.1 데이터셋 구성
+
+**정본 평가 쌍 (real-RAW, 목표 1의 교차 우위 실증용 — RESEARCH.md §10):**
+
+| 데이터셋 | 조도 | 포맷 | 역할 |
+|---|---|---|---|
+| **PASCAL RAW** | 밝음 | real Bayer RAW | `normal` 모듈이 최고를 낼 조건 |
+| **LOD RAW** | 저조도 | **Sony `.ARW`** | `lowlight` 모듈이 최고를 낼 조건 |
+
+- 둘 다 real 센서 RAW라 실제 Poisson-Gaussian 노이즈를 담아, low-light 모듈의 binning(SNR 회복) 정당성을 제대로 검증한다(pseudo-RAW엔 회수할 노이즈 없음).
+- 어댑터: LOD는 Sony `.ARW`라 `tools/aodraw_adapter.py`의 rawpy 경로 그대로 적용(파일별 흑레벨/화이트레벨/베이어를 rawpy에서 읽음). shift8 규약으로 정규화 → 아래 §2.2 포맷과 동일.
+- **arm 비교는 `normal`/`lowlight`/`adaptive` 세 가지로 한정**한다(색보정 안 된 `none`은 배포 가능한 ISP 출력이 아니므로 제외 — RESEARCH.md §1.2).
+
+**이력 (superseded proxy — 초기 실험용, 정성 결론만 유효):**
+
 | 데이터셋 | 조도 | 경로 | 이미지 수 | 유효(raw==jpg) |
 |---|---|---|---|---|
 | COCO_val | 정상 | `data/coco_val/` | 575 | 347 |
 | ExDark_val | 저조도 | `data/exdark_val/` | 491 | 260 |
+| SonyNOD | 저조도(실센서) | `data/sonynod_test/` | 321 | 321 |
 
-각 데이터셋은 `raw_bin/`(pseudo-RAW), `images/`(해상도 출처 jpg), `labels/`(YOLO txt)로 구성.
+각 데이터셋은 `raw_bin/`(pseudo-RAW 또는 shift8 real-RAW), `images/`(해상도 출처 jpg), `labels/`(YOLO txt)로 구성.
 `raw_bin` 크기가 jpg 해상도와 불일치하는 프레임은 스킵(유효 프레임만 사용).
 
 ### 2.2 raw_bin 포맷 (SW eval 입력)
