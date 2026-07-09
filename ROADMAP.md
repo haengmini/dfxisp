@@ -236,10 +236,22 @@ canonical 파일(`baseline_isp_pipeline.py`/`low_light_isp_pipeline.py`/
 - **부차 결론 정정:** "`normal`은 BLC에 대해 무조건 단조감소"라는 R3의
   주장이 철회됨 — 올바른 gamma에서는 `normal`도 BLC≈1에서 약한 정점을
   찍는 비단조 곡선.
-- **미결 항목:** archive된 `isp_pipeline_ver1.py` 계열이 golden model
-  대비 R/B 채널 단일탭 보간(bilinear 아님)을 쓰고 있다는 별도 정합성
-  격차가 발견됐으나 **의도적으로 미수정**(다시 mAP 수치가 바뀔 수 있어
-  사용자 결정 대기 중).
+- **정정(2026-07-09, 검토 후 수정 확정, PR #9
+  `fix/canonical-demosaic-bilinear-2026-07-09`, main 기준 분기 —
+  `origin/main`에만 있는 canonical 파일 대상이라 이 브랜치와 별도):**
+  위 미결 항목("canonical `checker.py`/`baseline_isp_pipeline.py`의 R/B
+  채널 단일탭 보간이 golden model의 bilinear와 다르다")을 검토한 결과
+  **수정하기로 판단** — BLC/체커 임계값과 달리 이건 설계 트레이드오프가
+  아니라 이미 정답(golden/`dfxisp_accel.cpp`)이 있는데 잘못 베낀 버그였다.
+  `_demosaic_rggb16`을 tap 단위로 golden과 동일하게 재작성하고, 신규 3자
+  교차검증 게이트(`verify_demosaic_bilinear_cross_check.py`)로 300회
+  랜덤 그리드 bit-exact 확인, 수정 전 코드가 실제로 이 검증에 실패함도
+  회귀 확인(`results/demosaic-bilinear-fix-2026-07-09.md`). SonyNOD
+  8프레임 픽셀 단위 사전측정: 평균 변화 0.377/255(8-bit 환산), 34.5%
+  픽셀·채널 값 이동, 에지에 집중 — 정성적 결론 반전 가능성은 낮으나 정밀
+  mAP는 다시 움직일 것으로 예상. **mAP 재검증은 GPU 필요(이 세션은
+  CUDA 불가)라 별도 R5 라운드로 미룸.** PR 상태: 리뷰 대기, `main`
+  미병합.
 - **범위:** 이 재보정은 SW 평가 도구만 바꿨다 — Stage 4/5의 HLS/Vivado
   수치는 재합성 대상이 아니며(알고리즘 상수 자체는 불변), Stage 3의
   R1~R3·R3b **정성적 결론은 재확인**됐으나 그 **정밀 mAP 수치는 canonical
@@ -430,9 +442,9 @@ arm 비교표.
    수치(R1~R3, R3b 포함)는 canonical 파이프라인 기준으로 최종 확정된 것이
    아니므로, 앞으로 이 수치들을 인용할 때는 R4(`isp-pipeline-recalibration
    -2026-07-08.md`)로 대체(superseded)됐음을 명시할 것.
-3. **미결 결정 — archive된 `isp_pipeline_ver1.py` 정합성 격차** — R/B
-   채널 단일탭 보간(golden model의 bilinear와 다름)이 발견됐으나 의도적
-   으로 미수정 상태. 고칠지, 고치면 어떤 mAP 재검증이 필요한지 결정 필요.
+3. **PR #9 (`fix/canonical-demosaic-bilinear-2026-07-09`) 리뷰·병합** —
+   R/B 채널 단일탭→bilinear 수정은 완료·검증됐으나(Stage 3 R4 절 정정
+   참고) main 미병합. 병합 후 GPU 가용 시 mAP 재검증(R5) 착수.
 4. **checker SOTA 강화 후속** — AODRaw 다운로드 완료 시 어댑터로 오라클
    라벨 재정의(#4) 및 센서 적응 임계 τ(#1) 착수 (`checker-sota-strategy
    -2026-07-09.md` 참고).
