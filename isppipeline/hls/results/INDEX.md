@@ -36,6 +36,7 @@
 | `isp_analysis.md` / `isp_analysis.csv` | 06-29 | ISP variant proxy 분석 (detector 없음) |
 | `11-ssd-crosscheck-2026-06-29.md` | 06-29 | SSD 2차 detector 교차검증 |
 | `realraw-sonynod-benchmark-2026-07-06.md` | 07-06 (BLC ablation 07-07 추가) | **real-RAW** 벤치마크 (RAW-NOD Sony, .ARW 원본+실측 GT) + AWB(§6bis)/BLC(§6ter) domain-gap ablation |
+| `isp-pipeline-recalibration-2026-07-08.md` | 07-08 | §6ter BLC 재보정 스윕 재측정 -- 구 SW-proxy 파이프라인의 gamma 버그(2.2/2.5/4.0 vs 배포 gamma-2.0) 수정 후 canonical-matched 파이프라인(`baseline_isp_pipeline.py`/`low_light_isp_pipeline.py`/`checker.py`)으로 재실행, arm 순서 역전은 유지(단 margin 축소)·normal 단조감소 결론은 정정(BLC=1 근방 정점) |
 | `lowlight-module-techniques-2026-07-10.md` | 07-10 | **정본** 저조도 모듈(RM_LOW_LIGHT_TONE) 제안 기술 4종(binning/gain/gamma/완화BLC) × 기대 vs 실측 이득. 주효인=완화BLC(+78%), binning=조건부(real-RAW 대기), 별도 톤=기각. RESEARCH.md §1.3 주장1 상세근거 |
 | `checker-tile-probe-2026-07-10.md` | 07-10 | checker 강화 #5(공간 타일 미터링). 게이트 PASS(오차 86%가 공간구조, bimodal 5.17배 enriched)이나 nested-CV **기각**(J +0.016<fold-std) — ExDark miss와 COCO FT의 공간 시그니처가 반대라 상쇄. #4 오라클 후 조건부 재평가 |
 | `checker-temporal-2026-07-10.md` | 07-10 | checker 강화 #3(순차 시간층)+#6(캘리브레이션). 측정 지터에서 CUSUM/SPRT가 Schmitt 대비 이득 없음 → **Schmitt(+옵션 K-of-N) 채택**(보드 지터 시 재검토). ECE isotonic 0.033(<0.05); p(H1\|dark16=0.62)=0.516로 C1 임계 독립 정당화 |
