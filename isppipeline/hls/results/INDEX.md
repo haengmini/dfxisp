@@ -39,10 +39,8 @@
 | `isp-pipeline-recalibration-2026-07-08.md` | 07-08 | §6ter BLC 재보정 스윕 재측정 -- 구 SW-proxy 파이프라인의 gamma 버그(2.2/2.5/4.0 vs 배포 gamma-2.0) 수정 후 canonical-matched 파이프라인(`baseline_isp_pipeline.py`/`low_light_isp_pipeline.py`/`checker.py`)으로 재실행, arm 순서 역전은 유지(단 margin 축소)·normal 단조감소 결론은 정정(BLC=1 근방 정점) |
 | `demosaic-bilinear-fix-2026-07-09.md` | 07-09 | canonical `_demosaic_rggb16`의 R/B 채널 단일탭 보간을 golden/HW와 tap 단위로 동일한 bilinear로 수정, 신규 3자 교차검증 게이트로 bit-exact 확인. mAP 재검증은 GPU 필요 -- 별도 R5 라운드로 예정 |
 | `lowlight-module-techniques-2026-07-10.md` | 07-10 | **정본** 저조도 모듈(RM_LOW_LIGHT_TONE) 제안 기술 4종(binning/gain/gamma/완화BLC) × 기대 vs 실측 이득. 주효인=완화BLC(+78%), binning=조건부(real-RAW 대기), 별도 톤=기각. RESEARCH.md §1.3 주장1 상세근거 |
-| `checker-status-2026-07-10.md` | 07-10 | **정본** checker 현행 상태 종합 — 배포(C0) vs 권장(C1) 운영점, 강화안 채택/기각 확정(Schmitt·적응τ 채택 / LRT·타일·CUSUM 기각), 다음=LOD real-RAW. 산재한 캠페인 결론을 하나로 |
-| `checker-tile-probe-2026-07-10.md` | 07-10 | checker 강화 #5(공간 타일 미터링). 게이트 PASS(오차 86%가 공간구조, bimodal 5.17배 enriched)이나 nested-CV **기각**(J +0.016<fold-std) — ExDark miss와 COCO FT의 공간 시그니처가 반대라 상쇄. #4 오라클 후 조건부 재평가 |
-| `checker-temporal-2026-07-10.md` | 07-10 | checker 강화 #3(순차 시간층)+#6(캘리브레이션). 측정 지터에서 CUSUM/SPRT가 Schmitt 대비 이득 없음 → **Schmitt(+옵션 K-of-N) 채택**(보드 지터 시 재검토). ECE isotonic 0.033(<0.05); p(H1\|dark16=0.62)=0.516로 C1 임계 독립 정당화 |
-| `checker-adaptive-tau-2026-07-10.md` | 07-10 | checker 강화 #1(센서 적응 임계). τ=BLC+k·σ_read(g) 유도 + 노출 정규화 + EXIF 스캐폴드(셀프테스트 PASS). **Path A(드라이버가 AXI-lite 레지스터 기록, RTL 변경 0)** 권장. 실데이터 검증(LOD ISO 스트라텀)은 PENDING |
+| `checker-status-2026-07-10.md` | 07-10 | **정본(빠른 결정)** checker 현행 상태 — 배포(C0) vs 권장(C1) 운영점, 강화안 7항목 채택/기각 표, 다음=LOD real-RAW |
+| `checker-strengthening-2026-07-10.md` | 07-10 | **정본(전체 근거)** checker SOTA 강화 종합 — 리뷰(왜 이 레버들) + 7항목 전략 + 캠페인 실측(#2 LRT·#5 타일·#3+#6 시간층·#1 적응τ 판정·수치·재현). 구 review/strategy/lrt/tile/temporal/adaptive-tau 6문서를 대체(원문 git 이력). 도구는 `tools/checker_{lrt,tile_probe,temporal,adaptive_tau}.py` |
 
 ## 3. HW 트랙 결과 (Stage 4~5)
 

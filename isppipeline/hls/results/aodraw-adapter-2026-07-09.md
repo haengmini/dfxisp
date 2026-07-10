@@ -7,7 +7,7 @@ Campaign: checker-sota #4-1 (AODRaw adapter, pre-written)
 Function: AODRaw(실 RAW) → dfxisp SW-eval 레이아웃 어댑터의 설계·계약·검증
           상태 기록. 다운로드 완료 전 선작성. #4(오라클 라벨)·#1(적응 τ)의
           임계경로 선결물.
-Sources: checker-sota-strategy-2026-07-09.md (#4 step 1)
+Sources: checker-strengthening-2026-07-10.md (#4 step 1)
          tools/aodraw_adapter.py (신규, 본 캠페인)
          tools/build_sonynod_dataset.py (실-RAW 수집 선례/계약)
          AODRaw: Li et al., CVPR2025 Highlight, github.com/lzyhha/AODRaw
@@ -32,7 +32,7 @@ Repro  : cd isppipeline/hls/tools
 메타데이터**를 전제로 한다. 현행 벤치마크(COCO/ExDark pseudo-RAW)는 (a)
 sRGB 역감마 합성이라 SNR 기반 τ(s,g)를 활성화할 수 없고, (b) 라벨이
 데이터셋 프록시라 잔존오차 78장이 라벨 아티팩트로 귀속된다(LRT 캠페인
-`checker-lrt-2026-07-09.md`에서 실증). AODRaw는 실 Sony RAW + COCO 포맷
+`checker-strengthening-2026-07-10.md`에서 실증). AODRaw는 실 Sony RAW + COCO 포맷
 주석 + 프레임별 `tag`(조도/날씨)로 이 둘을 동시에 푼다. 어댑터가 없으면
 #4·#1 어느 것도 시작할 수 없으므로 다운로드 대기 중 선작성했다.
 

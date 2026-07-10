@@ -536,7 +536,7 @@ arm 비교표.
    불필요). PASCAL RAW(밝음)도 rawpy가 처리하는 RAW 포맷이면 같은 경로 —
    실 다운로드 파일로 `read_raw()` 한 함수만 확인하면 된다.
 5. **checker SOTA 강화 후속** — 오라클 라벨 재정의(#4)·센서 적응 임계 τ(#1)는
-   위 real-RAW 데이터셋 위에서 착수 (`checker-sota-strategy-2026-07-09.md`).
+   위 real-RAW 데이터셋 위에서 착수 (`checker-strengthening-2026-07-10.md`).
 
 **기존(Stage 6 착수 준비, 순서 유지):**
 

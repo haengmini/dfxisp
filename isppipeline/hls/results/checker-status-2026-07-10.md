@@ -7,9 +7,7 @@ Function: checker 모듈의 현행 상태 정본(single source of truth). 2026-0
           적응τ)의 결론을 하나로 종합 — 배포 vs 권장 운영점, 채택/기각 확정,
           다음 관문(LOD real-RAW)을 한 장으로 고정. 세부 근거는 각 캠페인 문서.
 Sources: checker-principles-2026-07-05.md, checker-principled-versions-2026-07-05.md,
-         checker-sota-review-2026-07-09.md, checker-sota-strategy-2026-07-09.md,
-         checker-lrt-2026-07-09.md, checker-tile-probe-2026-07-10.md,
-         checker-temporal-2026-07-10.md, checker-adaptive-tau-2026-07-10.md,
+         checker-strengthening-2026-07-10.md (SOTA 리뷰+7항목+캠페인 실측 종합),
          src/dfxisp_accel.cpp (배포 구현)
 =============================================================================
 -->
@@ -37,17 +35,17 @@ Sources: checker-principles-2026-07-05.md, checker-principled-versions-2026-07-0
 
 ## 2. 강화안 채택/기각 확정 (SOTA 검토 7항목)
 
-`checker-sota-strategy-2026-07-09.md`의 7개 강화안을 fold-분산 마진 기준으로
-정직하게 판정한 결과:
+7개 강화안을 fold-분산 마진 기준으로 정직하게 판정한 결과(리뷰·전략·실측
+근거는 `checker-strengthening-2026-07-10.md`):
 
 | # | 강화안 | 판정 | 근거 |
 |---|---|---|---|
-| #1 | 센서 적응 임계 τ(exp,gain,blc) | **채택(Path A)** | τ=BLC+k·σ_read(g) 유도·셀프테스트 통과. 드라이버가 AXI-lite 레지스터에 기록 → RTL 변경 0. 실데이터 검증만 PENDING. `checker-adaptive-tau-2026-07-10.md` |
-| #2 | 히스토그램 우도비(LRT) | **기각** | 학습형 LRT가 dark-ratio를 재발견, held-out J 0.835<C1 0.847. dark16이 정보 소진. `checker-lrt-2026-07-09.md` |
-| #3 | 순차 변화탐지(CUSUM/SPRT) | **기각(Schmitt 채택)** | 측정 지터(σ≈0.002)에서 CUSUM/SPRT가 Schmitt 대비 무이득, CUSUM≡SPRT. Schmitt(δ=2%p)+옵션 K-of-N 채택. 보드 지터 시 재검토. `checker-temporal-2026-07-10.md` |
+| #1 | 센서 적응 임계 τ(exp,gain,blc) | **채택(Path A)** | τ=BLC+k·σ_read(g)·셀프테스트 통과. 드라이버가 AXI-lite 레지스터에 기록 → RTL 변경 0. 실데이터 검증만 PENDING |
+| #2 | 히스토그램 우도비(LRT) | **기각** | 학습형 LRT가 dark-ratio를 재발견, held-out J 0.835<C1 0.847. dark16이 정보 소진 |
+| #3 | 순차 변화탐지(CUSUM/SPRT) | **기각(Schmitt 채택)** | 측정 지터(σ≈0.002)에서 CUSUM/SPRT가 Schmitt 대비 무이득, CUSUM≡SPRT. Schmitt(δ=2%p)+옵션 K-of-N. 보드 지터 시 재검토 |
 | #4 | 평가·라벨 재정의(오라클) | **대기(최우선)** | 잔존오차가 라벨 아티팩트임이 #2·#5에서 반복 확인 → 오라클 라벨이 핵심. LOD/PASCAL real-RAW 필요 |
-| #5 | 공간 타일 미터링 | **기각** | 게이트 PASS나 nested-CV J +0.016<fold-std. ExDark miss와 COCO FT의 공간 시그니처가 반대라 상쇄. `checker-tile-probe-2026-07-10.md` |
-| #6 | 확률 캘리브레이션 | **채택(가능)** | ECE isotonic 0.033(<0.05). 부수 성과: p(H1\|dark16=0.62)=0.516 → **C1 임계가 사후확률 중립점**임을 독립 확인. `checker-temporal-2026-07-10.md` |
+| #5 | 공간 타일 미터링 | **기각** | 게이트 PASS나 nested-CV J +0.016<fold-std. ExDark miss와 COCO FT의 공간 시그니처가 반대라 상쇄 |
+| #6 | 확률 캘리브레이션 | **채택(가능)** | ECE isotonic 0.033(<0.05). 부수 성과: p(H1\|dark16=0.62)=0.516 → **C1 임계가 사후확률 중립점**임을 독립 확인 |
 | #7 | 3-모드 이산화 | **게이트 대기** | #4 오라클 조도축 결과가 착수 게이트. 지금 착수 금지 |
 
 **한 줄 요약:** checker는 **정보축(#2)·공간축(#5)·시간축(#3)에서 이미 포화**

@@ -3,7 +3,7 @@
 for the scene checker (strengthening-strategy item #1).
 
 Campaign : checker-sota #1 (2026-07-10), branch exp/principled-checker-rm-2026-07-05.
-Track    : checker-sota-strategy-2026-07-09.md item #1 step 1 ("tau(s,g) parametric
+Track    : checker-strengthening-2026-07-10.md item #1 step 1 ("tau(s,g) parametric
            model + tools/checker_adaptive_tau.py prototype -- EXIF -> tau. AODRaw
            NOT required, start now: derivation + scaffold"). This is the
            DERIVATION + SCAFFOLD only; the real-data stratified validation
@@ -19,7 +19,7 @@ Problem it solves (see results/checker-principles-2026-07-05.md, Principle 3).
   absolute threshold's meaning collapses. Principle 3 says the threshold must
   sit at the READ-NOISE FLOOR, which is itself gain-dependent.
 
-Model (from checker-sota-strategy-2026-07-09.md #1, "설계"):
+Model (from checker-strengthening-2026-07-10.md #1, "설계"):
       tau(g) = BLC(g) + k * sigma_read_DN(g)
       sigma_read_DN(g) = sigma_read_e * g / K
   with g = analog gain (linear, e.g. ISO/ISO_base), K = conversion gain (e-/DN),

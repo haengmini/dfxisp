@@ -5,7 +5,7 @@ table that the checker #4 (oracle relabeling) and #1 (sensor-adaptive tau)
 campaigns need.
 
 Campaign : checker-sota #4-1 (2026-07-09), branch exp/principled-checker-rm-2026-07-05.
-Track    : checker-sota-strategy-2026-07-09.md item #4 step 1 ("AODRaw adapter,
+Track    : checker-strengthening-2026-07-10.md item #4 step 1 ("AODRaw adapter,
            the critical-path prerequisite for #4 and #1"). Pre-written while the
            dataset is still downloading; the ONLY unverifiable path is the real
            .ARW decode (reuses the proven rawpy path from build_sonynod_dataset.py).

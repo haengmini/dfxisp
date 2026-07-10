@@ -2,7 +2,7 @@
 """checker_lrt.py -- histogram likelihood-ratio checker (strategy #2).
 
 Campaign : checker-sota (2026-07-09), branch exp/principled-checker-rm-2026-07-05.
-Track    : strategy doc checker-sota-strategy-2026-07-09.md item #2.
+Track    : strategy doc checker-strengthening-2026-07-10.md item #2.
 
 Learns a linear log-likelihood-ratio score over the SAME 256-bin (raw>>8)
 histogram the HW checker already computes in one streaming pass:
