@@ -141,20 +141,17 @@ Stage 6  보드 실장 + DPU end-to-end                    ⬜   미착수(실�
 | HW | Stage 6 · 4 | 절대 전력(W) 측정, Arm1/2/3 비교 | 계획 | ⬜ 미착수 | — (보드) |
 | HW | Stage 6 · 5 | DPU/검출기 end-to-end(Vitis-AI, real-RAW, RGB32 직결) | 계획 | ⬜ 미착수 | — (보드) |
 | HW | Stage 6 · 6 | Stage 3 BLC 완화가 real-RAW에서도 유효한지 최종 확인(DPU mAP vs SW 예측 정합) | 계획 | ⬜ 미착수 | — (보드) |
-| SW | Stage 3 후속(SOTA) | checker SOTA 강화: 히스토그램 LRT(정직하게 기각) + AODRaw 어댑터 선작성(셀프테스트 통과, 데이터 대기) | 트리거③(감사) | 🔄 진행중(미병합) | 07-09 |
+| SW | Stage 3 후속(SOTA) | checker SOTA 강화 7항목 판정 완료(#1·#6 채택 / #2·#3·#5 기각 / #4·#7 대기) + AODRaw/LOD 어댑터. 종합=`checker-status-2026-07-10.md` | 트리거③(감사) | ✅ 판정완료(배포는 LOD 대기) | 07-10 |
 | 거버넌스 | — | "Hermes" 병렬 리뷰 → Python robustness 수정(경계 문서화, edge-clamp demosaic 버그) | 트리거③ 원천 | ✅ 완료(PR #6) | 07-08 |
 | 거버넌스 | — | PR #3(references) 브랜치 삭제로 자동 종료 → 리베이스 후 PR #5로 복구, 데이터 유실 없음 | 프로세스 | ✅ 완료 | 07-08 |
 
-> **표 밖 참고 — 브랜치 상태(2026-07-10 기준):** 되먹임 작업이 두 브랜치로
-> 갈라져 있다.
-> - **`exp/principled-checker-rm-2026-07-05`** (이 문서가 있는 브랜치): 위
->   "Stage 3 후속(SOTA)" 및 이 로드맵 갱신들이 여기 쌓여 있다. `main`보다
->   **11커밋 앞, 4커밋 뒤** — PR #4로 한 번 병합된 뒤에도 계속 커밋됐고 그
->   사이 main에 PR #5~#8이 들어왔기 때문. 병합 전 main 리베이스 필요.
-> - **`fix/canonical-demosaic-bilinear-2026-07-09`** (PR #9, 열림·병합가능):
->   R5의 demosaic 수정. `main`에 있는 canonical 파일이 대상이라 main 기준
->   분기했다. 이게 먼저 병합돼야 R5 mAP 재검증이 정본 위에서 돌아간다.
-> 정리 순서는 아래 "즉시 다음" 참고.
+> **표 밖 참고 — 브랜치 상태(2026-07-10, 통합 완료):** 모든 작업이 단일
+> 브랜치 `exp/principled-checker-rm-2026-07-05`로 통합됐다 — main을 병합해
+> canonical 파이프라인을 유입(behind 0)하고, demosaic 수정(구 PR #9)까지
+> 접어 넣었다. stale 병합 브랜치 5개(docs/checker-theory·docs/daily-report·
+> exp/isp-recalibration·fix/python-robustness·sw-stage-rm-variants) 삭제.
+> 보존: `main`, 이 통합 브랜치, `backup/local-work-*` 2개(의도적 백업).
+> 이 브랜치를 `main`으로 올리는 최종 통합은 리뷰 후 진행한다.
 
 ---
 
@@ -310,8 +307,8 @@ canonical 파일(`baseline_isp_pipeline.py`/`low_light_isp_pipeline.py`/
   8프레임 픽셀 단위 사전측정: 평균 변화 0.377/255(8-bit 환산), 34.5%
   픽셀·채널 값 이동, 에지에 집중 — 정성적 결론 반전 가능성은 낮으나 정밀
   mAP는 다시 움직일 것으로 예상. **mAP 재검증은 GPU 필요(이 세션은
-  CUDA 불가)라 별도 R5 라운드로 미룸.** PR 상태: 리뷰 대기, `main`
-  미병합.
+  CUDA 불가)라 별도 R5 라운드로 미룸.** 코드 수정은 통합 브랜치에 반영
+  완료(구 PR #9를 접어 넣음), mAP 재실행만 GPU 대기.
 - **범위:** 이 재보정은 SW 평가 도구만 바꿨다 — Stage 4/5의 HLS/Vivado
   수치는 재합성 대상이 아니며(알고리즘 상수 자체는 불변), Stage 3의
   R1~R3·R3b **정성적 결론은 재확인**됐으나 그 **정밀 mAP 수치는 canonical
@@ -514,20 +511,21 @@ arm 비교표.
 
 ## 즉시 다음 (우선순위)
 
-**신규(2026-07-09 파악, 최우선):**
+**완료(2026-07-10 통합):** 브랜치 정리·통합이 끝났다 — `exp/principled-checker
+-rm-2026-07-05`가 main을 병합(canonical 파이프라인 유입, behind 0)하고 demosaic
+수정(구 PR #9)까지 접어 넣어 **모든 작업을 담은 단일 브랜치**가 됐다. checker
+현행 상태는 `results/checker-status-2026-07-10.md`에 정본화(배포 C0 / 권장 C1 /
+강화안 7항목 판정: #1·#6 채택, #2·#3·#5 기각, #4·#7 대기). stale 병합 브랜치 5개
+삭제 완료. 아래는 남은 실질 과제다.
 
-1. **브랜치 정리** — `exp/principled-checker-rm-2026-07-05`가 이미 병합된
-   PR #4 이후로도 계속 커밋되고 있어, main의 PR #5~#8(참고문헌 정리,
-   Hermes 수정, canonical 파이프라인 재보정)과 별도로 갈라진 상태다.
-   다음 병합 전에 main 기준 리베이스 필요.
-2. **Stage 3 수치 재확인 대상 정리** — 2026-07-08 이전에 계산된 mAP
+**즉시 다음 (최우선):**
+
+1. **Stage 3 수치 재확인 대상 정리** — 2026-07-08 이전에 계산된 mAP
    수치(R1~R3, R3b 포함)는 canonical 파이프라인 기준으로 최종 확정된 것이
    아니므로, 앞으로 이 수치들을 인용할 때는 R4(`isp-pipeline-recalibration
-   -2026-07-08.md`)로 대체(superseded)됐음을 명시할 것.
-3. **PR #9 (`fix/canonical-demosaic-bilinear-2026-07-09`) 리뷰·병합** —
-   R/B 채널 단일탭→bilinear 수정은 완료·검증됐으나(Stage 3 R4 절 정정
-   참고) main 미병합. 병합 후 GPU 가용 시 mAP 재검증(R5) 착수.
-4. **정본 데이터셋 재평가(목표 1·2의 핵심 실증)** — PASCAL RAW(밝음)/
+   -2026-07-08.md`)로 대체(superseded)됐음을 명시할 것. demosaic 수정(R5)의
+   mAP 재실행은 코드·bit-exact 검증만 끝났고 GPU 대기.
+2. **정본 데이터셋 재평가(목표 1·2의 핵심 실증)** — PASCAL RAW(밝음)/
    LOD RAW(저조도) real-RAW 쌍으로 세 arm(normal/lowlight/adaptive) 재실행:
    (a) normal이 PASCAL RAW, lowlight가 LOD RAW에서 각각 우위인지(교차 우위
    = 전환 필요성), (b) 혼합 스트림에서 adaptive가 최적 단일 static 상회인지.
