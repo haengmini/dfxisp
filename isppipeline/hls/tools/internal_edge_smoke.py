@@ -10,7 +10,7 @@ Two independent checks:
    tiny end of the size range, both NORMAL and LOW_LIGHT-forced.
 
 2. Demosaic boundary-clamp regression, checked against BOTH SW-proxy files
-   that carry their own independent copy of the RGGB nearest-demosaic
+   that carry their own independent copy of the RGGB demosaic
    (baseline_isp_pipeline.py and checker.py -- kept deliberately un-shared,
    see those files' docstrings): perturbing the far border of an image must
    not change a near-border pixel's demosaiced value. This is the actual bug
@@ -22,13 +22,17 @@ Two independent checks:
    a future edit to either one can't silently reintroduce the wrap-around bug.
 
    Note: this checks each proxy against *itself* (before/after perturbation),
-   not against gen_golden_vectors.demosaic_rggb12. The two demosaic
-   implementations use different interpolation taps for the R/B planes
-   (gen_golden_vectors bilinear-averages 2-4 neighbors per RESEARCH §4; the
-   proxy files use single-nearest-tap for cross-color positions) and are not
-   bit-exact even away from edges -- that is a separate, larger fidelity gap
-   the 2026-07-08 review did not previously catch and is out of scope for
-   this boundary fix.
+   not against gen_golden_vectors.demosaic_rggb12. At the time this test was
+   written (07-08), the two demosaic implementations used different
+   interpolation taps for the R/B planes (gen_golden_vectors bilinear-averages
+   2-4 neighbors per RESEARCH §4; the proxy files used single-nearest-tap for
+   cross-color positions) and were not bit-exact even away from edges -- that
+   gap has since been CLOSED (2026-07-09 fix, both proxy files now bilinear-
+   average R/B identically to gen_golden_vectors) and is now covered by its
+   own independent cross-check, tools/verify_demosaic_bilinear_cross_check.py
+   (same rationale as verify_binning_cross_check.py -- a self-consistency test
+   can't catch a shared mistake, so a third independently-written reference
+   closes the gap). See results/demosaic-bilinear-fix-2026-07-09.md.
 
 Usage: python3 tools/internal_edge_smoke.py
 """

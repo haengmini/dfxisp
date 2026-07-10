@@ -42,6 +42,7 @@ golden:
 # same mistake) -- see SPEC.md §11.5/§11.8.
 cross-check:
 	cd tools && $(PYTHON) verify_binning_cross_check.py
+	cd tools && $(PYTHON) verify_demosaic_bilinear_cross_check.py
 
 verify: golden csim cross-check
 
@@ -100,6 +101,7 @@ sw-stage: verify rm-verify scheduler analysis
 py-verify:
 	$(PYTHON) -m py_compile tools/*.py
 	cd tools && $(PYTHON) verify_binning_cross_check.py
+	cd tools && $(PYTHON) verify_demosaic_bilinear_cross_check.py
 	$(PYTHON) tools/scheduler_sweep.py --out /tmp/scheduler_sweep.csv
 	cd tools && $(PYTHON) internal_edge_smoke.py
 
