@@ -102,5 +102,34 @@ C1=False, adaptive=False로 C1과 같이 실패): DSC03839, DSC03849, DSC03860
    설계 문서에 반영할지 결정 (신규 이슈로 등록 권장).
 2. ISO ≤1600 구간은 표본이 너무 작다 — PASCALRAW 또는 추가 저ISO 야간 프레임
    없이는 이 구간 결론을 강화할 수 없다.
-3. 시나리오 B(mAP 재확인)는 §3에서 실제로 13개 프레임이 갈렸으므로 진행할
-   가치가 생겼다 — GPU 필요, 다음 라운드로.
+3. ~~시나리오 B(mAP 재확인)는 §3에서 실제로 13개 프레임이 갈렸으므로 진행할
+   가치가 생겼다~~ → §6에서 실행 완료.
+
+## 6. 시나리오 B (mAP 재확인) — 실행 결과 (2026-07-13, 후속)
+
+계획: `checker-adaptive-tau-scenario-b-plan-2026-07-13.md`. §3에서 갈린
+13프레임(개선 방향 8 + 회귀 방향 4 + 회색지대 1)을 `build_sonynod_dataset.py`로
+서브셋 빌드 후 `archive/eval_map_newrm.py`로 `normal`/`lowlight` 강제 arm
+mAP를 직접 비교(GPU: RTX 5060 Laptop, ultralytics 8.4.90, yolov8n).
+
+- 서브셋 빌드: `converted=13 skipped=0 no_gt=0 total=13` (13장 전부 GT 포함,
+  스킵 없음).
+- 결과 (`results/map_newrm_sonynod_flip13_yolov8n.csv`):
+
+| arm | mAP@[.5:.95] | mAP@50 | Precision | Recall |
+|---|---:|---:|---:|---:|
+| normal | 0.1511 | 0.3161 | 0.928 | 0.284 |
+| lowlight | **0.1808** | **0.3608** | 0.950 | 0.304 |
+
+`lowlight` arm이 `normal` 대비 mAP@[.5:.95] +19.7%, mAP@50 +14.1%, Precision·
+Recall도 둘 다 소폭 개선 — 이 13장에 한해서는 **§4 계획 문서의 "해석" 기준으로
+개선 방향이 확인됨**: adaptive τ가 재분류한 프레임들을 `lowlight`로 처리하는
+것이 이 13장에서는 실제 detection에도 유리했다. §2의 recall 개선(ISO
+[3200,6400) 0.750→1.000)이 mAP에서도 뒷받침되는 결과다.
+
+**단, 계획 문서 §4가 미리 경고한 대로 13장은 통계적으로 작은 표본이다.**
+이 mAP 차이가 8개 recall-개선 프레임 때문인지, 4개 회귀 프레임이나 1개
+회색지대 프레임의 우연한 기여인지는 이 집계만으로 분리되지 않는다(arm별
+per-frame AP를 뽑지 않았음 — 필요하면 재실행 시 `--limit`을 프레임 단위로
+쪼개거나 스크립트에 per-image 출력을 추가해야 함). PASCALRAW 도착 후 정본
+재평가가 여전히 최종 근거라는 계획 문서의 입장은 유지.
