@@ -1,0 +1,7 @@
+dataset,blc_offset,arm,mAP_50_95,mAP_50,model,n
+SonyNOD-boundary31-canonical,16,normal,0.1256,0.2733,/home/user/dfxisp/model/detectors/yolo/yolov8n.pt,31
+SonyNOD-boundary31-canonical,16,lowlight,0.1261,0.2865,/home/user/dfxisp/model/detectors/yolo/yolov8n.pt,31
+SonyNOD-boundary31-canonical,1,normal,0.2383,0.4364,/home/user/dfxisp/model/detectors/yolo/yolov8n.pt,31
+SonyNOD-boundary31-canonical,1,lowlight,0.2385,0.4426,/home/user/dfxisp/model/detectors/yolo/yolov8n.pt,31
+SonyNOD-boundary31-canonical,2,normal,0.2342,0.4317,/home/user/dfxisp/model/detectors/yolo/yolov8n.pt,31
+SonyNOD-boundary31-canonical,2,lowlight,0.2362,0.4413,/home/user/dfxisp/model/detectors/yolo/yolov8n.pt,31
