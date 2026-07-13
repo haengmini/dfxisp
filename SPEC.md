@@ -5,15 +5,24 @@ project: DFXISP
 version: 1.0
 created: 2026-07-02
 target: Zynq UltraScale+ ZCU104 / XCZU7EV (xczu7ev-ffvc1156-2-e)
-status: active — reset 아키텍처(shared baseline core + 상호배타 tone RM slot)
+status: active — 아래 본문은 현재 구현(v1: shared baseline core + 상호배타 tone RM slot)을 기술한다. 목표 아키텍처(v2)는 RESEARCH.md §0 참고
 refs: "README.md · RESEARCH.md · isppipeline/hls · results/experiment-report-2026-07-02.md"
 ---
 
 # DFXISP 시스템 사양서
 
+> **아키텍처 note (2026-07-10):** `RESEARCH.md`가 2026-07-10 reset v2에서 RM 경계를
+> tone(gain/gamma)에서 ISP 데이터패스 전체로 넓혔다 — static shell(checker/DFX 컨트롤러/
+> AXI/packer)만 남기고, BLC/AWB/demosaic/CCM/gain/gamma 전부를 `RM_NORMAL`/`RM_LOW_LIGHT`
+> 두 개의 전체 ISP pipeline RM이 각자 소유한다. **이 SPEC.md 본문은 아직 그 v2로
+> 마이그레이션되지 않은 현재(v1) 구현**을 기술한다 — `isppipeline/hls/src/dfxisp_accel.cpp`가
+> 여전히 공유 baseline core + tone RM slot 구조이기 때문이다. v1 산술(파라미터 값, 인터페이스)
+> 자체는 정확하고 유효하며, v2 코드 마이그레이션 시 이 문서도 함께 갱신한다. 아래 내용을 읽을
+> 때 "baseline ISP core"는 v1 한정 개념이라는 점을 염두에 둘 것.
+
 > 입력(pseudo-RAW 데이터셋) → checker → tone RM slot → baseline ISP core → RGB32 출력 →
-> 검출기/mAP 까지 전 구간의 데이터 포맷·산술·인터페이스·파라미터를 정의한다.
-> 정본 아키텍처는 `RESEARCH.md`, 구현은 `isppipeline/hls/`. 모든 산술은 **정수(bit-exact)**.
+> 검출기/mAP 까지 전 구간의 데이터 포맷·산술·인터페이스·파라미터를 정의한다(v1, 현재 구현).
+> 아키텍처 정본은 `RESEARCH.md`, 구현은 `isppipeline/hls/`. 모든 산술은 **정수(bit-exact)**.
 
 ---
 
@@ -273,8 +282,8 @@ AXI: `raw_bayer`/`rgb_out` = `m_axi`(gmem0/gmem1); 나머지 스칼라 인자·�
 | 타깃 디바이스 | ZCU104, `xczu7ev-ffvc1156-2-e` |
 | 합성 도구 | Vitis HLS 2024.1 |
 | 클럭 타깃 | 5.0 ns (200 MHz) |
-| static region | AXI/control wrapper, checker/mode FSM, baseline ISP core, DFX/PR controller, output/metadata packer |
-| RM slot(재구성) | RM_NORMAL_TONE / RM_LOW_LIGHT_TONE (상호배타, 동일 downstream 계약 또는 shape 메타 노출) |
+| static region (v1, 현재) | AXI/control wrapper, checker/mode FSM, baseline ISP core, DFX/PR controller, output/metadata packer — **v2 목표는 baseline ISP core를 static에서 제거**하고 RM 안으로 옮기는 것(RESEARCH.md §0/§2.3) |
+| RM slot(재구성, v1) | RM_NORMAL_TONE / RM_LOW_LIGHT_TONE (상호배타, 동일 downstream 계약 또는 shape 메타 노출). v2에서는 각 RM이 전체 ISP pipeline(`RM_NORMAL`/`RM_LOW_LIGHT`)이 된다 |
 | 전환 정책 | 장면 단위(프레임 단위 아님), 히스테리시스 checker |
 | 재구성 지연 | drain+ICAP+warm-up 이론적 분해: **peak 1.72 ms / 전형 6.87 ms**(스펙 유도, 보드 미실측). 상세 `results/pr-latency-breakdown-2026-07-02.md`. 드라이버/FSM 오버헤드는 TODO(보드) |
 
@@ -440,8 +449,8 @@ Arm2 인스턴스 분해(unified top 내부, DFX 순이득 추정의 참조점, 
 |---|---|
 | DFX / DPR | Dynamic Function eXchange / 부분 재구성 |
 | RM | Reconfigurable Module(부분 비트스트림 교체 단위) |
-| tone RM slot | gain/gamma/binning을 담는 상호배타 재구성 영역 |
-| baseline ISP core | demosaic+BLC+WB+CCM 공통(12-bit, tone에 감싸임), gain/gamma 없음 |
+| tone RM slot | **(v1 한정)** gain/gamma/binning을 담는 상호배타 재구성 영역. v2(RESEARCH.md §0)에서는 RM 경계가 ISP 데이터패스 전체로 확장돼 이 개념은 superseded |
+| baseline ISP core | **(v1 한정)** demosaic+BLC+WB+CCM 공통(12-bit, tone에 감싸임), gain/gamma 없음. v2에서는 이 공유 static 스테이지 자체가 사라지고 각 RM이 전체를 소유(RESEARCH.md §0/§3) |
 | Policy A / B | 형상변경(H/2×W/2) / 형상보존(upsample-pad) |
 | guardrail | mAP가 기준선(예: none/register-only) 이상이어야 RM 채택 |
 | arm | 실험 비교군(static / register-only / DFX / ablation) |

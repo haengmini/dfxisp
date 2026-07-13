@@ -42,7 +42,10 @@ fallback -- mirrors tools/aodraw_adapter.py:extract_exif).
 Usage:
   python3 tools/checker_adaptive_tau.py --selftest          # no dataset needed
   python3 tools/checker_adaptive_tau.py --tau --iso 6400 \\
-      --exposure 0.033 --black 512 --white 16383            # one-off tau print
+      --exposure 0.033 --black 800 --white 16380            # one-off tau print
+      # 800/16380 = measured SonyNOD (Sony RX100 VII) black/white level,
+      # see tools/build_sonynod_dataset.py:11. Override --black/--white for
+      # any other sensor (AODRaw etc. -- read per-file via rawpy instead).
 """
 from __future__ import annotations
 
@@ -223,7 +226,7 @@ def _selftest() -> int:
     sp = SensorParams()
 
     # (a) tau increases monotonically with analog gain (read-noise floor rises).
-    black = 512.0
+    black = 800.0   # measured SonyNOD (RX100 VII) black level, build_sonynod_dataset.py:11
     gains = [1.0, 2.0, 4.0, 8.0, 16.0]
     taus = [tau_from_sensor(black, g, sp.sigma_read_e, sp.K, k=5.0) for g in gains]
     mono = all(t2 > t1 for t1, t2 in zip(taus, taus[1:]))
@@ -277,9 +280,9 @@ def _selftest() -> int:
     ok = ok and grace
 
     # (e) end-to-end tau_for_frame with a synthetic EXIF dict + register mapping.
-    frame = tau_for_frame({"iso": 6400, "exposure_s": 1 / 30}, black_level=512,
-                          white_level=16383, sp=sp, k=5.0)
-    reg_ok = (0 <= frame["register"] <= 0xFFFF) and (frame["tau_dn"] > 512)
+    frame = tau_for_frame({"iso": 6400, "exposure_s": 1 / 30}, black_level=800,
+                          white_level=16380, sp=sp, k=5.0)
+    reg_ok = (0 <= frame["register"] <= 0xFFFF) and (frame["tau_dn"] > 800)
     assert reg_ok, f"tau_for_frame bad: {frame}"
     print(f"[{'ok' if reg_ok else 'FAIL'}] tau_for_frame ISO6400: "
           f"tau_dn={frame['tau_dn']:.2f} r={frame['r']:.3f} "
@@ -301,8 +304,10 @@ def main() -> int:
                     help="print tau for a single (iso,exposure,black,white)")
     ap.add_argument("--iso", type=float, default=None)
     ap.add_argument("--exposure", type=float, default=None, help="seconds")
-    ap.add_argument("--black", type=float, default=512.0)
-    ap.add_argument("--white", type=float, default=16383.0)
+    ap.add_argument("--black", type=float, default=800.0,
+                    help="black level; default = measured SonyNOD (RX100 VII) value")
+    ap.add_argument("--white", type=float, default=16380.0,
+                    help="white level; default = measured SonyNOD (RX100 VII) value")
     ap.add_argument("--k", type=float, default=5.0)
     ap.add_argument("--raw", type=Path, default=None,
                     help="RAW file to read EXIF from (best-effort)")
