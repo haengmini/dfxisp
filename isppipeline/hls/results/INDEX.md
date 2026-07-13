@@ -43,6 +43,7 @@
 | `checker-strengthening-2026-07-10.md` | 07-10 | **정본(전체 근거)** checker SOTA 강화 종합 — 리뷰(왜 이 레버들) + 7항목 전략 + 캠페인 실측(#2 LRT·#5 타일·#3+#6 시간층·#1 적응τ 판정·수치·재현). 구 review/strategy/lrt/tile/temporal/adaptive-tau 6문서를 대체(원문 git 이력). 도구는 `tools/checker_{lrt,tile_probe,temporal,adaptive_tau}.py` |
 | `checker-adaptive-tau-realdata-2026-07-13.md` | 07-13 | checker-status §4 "다음 관문" #1 첫 실데이터 답 — SonyNOD 321장 ISO 층화 fixed-vs-adaptive τ recall. ISO[3200,6400)에서 개선(0.750→1.000, 8프레임) 확인, ISO≤1600(n=7)은 개선 없음(고정 판정 컷오프 재사용 탓, 표본 소). false-trigger는 여전히 미검증(PASCALRAW 필요). 도구는 `tools/analyze_adaptive_tau_sonynod.py` |
 | `checker-adaptive-tau-scenario-b-plan-2026-07-13.md` | 07-13 | 위 문서에서 C0/C1/adaptive 분류가 갈린 13프레임을 normal/lowlight 강제 arm으로 mAP 재확인하는 실행 계획 — **실행 완료, 결과는 `checker-adaptive-tau-realdata-2026-07-13.md` §6** (lowlight가 normal 대비 mAP@[.5:.95] +19.7%) |
+| `checker-adaptive-tau-scenario-b-full321-plan-2026-07-13.md` | 07-13 | **계획(미실행)** — 시나리오 B를 321장 전체로 확장. §0에서 기존 ver0 파이프라인(`newrm_pipeline.py`)의 공정성 결함(normal=identity, lowlight=풀처리, `performance-scenario-lowlight-review-2026-07-09.md` 지적)을 재확인시킴 — ver0 재실행(§1, 빠른 확인)과 ver1 재실행(§2, 공정 비교, 07-09 이후 미실행) 둘 다 계획 |
 
 ## 3. HW 트랙 결과 (Stage 4~5)
 
