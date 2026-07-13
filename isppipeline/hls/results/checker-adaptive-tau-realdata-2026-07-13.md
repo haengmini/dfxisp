@@ -210,3 +210,16 @@ real-RAW·공정 비교로 확정하는 방향의 강한 근거. §6(13프레임
 
 ver0로 321장 전체를 재실행하는 §1(계획 문서의 "빠른 재확인")은 아직 안 함 —
 07-06 수치 재현 확인 목적이라 우선순위가 낮다고 보고 스킵함.
+
+> **⚠️ 정정 (2026-07-13, 후속): §6/§7은 둘 다 비-정본 파이프라인 기준이다.**
+> `isp_pipeline_ver1.py`(§7이 "공정 비교"라 부른 ver1)는 2026-07-08부터 이미
+> archived/superseded 상태였다 — 배포 HW(`dfxisp_accel.cpp`)는 gamma-2.0
+> 정수 sqrt LUT를 normal/lowlight가 공유하는데, ver1은 gamma-2.2 부동소수점
+> LUT를 썼다. 진짜 정본 파이프라인(`baseline_isp_pipeline.py`/
+> `low_light_isp_pipeline.py`/`checker.py`)으로 이미 07-08에 SonyNOD 321장
+> 전체를 돌려놓은 결과가 있다(`isp-pipeline-recalibration-2026-07-08.md`):
+> **BLC=16(배포값)에서 lowlight가 normal 대비 +8.1%, BLC=2(후보값)에서
+> +12.6%** — §7의 "+190%(2.9배)"는 gamma 불일치로 부풀려진 수치였다.
+> 방향(`lowlight > normal`)은 유지되지만 크기는 이 표로 대체할 것. 전체
+> 경위와 13프레임 서브셋의 정본 재실행 계획은
+> `HANDOFF-checker-adaptive-tau-canonical-rerun-2026-07-13.md` 참고.
