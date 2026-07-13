@@ -179,6 +179,28 @@ binning까지 더한 ver1 `lowlight`가 한 번 더 크게 도약한다. 즉 §0
 > (YOLO가 두 경우 다 imgsz=640으로 리사이즈해 추론하므로 원본 해상도
 > 차이 자체는 비교를 막지 않는다). 결과의 신뢰도를 깎는 발견은 아니지만,
 > 재현 시 이 특정 소수점 일치를 "버그 신호"로 오인하지 않도록 기록해둔다.
+>
+> **추가 감사(2026-07-13, 사용자 요청 — 스크립트/모듈 전수 점검):**
+> "정말 우연인지, 데이터·모듈 사용 과정에 고정된 게 있는지" 재확인 요청을
+> 받아 `newrm_pipeline.py`(ver0)/`isp_pipeline_ver1.py`(ver1)/
+> `src/dfxisp_accel.cpp`(HW 정본)의 게인·감마 상수를 전부 나란히 대조했다.
+> **완전한 우연은 아니었다** — HW 정본은 `GAIN_NORMAL=5/4(1.25x)` /
+> `GAIN_LOWLIGHT=2/1(2.0x)`로 서로 다른데(`dfxisp_accel.cpp:86-87`),
+> **ver0의 `lowlight` arm이 실제로 쓰는 게인은 `LL_GAIN_NUM,LL_GAIN_DEN=5,4`
+> (1.25x)** — HW의 저조도(2.0x)가 아니라 HW의 **정상** 게인과 우연히
+> 일치한다(`newrm_pipeline.py:34`, ver0 파일 자체가 docstring에 "LEGACY,
+> not canonical"이라 명시해둔 이미 알려진 괴리). 그리고 **ver1의 `normal`
+> arm 게인도 `GAIN_NORMAL_NUM,GAIN_NORMAL_DEN=5,4`(1.25x)로 동일**
+> (`isp_pipeline_ver1.py:43`) — 즉 이름은 반대(lowlight vs normal)지만
+> `ver0-lowlight`와 `ver1-normal`은 **게인 상수 자체가 우연이 아니라
+> 실제로 같다(1.25x)**. 단, 감마(ver0=4.0 고정 LUT vs ver1=2.2), BLC(ver0
+> 고정16 vs ver1 완화 없음/BLK_RAW=16, 도메인도 8-bit 후처리 vs RAW16
+> 사전처리로 다름), 해상도(binning 유무)는 여전히 다르므로 위 픽셀 대조
+> 결과(다른 해상도·다른 평균밝기)와 모순되지 않는다 — **"픽셀이 같다"는
+> 아니고 "완전히 무관한 두 숫자의 우연"도 아닌, 두 파이프라인이 하나의
+> 실제 공유 파라미터(1.25x 게인)를 우연히 물려받았다는 게 정확한 결론**이다.
+> `model_paths.py`/`build_arm_images`의 work-디렉터리 재사용 경로도 확인했으나
+> tag별로 분리돼 있어 캐시 오염 가능성은 없음을 재확인.
 
 **해석 (계획 문서 §3 기준):** `RESEARCH.md` §1.3 주장1("저조도 RM이 유효하다")을
 real-RAW·공정 비교로 확정하는 방향의 강한 근거. §6(13프레임, ver0)의 결과는
