@@ -41,6 +41,7 @@
 | `lowlight-module-techniques-2026-07-10.md` | 07-10 | **정본** 저조도 모듈(RM_LOW_LIGHT_TONE) 제안 기술 4종(binning/gain/gamma/완화BLC) × 기대 vs 실측 이득. 주효인=완화BLC(+78%), binning=조건부(real-RAW 대기), 별도 톤=기각. RESEARCH.md §1.3 주장1 상세근거 |
 | `checker-status-2026-07-10.md` | 07-10 | **정본(빠른 결정)** checker 현행 상태 — 배포(C0) vs 권장(C1) 운영점, 강화안 7항목 채택/기각 표, 다음=LOD real-RAW |
 | `checker-strengthening-2026-07-10.md` | 07-10 | **정본(전체 근거)** checker SOTA 강화 종합 — 리뷰(왜 이 레버들) + 7항목 전략 + 캠페인 실측(#2 LRT·#5 타일·#3+#6 시간층·#1 적응τ 판정·수치·재현). 구 review/strategy/lrt/tile/temporal/adaptive-tau 6문서를 대체(원문 git 이력). 도구는 `tools/checker_{lrt,tile_probe,temporal,adaptive_tau}.py` |
+| `checker-adaptive-tau-realdata-2026-07-13.md` | 07-13 | checker-status §4 "다음 관문" #1 첫 실데이터 답 — SonyNOD 321장 ISO 층화 fixed-vs-adaptive τ recall. ISO[3200,6400)에서 개선(0.750→1.000, 8프레임) 확인, ISO≤1600(n=7)은 개선 없음(고정 판정 컷오프 재사용 탓, 표본 소). false-trigger는 여전히 미검증(PASCALRAW 필요). 도구는 `tools/analyze_adaptive_tau_sonynod.py` |
 
 ## 3. HW 트랙 결과 (Stage 4~5)
 
