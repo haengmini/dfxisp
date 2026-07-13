@@ -1,0 +1,3 @@
+pipeline,dataset,arm,mAP_50_95,mAP_50,model,n
+ver1,SonyNOD-full,normal,0.0356,0.0807,/home/user/dfxisp/model/detectors/yolo/yolov8n.pt,321
+ver1,SonyNOD-full,lowlight,0.1035,0.2037,/home/user/dfxisp/model/detectors/yolo/yolov8n.pt,321
