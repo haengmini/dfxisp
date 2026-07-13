@@ -82,12 +82,20 @@ Stage 4 재합성이 원칙적으로 다시 필요할 수 있다(단 지금까�
 > 모든 결론은 두 목표에 종속된다 — **목표 1**(저조도 특화 모듈이 CV에
 > 필요; 단일 모듈은 각각 자기 조건 데이터셋에서 최고 → 전환 필요),
 > **목표 2**(DFX로 상황별 모듈 전환 → 효율·성능 개선, SW→HW 순 증명).
-> 이에 따른 결정 3가지: **(a) `none`(무처리) arm은 비교에서 제외**(색보정
+> 이에 따른 결정 4가지: **(a) `none`(무처리) arm은 비교에서 제외**(색보정
 > 안 된 배포 불가 출력 — 아래 R1/R2 기록의 "none 최고"는 **당시 관찰일
 > 뿐 기여 비교 대상 아님**). **(b) 정본 평가 데이터셋 = PASCAL RAW(밝음)
 > + LOD RAW(저조도)** real-RAW 쌍(§Stage 3, 이전 COCO/ExDark/SonyNOD는
 > superseded proxy). **(c) 저조도 모듈의 기술·기대·실측 이득은
 > `results/lowlight-module-techniques-2026-07-10.md`에 정본화.**
+> **(d) 아키텍처 reset v2(2026-07-10, RESEARCH.md §0):** RM 경계가 tone(gain/gamma)에서
+> ISP 데이터패스 전체(BLC/AWB/demosaic/CCM/gain/gamma)로 넓어졌다 — static shell은
+> checker/DFX 컨트롤러/AXI/packer만 남고, `RM_NORMAL`(stock Vitis Vision 기준)과
+> `RM_LOW_LIGHT`(저조도 특화) 두 전체 ISP pipeline이 상호배타로 재구성된다. **아래
+> Stage 0~5의 모든 실측 수치(golden bit-exact, mAP, HLS 자원/타이밍, DFX pr_verify/
+> bitstream 크기)는 v1(공유 baseline core + tone RM) 코드 기준**이다 — v2 코드
+> 마이그레이션은 아직 시작하지 않았고(§STRATEGY.md), 마이그레이션 후에는 Stage 3(mAP)과
+> Stage 4/5(HLS/DFX 자원·전력)를 v2 기준으로 재실측해야 한다.
 
 ## 전체 진행률 한눈에
 
@@ -520,6 +528,13 @@ arm 비교표.
 
 **즉시 다음 (최우선):**
 
+0. **아키텍처 v2 코드 마이그레이션(2026-07-10 신규, RESEARCH.md §0 / STRATEGY.md 참고)** —
+   문서 reset은 완료됐으나 코드(`isppipeline/hls/src/dfxisp_accel.cpp`)는 아직 v1(공유
+   baseline core + tone RM)이다. `RM_NORMAL`(base_vitis 통합)과 `RM_LOW_LIGHT`(tone +
+   저조도 ISP 통합) 두 개의 전체 ISP pipeline top으로 재구성하는 작업이 이 항목 아래
+   1~8보다 선행돼야 한다 — 아래 Stage 3(mAP)·Stage 4/5(HLS/DFX 자원) 재실측 항목들은
+   이 마이그레이션이 끝난 뒤 v2 기준으로 다시 실행해야 의미가 있다(v1 수치를 인용할 때는
+   "v1 기준"임을 명시).
 1. **Stage 3 수치 재확인 대상 정리** — 2026-07-08 이전에 계산된 mAP
    수치(R1~R3, R3b 포함)는 canonical 파이프라인 기준으로 최종 확정된 것이
    아니므로, 앞으로 이 수치들을 인용할 때는 R4(`isp-pipeline-recalibration
