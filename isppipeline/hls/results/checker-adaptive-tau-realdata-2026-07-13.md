@@ -314,5 +314,9 @@ detection 난이도가 비슷하다는 뜻이다(어차피 두 arm 다 아주 �
 **최종 결론(§8+§9 종합):** `lowlight ≥ normal` 방향은 13/31/321장 세
 표본 모두에서 일관되며(§8의 BLC=1/2 역전은 노이즈로 확인됨), 격차 크기는
 표본이 얼마나 어두운 프레임 위주인지에 따라 달라진다(경계 프레임 <1%p,
-전체 데이터셋 8~13%p). false-trigger는 여전히 미검증 — PASCALRAW 필요,
-변동 없음.
+전체 데이터셋 8~13%p).
+
+**false-trigger 후속(2026-07-15):** PASCALRAW 4,259장으로 실측 완료 —
+`pascalraw-adapter-2026-07-13.md` §7. C0(배포) 92.9% / C1 41.8% / adaptive
+38.4% false-trigger rate. adaptive가 recall(본 문서)과 false-trigger
+양쪽에서 C1 대비 우위/동등이나, ISO[800,1600) n=28에서는 역전(미결).

@@ -63,12 +63,18 @@ Sources: checker-principles-2026-07-05.md, checker-principled-versions-2026-07-0
 
 ## 4. 다음 관문 (순서)
 
-1. **LOD real-RAW(Sony .ARW) + PASCAL RAW 확보** → `aodraw_adapter.py`로 변환.
+1. ~~**LOD real-RAW(Sony .ARW) + PASCAL RAW 확보** → `aodraw_adapter.py`로
+   변환.~~ **완료** — SonyNOD 321장(07-13), PASCALRAW 4,259장(07-14).
 2. **#4 오라클 라벨 재정의** — dual-arm 렌더 → 검출 델타로 프레임 정답 재정의,
    잔존오차의 라벨-아티팩트 비율 정량화. C_miss/C_FA 재추정.
-3. **#1 적응 τ 스트라텀 검증** — LOD를 ISO로 층화, 고정 vs 적응 τ recall/FT.
+3. ~~**#1 적응 τ 스트라텀 검증** — LOD를 ISO로 층화, 고정 vs 적응 τ
+   recall/FT.~~ **완료** — recall: SonyNOD ISO층화
+   (`checker-adaptive-tau-realdata-2026-07-13.md`), false-trigger: PASCALRAW
+   ISO층화(`pascalraw-adapter-2026-07-13.md` §7, 2026-07-15). adaptive가
+   C1 대비 양쪽 다 우위/동등이나 ISO[800,1600) n=28(PASCALRAW)에서 역전 —
+   미결.
 4. **C1(또는 재보정 τ) 정식 배포** — `DARK_RATIO_PCT` + 드라이버 레지스터값
-   갱신, golden 재생성 + `make verify` bit-exact 재확인.
+   갱신, golden 재생성 + `make verify` bit-exact 재확인. §3 완료로 착수 가능,
+   단 ISO[800,1600) 역전 원인 규명 후 권장.
 
-**차단 요인:** LOD/PASCAL 데이터(다운로드 대기) + GPU(mAP). 그 전까지 checker의
-알고리즘 축 작업은 완료 상태로 동결한다.
+**차단 요인:** GPU(mAP, #2용). #1/LOD/PASCAL 데이터 확보는 완료됨.

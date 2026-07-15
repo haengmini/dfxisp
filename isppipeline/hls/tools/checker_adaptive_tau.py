@@ -43,6 +43,22 @@ Usage:
   python3 tools/checker_adaptive_tau.py --selftest          # no dataset needed
   python3 tools/checker_adaptive_tau.py --tau --iso 6400 \\
       --exposure 0.033 --black 512 --white 16383            # one-off tau print
+
+KNOWN OPEN ISSUE (found in the SonyNOD real-data validation,
+results/checker-adaptive-tau-realdata-2026-07-13.md Sec.3-4): the register
+this module produces (tau_for_frame()["register"]) correctly moves with ISO
+-- lower ISO gives a lower register per the sigma_read_DN(g) model -- but
+analyze_adaptive_tau_sonynod.py compares the resulting dark-ratio against
+the FIXED C1 cutoff (dark_ratio > 0.62) borrowed from the non-adaptive
+checker. That mismatch (adaptive register, non-adaptive judgement cutoff)
+cost recall on all 4 ISO<=1600 frames in the SonyNOD test split. Not a bug
+in this module's tau math; it means a deployment of Path A must either
+re-derive the judgement cutoff alongside tau(s,g), or compare
+tau_for_frame()["register"] directly against an absolute DN threshold
+instead of going through a fixed dark-ratio percentage. Unresolved --
+next real-data run (AODRaw/PASCALRAW, once downloaded) should test a
+cutoff that scales with the adaptive register before trusting low-ISO
+recall numbers.
 """
 from __future__ import annotations
 
