@@ -47,7 +47,7 @@ Sources: checker-principles-2026-07-05.md, checker-principled-versions-2026-07-0
 | #1 | 센서 적응 임계 τ(exp,gain,blc) | **채택(Path A)** | τ=BLC+k·σ_read(g)·셀프테스트 통과. 드라이버가 AXI-lite 레지스터에 기록 → RTL 변경 0. 실데이터 검증만 PENDING |
 | #2 | 히스토그램 우도비(LRT) | **기각** | 학습형 LRT가 dark-ratio를 재발견, held-out J 0.835<C1 0.847. dark16이 정보 소진 |
 | #3 | 순차 변화탐지(CUSUM/SPRT) | **기각(Schmitt 채택)** | 측정 지터(σ≈0.002)에서 CUSUM/SPRT가 Schmitt 대비 무이득, CUSUM≡SPRT. Schmitt(δ=2%p)+옵션 K-of-N. 보드 지터 시 재검토 |
-| #4 | 평가·라벨 재정의(오라클) | **대기(최우선)** | 잔존오차가 라벨 아티팩트임이 #2·#5에서 반복 확인 → 오라클 라벨이 핵심. LOD/PASCAL real-RAW 필요 |
+| #4 | 평가·라벨 재정의(오라클) | **완료(2026-07-20)** — C1 유지, 재조정 불필요 | 잔존오차 89.6%가 라벨 아티팩트로 확증. `checker-oracle-label-gate2-2026-07-20.md` |
 | #5 | 공간 타일 미터링 | **기각** | 게이트 PASS나 nested-CV J +0.016<fold-std. ExDark miss와 COCO FT의 공간 시그니처가 반대라 상쇄 |
 | #6 | 확률 캘리브레이션 | **채택(가능)** | ECE isotonic 0.033(<0.05). 부수 성과: p(H1\|dark16=0.62)=0.516 → **C1 임계가 사후확률 중립점**임을 독립 확인 |
 | #7 | 3-모드 이산화 | **게이트 대기** | #4 오라클 조도축 결과가 착수 게이트. 지금 착수 금지 |
@@ -72,8 +72,13 @@ Sources: checker-principles-2026-07-05.md, checker-principled-versions-2026-07-0
 
 1. ~~**LOD real-RAW(Sony .ARW) + PASCAL RAW 확보** → `aodraw_adapter.py`로
    변환.~~ **완료** — SonyNOD 321장(07-13), PASCALRAW 4,259장(07-14).
-2. **#4 오라클 라벨 재정의** — dual-arm 렌더 → 검출 델타로 프레임 정답 재정의,
-   잔존오차의 라벨-아티팩트 비율 정량화. C_miss/C_FA 재추정.
+2. ~~**#4 오라클 라벨 재정의** — dual-arm 렌더 → 검출 델타로 프레임 정답
+   재정의, 잔존오차의 라벨-아티팩트 비율 정량화. C_miss/C_FA 재추정.~~
+   **완료(2026-07-20)** — `checker-oracle-label-gate2-2026-07-20.md`.
+   Shuffle_split 642장 실측: C1 잔존오차의 89.6%가 라벨 아티팩트(진짜 오류
+   10.4%), dark16 판별력은 naive-라벨 J=0.847에서 오라클-라벨 J=0.008로
+   붕괴하지만 C1 임계(0.62)의 사후확률-중립점 성질(비용 C_miss≈C_FA)은
+   오라클 기준에서도 유지(p(H1|0.62)=0.510) — **C1 재조정 불필요** 결론.
 3. ~~**#1 적응 τ 스트라텀 검증** — LOD를 ISO로 층화, 고정 vs 적응 τ
    recall/FT.~~ **완료** — recall: SonyNOD ISO층화
    (`checker-adaptive-tau-realdata-2026-07-13.md`), false-trigger: PASCALRAW
@@ -86,4 +91,6 @@ Sources: checker-principles-2026-07-05.md, checker-principled-versions-2026-07-0
    역전은 adaptive-τ 한정 이슈라 C1 배포와 분리, τ 재검토의 선행 조건으로
    이관.
 
-**차단 요인:** GPU(mAP, #2용). #1/LOD/PASCAL 데이터 확보는 완료됨.
+**차단 요인:** 없음 — 위 4개 관문 전부 완료(2026-07-20). 남은 것은 csynth/
+cosim 재실행(비트스트림 배포 전), YOLOv8s/SSDLite 교차 모델 검증뿐(둘 다
+`checker-oracle-label-gate2-2026-07-20.md` §5 참고).
