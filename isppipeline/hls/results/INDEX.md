@@ -1,7 +1,9 @@
 # results/ INDEX — 실험·시뮬레이션 산출물 카탈로그
 
-**갱신:** 2026-07-07 · 이 폴더의 모든 파일을 주제별로 분류한 탐색용 인덱스.
-정본 요약은 `ROADMAP.md`(진행 상태) / `SPEC.md`(사양) 참조. 파일은 인용 링크 보존을 위해 이동하지 않고 여기서 색인만 한다.
+**갱신:** 2026-07-20 · 이 폴더의 모든 파일을 주제별로 분류한 탐색용 인덱스.
+정본 요약은 `ROADMAP.md`(진행 상태) / `SPEC.md`(사양) 참조. 2026-07-20부터
+superseded 중간 산출물은 `archive/`로 이동한다(맨 아래 "아카이브 정책" 참고) —
+정본/최신 파일은 계속 이 폴더 바로 아래에 두고 여기서 색인한다.
 
 ## 읽는 순서 (처음 오면 이 4개부터)
 
@@ -16,7 +18,7 @@
 
 | 파일 | 날짜 | 상태 |
 |---|---|---|
-| `experiment-plan-2026-07-01.md` | 07-01 | superseded → `experiment-stages-2026-07-02.md` |
+| `archive/experiment-plan-2026-07-01.md` | 07-01 | superseded → `experiment-stages-2026-07-02.md` |
 | `experiment-stages-2026-07-02.md` | 07-02 | **정본** Stage 0~6 계획 |
 | `improvement-strategy-2026-07-03.md` | 07-03 | **정본** 개선 전략 |
 
@@ -25,8 +27,8 @@
 | 파일 | 날짜 | 내용 |
 |---|---|---|
 | `stage1-3-results-2026-07-02.md` | 07-02 | Stage 1~3 SW 실측 (checker/RM/mAP) |
-| `experiment_ver1_2026-07-02.md` | 07-02 | ver1 파이프라인 (RAW-domain-first) |
-| `experiment_ver2_2026-07-02.md` | 07-02 | ver2 checker dark-level 재보정 |
+| `archive/experiment_ver1_2026-07-02.md` | 07-02 | ver1 파이프라인 (RAW-domain-first) — 2026-07-08부터 archived/superseded (gamma 버그, `HANDOFF-checker-adaptive-tau-canonical-rerun-2026-07-13.md` 참고) |
+| `archive/experiment_ver2_2026-07-02.md` | 07-02 | ver2 checker dark-level 재보정 |
 | `lowlight-rm-map-rootcause-2026-07-02.md` | 07-02 | low-light RM mAP 미개선 원인 ablation |
 | `phase0-2-execution-2026-07-03.md` | 07-03 | 개선전략 Phase 0~2 실행 결과 |
 | `checker-improvement-theory-2026-07-03.md` | 07-03 | checker 개선 이론 (결정이론/노이즈물리/hysteresis) |
@@ -35,7 +37,7 @@
 | `checker-improvement-analysis-2026-07-04.md` | 07-04 | dark16 우월성 원인 규명 + 기존 결과 비교 |
 | `isp_analysis.md` / `isp_analysis.csv` | 06-29 | ISP variant proxy 분석 (detector 없음) |
 | `11-ssd-crosscheck-2026-06-29.md` | 06-29 | SSD 2차 detector 교차검증 |
-| `realraw-sonynod-benchmark-2026-07-06.md` | 07-06 (BLC ablation 07-07 추가) | **real-RAW** 벤치마크 (RAW-NOD Sony, .ARW 원본+실측 GT) + AWB(§6bis)/BLC(§6ter) domain-gap ablation |
+| `archive/realraw-sonynod-benchmark-2026-07-06.md` | 07-06 (BLC ablation 07-07 추가) | **real-RAW** 벤치마크 (RAW-NOD Sony, .ARW 원본+실측 GT) + AWB(§6bis)/BLC(§6ter) domain-gap ablation — §6ter는 `isp-pipeline-recalibration-2026-07-08.md`가 명시적으로 superseded 처리 |
 | `isp-pipeline-recalibration-2026-07-08.md` | 07-08 | §6ter BLC 재보정 스윕 재측정 -- 구 SW-proxy 파이프라인의 gamma 버그(2.2/2.5/4.0 vs 배포 gamma-2.0) 수정 후 canonical-matched 파이프라인(`baseline_isp_pipeline.py`/`low_light_isp_pipeline.py`/`checker.py`)으로 재실행, arm 순서 역전은 유지(단 margin 축소)·normal 단조감소 결론은 정정(BLC=1 근방 정점) |
 | `demosaic-bilinear-fix-2026-07-09.md` | 07-09 | canonical `_demosaic_rggb16`의 R/B 채널 단일탭 보간을 golden/HW와 tap 단위로 동일한 bilinear로 수정, 신규 3자 교차검증 게이트로 bit-exact 확인. mAP 재검증은 GPU 필요 -- 별도 R5 라운드로 예정 |
 | `lowlight-module-techniques-2026-07-10.md` | 07-10 | **정본** 저조도 모듈(RM_LOW_LIGHT_TONE) 제안 기술 4종(binning/gain/gamma/완화BLC) × 기대 vs 실측 이득. 주효인=완화BLC(+78%), binning=조건부(real-RAW 대기), 별도 톤=기각. RESEARCH.md §1.3 주장1 상세근거 |
@@ -56,7 +58,7 @@
 
 | 파일 | 날짜 | 내용 |
 |---|---|---|
-| `10-hw-csynth-resource-2026-06-29.md` | 06-29 | 초기 C-합성 자원 (구 스캐폴드 기준) |
+| `archive/10-hw-csynth-resource-2026-06-29.md` | 06-29 | 초기 C-합성 자원 (구 스캐폴드 기준) — `stage4-hw-synthesis-2026-07-02.md`(정본)로 대체 |
 | `stage4-hw-synthesis-2026-07-02.md` | 07-02 | **정본** Stage 4 HLS 합성 실측 |
 | `stage5-dfx-implementation-2026-07-02.md` | 07-02 | **정본** Stage 5 Vivado DFX 구현 |
 | `pr-latency-breakdown-2026-07-02.md` | 07-02 | PR latency 단계별 분해 |
@@ -77,29 +79,32 @@
 
 ## 5. mAP CSV 계보 (시간순 — 어느 숫자가 최신인지)
 
-측정 세대가 4번 바뀌었다. **최신 정본 수치는 G4 (`*_blcfix`)**, 그 이전은 계보 추적용.
+측정 세대가 4번 바뀌었다. **최신 정본 수치는 G4 (`*_blcfix`)**, 그 이전은 계보
+추적용 — 2026-07-20 정리로 G1~G3 CSV 전부 `archive/`로 이동(파일명은 동일,
+경로만 `archive/` 접두).
 
 ```text
-G1 (06-29, 구 스캐폴드):  map_dark, map_dark_full, map_real, map_real_full,
+G1 (06-29, 구 스캐폴드, → archive/):
+                          map_dark, map_dark_full, map_real, map_real_full,
                           map_exdark, map_exdark_bilbin, map_coco_bilbin,
                           map_exdark_yolov8s, map_coco_ssd, map_exdark_ssd
-G2 (07-01~02, reset 아키텍처 "newrm"):
+G2 (07-01~02, reset 아키텍처 "newrm", → archive/):
                           map_newrm_{coco,exdark}_{yolov8n,yolov8s,ssd}
-G3 (07-02, ver1/ver2 개정): map_ver1_{coco,exdark}_{yolov8n,yolov8s,ssd}
+G3 (07-02, ver1/ver2 개정, → archive/): map_ver1_{coco,exdark}_{yolov8n,yolov8s,ssd}
                           map_ver2_{coco,exdark}_yolov8n_adaptive
                           map_ablation_*, map_ablation2_* (원인분석 ablation)
-G4 (07-03, BLC 완화 최종): map_ver1_coco_yolov8n_blcfix.csv ★
+G4 (07-03, BLC 완화 최종, top level 유지): map_ver1_coco_yolov8n_blcfix.csv ★
                           map_ver1_exdark_yolov8n_blcfix.csv ★
 ```
 
-- `map_ablation{,2}_*` — `lowlight-rm-map-rootcause-2026-07-02.md` 의 근거 데이터
-- `image_metrics_{coco,exdark}.csv` — Y 통계/포화율 등 이미지 지표 (Stage 2)
+- `archive/map_ablation{,2}_*` — `lowlight-rm-map-rootcause-2026-07-02.md` 의 근거 데이터 (문서 자체는 top level 유지, 데이터만 archive/)
+- `image_metrics_{coco,exdark}.csv` — Y 통계/포화율 등 이미지 지표 (Stage 2, top level 유지 — `stage1-3-results-2026-07-02.md`가 여전히 참조)
 
 ## 6. 자원/스케줄러 CSV
 
 | 파일 | 내용 |
 |---|---|
-| `resource_csynth.csv` | variant별 C-합성 자원 (BRAM/DSP/FF/LUT/Fmax) |
+| `archive/resource_csynth.csv` | variant별 C-합성 자원 (BRAM/DSP/FF/LUT/Fmax) — 구 스캐폴드, `resource_csynth_ver1_2026-07-02.csv`(Stage 4 정본)로 대체 |
 | `resource_csynth_ver1_2026-07-02.csv` | ver1 모듈별 자원 분해 |
 | `resource_csynth_rm_standalone_2026-07-02.csv` | RM 단독 합성 자원 |
 | `resource_dfx_savings.csv` | DFX 시분할 대비 자원 절감 시나리오 |
@@ -147,3 +152,12 @@ map_<세대>_<dataset>_<model>.csv  mAP 측정 (최신 세대가 정본)
 resource_*.csv / scheduler*.csv   자원·스케줄러 측정
 새 실험 추가 시: 파일 생성 → 이 INDEX의 해당 섹션에 한 줄 추가
 ```
+
+## 아카이브 정책
+
+top level(이 INDEX가 색인하는 `results/` 바로 아래)에는 정본/최신 문서·CSV만
+남긴다. superseded/대체된 중간 산출물(구 세대 mAP CSV, gamma 버그가 있던
+파이프라인 결과, INDEX나 후속 문서가 명시적으로 "superseded"/"대체"라 표기한
+문서)은 `results/archive/`로 옮긴다 — `tools/archive/`와 동일한 규칙. **이동만
+하고 삭제하지 않는다**(`git mv`, 내용 무수정, 전체 이력은 git으로 보존).
+어떤 파일이 왜 옮겨졌는지는 `archive/README.md` 참고.
