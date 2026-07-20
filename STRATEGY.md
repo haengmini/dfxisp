@@ -1,5 +1,14 @@
 # Vitis-First DFXISP Refactor Strategy
 
+> **상태(2026-07-20): 제안됐으나 미착수.** 이 문서는 2026-07-03에 작성된
+> 계획이다 — `src/`에 `base_vitis.cpp`/`check.cpp`/`tone.cpp`/`ctrl.cpp`/
+> `shell.cpp`/`TERMS.md` 등 Task 1~18의 어떤 산출물도 아직 존재하지 않는다.
+> 2026-07-04~20 사이 실제로 진행된 작업은 이 문서와 무관한 checker/BLC
+> real-RAW 재보정 트랙(`ROADMAP.md` Stage 1·3 후속)이었다 — 이 문서가
+> 폐기된 것은 아니고, 우선순위상 뒤로 밀렸을 뿐이다. 착수 여부·시점은
+> 미결정(`ROADMAP.md` "즉시 다음" §7 참고). 아래 계획 본문은 착수 시
+> 그대로 유효하다.
+
 > **For Hermes:** Use subagent-driven-development skill to implement this plan task-by-task.
 
 > **정본 프레이밍 (2026-07-10):** 연구 목표는 RESEARCH.md §1이 정본이다 —

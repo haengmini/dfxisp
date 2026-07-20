@@ -8,7 +8,7 @@ board: dfxisp
 created: 2026-06-23
 owner: 이형민
 tags: [fpga, dfx, isp, machine-vision, zynq-ultrascale, low-light]
-updated: 2026-07-10
+updated: 2026-07-20
 ---
 
 # DFXISP
@@ -48,16 +48,19 @@ Input real-RAW Bayer (PASCAL RAW 밝음 / LOD RAW 저조도; 초기엔 pseudo-RA
 5. **Low-light tone RM은 `binning + gain + gamma + 완화 BLC`다.** 이득 귀속(기대 vs 실측)은 `results/lowlight-module-techniques-2026-07-10.md` — 주효인은 완화 BLC, binning은 real-RAW에서 조건부, 별도 톤 LUT는 기각.
 6. DFX 실증 전에는 C-Sim/Python golden으로 산술 정합을 먼저 고정한다.
 
-## Current status (2026-07-10)
+## Current status (2026-07-20)
 
-- **SW 트랙 (Stage 0~3): 절차 완료, Stage 3 재검증 진행중** — golden/baseline core, checker(+principled-v3 SOTA 후속), tone RM 산술+이득귀속, mAP 평가. **Stage 3은 "정확도 재검증 허브"**로 되먹임마다 재진입한다 — 현재 demosaic 수정 반영(R5, GPU 대기)과 **정본 데이터셋(PASCAL RAW/LOD RAW) 재평가**가 미완. 정성적 결론(저조도 모듈이 dark 조건에서 normal 상회)은 견고.
-- **HW 트랙 (Stage 4~5): 완료(한계 기록됨)** — Vitis HLS 합성 + C/RTL Co-sim, Vivado DFX 구현 + pr_verify + PR latency 분석.
-- **Stage 6 (보드 실장 + DPU end-to-end): 미착수** — 실물 ZCU104 필요. 목표 2의 효율(전력) 실증이 여기 걸림.
+- **SW 트랙 (Stage 0~3): 절차 완료, real-RAW 기준으로 동결** — golden/baseline core, checker(+principled-v3 SOTA 후속), tone RM 산술+이득귀속, mAP 평가. **Stage 3 "정확도 재검증 허브"**가 2026-07-20에 한 바퀴 완주했다 — 정본 데이터셋(LOD=SonyNOD/PASCAL=PASCALRAW real-RAW, Shuffle_split 642장) 교차검증 완료, 그 실측 근거로 **BLC 재보정(16/8→2/2) 배포**. 정성적 결론(저조도 모듈이 dark 조건에서 normal 상회)은 견고하게 재확인됨.
+- **Checker: SOTA 강화 4개 관문 전부 완료(2026-07-20)** — C0(dark50>0.80)→**C1(dark16>0.62) 정식 배포**, 오라클 라벨 재정의로 잔존오차의 89.6%가 라벨 아티팩트임을 확인해 **C1 재조정 불필요**로 결론. 상세: `isppipeline/hls/results/checker-status-2026-07-10.md` §4.
+- **HW 트랙 (Stage 4~5): 완료(한계 기록됨)** — Vitis HLS 합성 + C/RTL Co-sim, Vivado DFX 구현 + pr_verify + PR latency 분석. BLC/checker 배포로 HW 소스 상수는 이미 갱신됐으나 **csynth/cosim 재실행은 아직(open)**.
+- **Stage 6 (보드 실장 + DPU end-to-end): 미착수** — 실물 ZCU104 필요, **보드 없이 할 수 있는 절차 중 유일하게 남은 것**. 목표 2의 효율(전력) 실증이 여기 걸림.
 - 실제 진행은 선형이 아니라 **나선형**(Stage 5까지 올라갔다 SW Stage 3으로 되돌아오는 되먹임 반복) — 상세는 `ROADMAP.md`.
 
 ## Next direction
 
-다음 리팩토링 방향은 **Vitis Vision Library 기준 baseline + DFXISP 확장 모듈** 구조다 (자체 ISP 전체를 새로 만드는 대신 Vitis Base를 고정하고 Check / Dark / DFX Ctrl을 확장). 계획 전문은 `STRATEGY.md` 참조.
+**즉시(둘 다 SW/형식 확인 위주, Stage 6과 독립):** (1) csynth/cosim 재실행(BLC/checker 상수 변경 반영, 자원 영향 없음 예상), (2) YOLOv8s/SSDLite 교차 모델 검증(부차 발견 견고성 확인). 그 다음은 Stage 6(보드) 착수 준비.
+
+**보류 중인 리팩토링 방향:** `STRATEGY.md`가 제안한 **Vitis Vision Library 기준 baseline + DFXISP 확장 모듈** 구조(Vitis Base를 고정하고 Check/Dark/DFX Ctrl을 확장)는 2026-07-03에 제안됐으나 **아직 착수되지 않았다** — checker/BLC real-RAW 재보정 트랙이 우선됐다. 착수 여부·시점은 미결정.
 
 ## Active documents
 

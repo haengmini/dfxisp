@@ -66,6 +66,23 @@ gamma-2.2 부동소수점 LUT를 썼는데 배포 HW는 gamma-2.0 정수 sqrt �
 `scratch_frame_hist.npz` — 어떤 top-level 문서에서도 참조되지 않는 미인용
 바이너리 산출물(1150프레임 히스토그램 캐시로 추정, 재생성 가능).
 
+## 7. handoff/plan 문서 (2026-07-20, 캠페인 완결로 흡수)
+
+체커 SOTA 강화 캠페인이 2026-07-20에 4개 관문 전부로 종결되면서(`checker-status
+-2026-07-10.md` §4), 그 과정에서 쓰인 handoff/plan 문서 4개를 이동했다 —
+전부 "실행 완료, 결과는 X 참고"를 스스로 명시하고 있어 내용이 이미 결과
+문서로 흡수된 상태였다:
+
+- `checker-adaptive-tau-scenario-b-plan-2026-07-13.md` — 실행 계획.
+  결과는 `checker-adaptive-tau-realdata-2026-07-13.md` §6.
+- `checker-adaptive-tau-scenario-b-full321-plan-2026-07-13.md` — ver1 공정비교
+  실행 계획. 결과는 `checker-adaptive-tau-realdata-2026-07-13.md` §7.
+- `HANDOFF-lod-pascal-isp-simulation-2026-07-15.md` — 노트북(RTX 5060)
+  인수인계. 실행 결과(+버그 발견·수정)는 `lod-pascal-isp-simulation-2026-07-15.md`.
+- `HANDOFF-checker-adaptive-tau-canonical-rerun-2026-07-13.md` — 파이프라인
+  정정 + 재실행 인수인계. 최종 정본 수치는 `checker-adaptive-tau-realdata
+  -2026-07-13.md` §8/§9.
+
 ## 이동하지 않은 것 (참고)
 
 `*.log` 스크래치 파일(`scratch_rmfine*.log`, `scratch_rmds.log`,
