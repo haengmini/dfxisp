@@ -1,0 +1,64 @@
+{
+  "date": "2026-07-20",
+  "cache": "isppipeline/hls/results/adaptive_tau_histograms-2026-07-20.npz",
+  "cache_status_this_run": "reused",
+  "cache_build_count": 1,
+  "raw_reads_when_built": 4580,
+  "histograms": 4580,
+  "build_seconds": 0.0,
+  "sweeps_use": "np.cumsum lookup only",
+  "counts": {
+    "pascalraw": 4259,
+    "sonynod": 321
+  },
+  "sensor_c": {
+    "pascalraw": 0.0,
+    "sonynod": 4.0
+  },
+  "best_tau_train": "tau_floor_only",
+  "best_tau_selection": "train J among structural variants; fitted_sensor_c excluded due sensor/class confounding",
+  "global_joint_cutoff": 0.8291507231702308,
+  "bucket_joint_cutoffs": {
+    "[0,400)": 0.4936130688449009,
+    "[400,800)": 0.11780868472350466,
+    "[800,1600)": 0.5187104846362982,
+    "[1600,3200)": 0.8291507231702308,
+    "[3200,6400)": 0.8291507231702308,
+    "[6400,inf)": 0.8291507231702308
+  },
+  "global_joint_tau_scale_cutoff": [
+    0.55,
+    0.6694545134896933
+  ],
+  "bucket_joint_tau_scale_cutoffs": {
+    "[0,400)": [
+      0.5,
+      0.3550461941013901
+    ],
+    "[400,800)": [
+      0.15000000000000002,
+      0.032893684835718674
+    ],
+    "[800,1600)": [
+      0.55,
+      0.35536535280086173
+    ],
+    "[1600,3200)": [
+      0.55,
+      0.6694545134896933
+    ],
+    "[3200,6400)": [
+      0.55,
+      0.6694545134896933
+    ],
+    "[6400,inf)": [
+      0.55,
+      0.6694545134896933
+    ]
+  },
+  "crosscheck": {
+    "max_abs_c1_ratio_diff_vs_csv": 0.0,
+    "max_abs_current_ratio_diff_vs_csv": 0.0,
+    "current_threshold_mismatches": 0
+  }
+}
