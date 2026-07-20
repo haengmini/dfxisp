@@ -28,14 +28,14 @@ import numpy as np
 # ---- parameters (must match dfxisp_accel.cpp / gen_golden_vectors.py) ------
 SHIFT = 8                              # raw16 -> 8-bit domain (>>8 = /256)
 
-# BLC_OFFSET_LOWLIGHT defaults to the currently-deployed canonical value (8,
-# i.e. 128 in the HW's 12-bit domain: BLC_OFFSET12_LOWLIGHT = 8 << 4). An
-# earlier ablation (newrm_pipeline_blcfix.py, now archived) found an
-# "optimal" value of 2, but that sweep ran under the WRONG gain/gamma (1.25x /
-# gamma-4.0 instead of canonical 2.0x / gamma-2.0), so that result is NOT
-# trustworthy and must not be reused here without re-running the sweep
-# against this corrected pipeline.
-BLC_OFFSET_LOWLIGHT = 8 << SHIFT
+# BLC_OFFSET_LOWLIGHT: recalibrated to 2 (2026-07-20, approved; 32 in the
+# HW's 12-bit domain: BLC_OFFSET12_LOWLIGHT = 2 << 4). The old warning that
+# "optimal 2" came only from a wrong-gamma sweep no longer applies: the value
+# was re-measured on THIS canonical gamma-2.0 pipeline with real-sensor RAW
+# (results/isp-pipeline-recalibration-2026-07-08.md, SonyNOD 321;
+# results/lod-pascal-isp-simulation-2026-07-15.md, LOD/PASCAL/Shuffle splits)
+# and BLC 1~2 is the measured mAP peak for the low-light arm on both.
+BLC_OFFSET_LOWLIGHT = 2 << SHIFT
 
 AWB_R, AWB_G, AWB_B = 286, 256, 307     # Q8 per-channel white balance (color), same as canonical
 GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN = 2, 1  # low-light exposure gain 2.0x

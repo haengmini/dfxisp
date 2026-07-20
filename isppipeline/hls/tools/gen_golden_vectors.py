@@ -54,11 +54,12 @@ DFXISP_RM_NORMAL_TONE = 0
 DFXISP_RM_LOW_LIGHT_TONE = 1
 
 # shared baseline-core params (12-bit RAW domain)
-BLC_OFFSET12 = 16 << 4           # black level 16 (8-bit) -> 256 (12-bit), normal mode
-# Low-light-only BLC relaxation (2026-07-03, root-cause ablation -- see
-# src/dfxisp_accel.cpp header comment / results/phase0-2-execution-2026-07-03.md):
-# full BLC_OFFSET12 clips too much signal in already-low-SNR dark scenes.
-BLC_OFFSET12_LOWLIGHT = 8 << 4    # black level 8 (8-bit) -> 128 (12-bit)
+# BLC recalibration (2026-07-20, approved): both modes share black level 2 --
+# real-sensor sweeps on the canonical pipeline put the mAP peak at BLC 1~2
+# (results/isp-pipeline-recalibration-2026-07-08.md,
+# results/lod-pascal-isp-simulation-2026-07-15.md). Must match dfxisp_accel.cpp.
+BLC_OFFSET12 = 2 << 4            # black level 2 (8-bit) -> 32 (12-bit), normal mode
+BLC_OFFSET12_LOWLIGHT = 2 << 4   # black level 2 (8-bit) -> 32 (12-bit)
 RAW12_MAX = 4095
 AWB_R, AWB_G, AWB_B = 286, 256, 307
 # tone RM params

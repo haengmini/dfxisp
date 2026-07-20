@@ -55,7 +55,7 @@ import numpy as np
 
 # ---- parameters (must match dfxisp_accel.cpp / gen_golden_vectors.py) ------
 SHIFT = 8                              # raw16 -> 8-bit domain (>>8 = /256)
-BLK_RAW = 16 << SHIFT                  # black level in RAW16 domain (BLC_OFFSET12 == 16<<4 in HW's 12-bit domain)
+BLK_RAW = 2 << SHIFT                   # black level in RAW16 domain (BLC_OFFSET12 == 2<<4 in HW's 12-bit domain; recalibrated 2026-07-20)
 AWB_R, AWB_G, AWB_B = 286, 256, 307     # Q8 per-channel white balance (color)
 GAIN_NORMAL_NUM, GAIN_NORMAL_DEN = 5, 4  # normal exposure gain 1.25x
 

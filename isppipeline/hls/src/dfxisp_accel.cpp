@@ -4,7 +4,8 @@
 
 // =============================================================================
 // File   : isppipeline/hls/src/dfxisp_accel.cpp
-// Updated: 2026-07-03 (low-light BLC relaxation, see below); 2026-07-02 (adversarial-review fixes)
+// Updated: 2026-07-20 (BLC recalibration 16/8 -> 2/2, see constants below);
+//          2026-07-03 (low-light BLC relaxation); 2026-07-02 (adversarial-review fixes)
 // 2026-07-03 change: root-cause ablation (results/lowlight-rm-map-rootcause-2026-07-02.md,
 //   results/phase0-2-execution-2026-07-03.md) isolated WHICH part of the shared
 //   baseline core actually costs low-light mAP on ExDark. Splitting the earlier
@@ -73,11 +74,15 @@
 namespace {
 
 // --- shared baseline-core parameters (12-bit RAW domain) ---
-constexpr int BLC_OFFSET12 = 16 << 4;   // black level 16 (8-bit) -> 256 (12-bit), normal mode
-// Low-light-only BLC relaxation (2026-07-03, root-cause ablation): the full
-// BLC_OFFSET12 clips too much real signal in already-low-SNR dark scenes.
-// Half offset -- WB/CCM unchanged, still the same apply_blc_wb12() code path.
-constexpr int BLC_OFFSET12_LOWLIGHT = 8 << 4;   // black level 8 (8-bit) -> 128 (12-bit)
+// BLC recalibration (2026-07-20, approved): real-sensor RAW sweeps on the
+// canonical gamma-2.0 pipeline (results/isp-pipeline-recalibration-2026-07-08.md,
+// results/lod-pascal-isp-simulation-2026-07-15.md; SonyNOD 321 + PASCALRAW 321,
+// BLC in {0,1,2,4,8,16}) put the mAP peak at BLC 1~2 for every arm and every
+// split -- the previous 16 (normal) / 8 (low-light) cost up to 5.7x mAP on
+// night data. Both modes now share black level 2; per-mode relaxation
+// (2026-07-03) is superseded since 2 sits at the measured peak of both arms.
+constexpr int BLC_OFFSET12 = 2 << 4;   // black level 2 (8-bit) -> 32 (12-bit), normal mode
+constexpr int BLC_OFFSET12_LOWLIGHT = 2 << 4;   // black level 2 (8-bit) -> 32 (12-bit)
 constexpr int RAW12_MAX = 4095;
 constexpr int AWB_R = 286;              // Q8 per-channel white balance (color)
 constexpr int AWB_G = 256;
