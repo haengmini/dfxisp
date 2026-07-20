@@ -148,28 +148,29 @@ int main() {
     assert(sm_ab == DFXISP_MODE_NORMAL);
     assert(sr_ab == DFXISP_RM_NORMAL_TONE);
 
-    // Checker recalibration (2026-07-02): DARK_RATIO_PCT 40 -> 80. 75% dark must
-    // stay NORMAL, 86% dark must trigger LOW_LIGHT (regression for the new gate).
+    // Checker C1 deployment (2026-07-20): DARK_RATIO_PCT 80 -> 62. On 64 pixels
+    // the gate needs dark*100 > 62*64, i.e. dark >= 40: 39/64 (60.9%) must stay
+    // NORMAL, 40/64 (62.5%) must trigger LOW_LIGHT (boundary regression).
     {
-        uint16_t r75[W * H];
+        uint16_t r61[W * H];
         int i = 0;
-        for (; i < (W * H * 75) / 100; ++i) r75[i] = 200;   // 48/64 = 75% dark
-        for (; i < W * H; ++i) r75[i] = 3000;
-        uint32_t out75[W * H] = {};
-        int ow75 = 0, oh75 = 0, sm75 = 0, sr75 = 0;
-        dfxisp_accel(r75, out75, W, H, DFXISP_MODE_AUTO, 512, &ow75, &oh75, &sm75, &sr75);
-        assert(sm75 == DFXISP_MODE_NORMAL);   // 75% <= 80% -> NORMAL
-        assert(sr75 == DFXISP_RM_NORMAL_TONE);
+        for (; i < 39; ++i) r61[i] = 200;   // 39/64 = 60.9% dark
+        for (; i < W * H; ++i) r61[i] = 3000;
+        uint32_t out61[W * H] = {};
+        int ow61 = 0, oh61 = 0, sm61 = 0, sr61 = 0;
+        dfxisp_accel(r61, out61, W, H, DFXISP_MODE_AUTO, 512, &ow61, &oh61, &sm61, &sr61);
+        assert(sm61 == DFXISP_MODE_NORMAL);   // 60.9% <= 62% -> NORMAL
+        assert(sr61 == DFXISP_RM_NORMAL_TONE);
 
-        uint16_t r86[W * H];
+        uint16_t r62[W * H];
         i = 0;
-        for (; i < (W * H * 86) / 100; ++i) r86[i] = 200;    // 55/64 ~= 86% dark
-        for (; i < W * H; ++i) r86[i] = 3000;
-        uint32_t out86[W * H] = {};
-        int ow86 = 0, oh86 = 0, sm86 = 0, sr86 = 0;
-        dfxisp_accel(r86, out86, W, H, DFXISP_MODE_AUTO, 512, &ow86, &oh86, &sm86, &sr86);
-        assert(sm86 == DFXISP_MODE_LOW_LIGHT);  // 86% > 80% -> LOW_LIGHT
-        assert(sr86 == DFXISP_RM_LOW_LIGHT_TONE);
+        for (; i < 40; ++i) r62[i] = 200;    // 40/64 = 62.5% dark
+        for (; i < W * H; ++i) r62[i] = 3000;
+        uint32_t out62[W * H] = {};
+        int ow62 = 0, oh62 = 0, sm62 = 0, sr62 = 0;
+        dfxisp_accel(r62, out62, W, H, DFXISP_MODE_AUTO, 512, &ow62, &oh62, &sm62, &sr62);
+        assert(sm62 == DFXISP_MODE_LOW_LIGHT);  // 62.5% > 62% -> LOW_LIGHT
+        assert(sr62 == DFXISP_RM_LOW_LIGHT_TONE);
     }
 
     // RAW-domain boundary regression (adversarial review, 2026-07-04): the dark16

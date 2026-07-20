@@ -110,11 +110,19 @@ def frame_stats(a: np.ndarray) -> dict[str, float]:
 
 
 def golden_y50_ratio(a: np.ndarray) -> float:
-    """Exact golden-model checker view: demosaic -> Y -> ratio(Y<50)."""
+    """C0-era golden-model checker view: demosaic -> Y -> ratio(Y<50).
+
+    Kept self-contained on purpose (2026-07-20): checker.py now mirrors the
+    deployed C1 rule (raw-domain dark16 > 0.62) and no longer exposes the old
+    luminance-based dark_ratio(rgb) this historical statistic was defined on.
+    Only the demosaic helper is still shared."""
     sys.path.insert(0, str(REPO / "isppipeline" / "hls" / "tools"))
     import checker as C  # noqa: PLC0415
     h, w = a.shape
-    return C.dark_ratio(C.demosaic_rggb(a, w, h))
+    rgb = C.demosaic_rggb(a, w, h)
+    r = rgb[..., 0].astype(np.int32); g = rgb[..., 1].astype(np.int32); b = rgb[..., 2].astype(np.int32)
+    y = (r + 2 * g + b) // 4
+    return float(np.mean(y < 50))
 
 
 def compute(csv_path: Path) -> None:

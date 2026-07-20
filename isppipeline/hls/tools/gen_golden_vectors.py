@@ -68,7 +68,7 @@ GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN = 2, 1    # low-light 2.0x
 # Recalibrated 2026-07-02 from measured dataset separation (Youden's J sweep):
 # old 40% gave ExDark recall=1.00 but COCO false-trigger=0.80; 80% gives
 # recall=0.90, false-trigger=0.11 (near-optimal J=0.79).
-DARK_RATIO_PCT = 80                            # AUTO -> LOW_LIGHT when dark pixels > 80%
+DARK_RATIO_PCT = 62                            # AUTO -> LOW_LIGHT when dark pixels > 62% (C1, deployed 2026-07-20)
 
 
 def clamp(v: int, lo: int, hi: int) -> int:
@@ -240,12 +240,13 @@ def golden_cases():
          grid_raw(8, 8, [120, 180, 240, 300, 360, 300, 240, 180], texture=16)),
         ("odd_dimension_lowlight_7x5", 7, 5, DFXISP_MODE_LOW_LIGHT, 512,
          grid_raw(7, 5, [200, 320, 480, 660, 900, 620, 380, 260], texture=22)),
-        # DARK_RATIO_PCT boundary regression (recalibrated 40% -> 80%, 2026-07-02):
-        # 75% dark must stay NORMAL, 86% dark must trigger LOW_LIGHT.
-        ("auto_boundary_ratio_75_8x8", 8, 8, DFXISP_MODE_AUTO, 512,
-         boundary_ratio_raw(8, 8, dark_count=48)),   # 48/64 = 75% -> NOT > 80% -> NORMAL
-        ("auto_boundary_ratio_86_8x8", 8, 8, DFXISP_MODE_AUTO, 512,
-         boundary_ratio_raw(8, 8, dark_count=55)),   # 55/64 = 85.9% -> > 80% -> LOW_LIGHT
+        # DARK_RATIO_PCT boundary regression (C1 deployment 80% -> 62%, 2026-07-20):
+        # 60.9% dark must stay NORMAL, 62.5% dark must trigger LOW_LIGHT
+        # (dark*100 > 62*64 needs dark >= 40).
+        ("auto_boundary_ratio_61_8x8", 8, 8, DFXISP_MODE_AUTO, 512,
+         boundary_ratio_raw(8, 8, dark_count=39)),   # 39/64 = 60.9% -> NOT > 62% -> NORMAL
+        ("auto_boundary_ratio_62p5_8x8", 8, 8, DFXISP_MODE_AUTO, 512,
+         boundary_ratio_raw(8, 8, dark_count=40)),   # 40/64 = 62.5% -> > 62% -> LOW_LIGHT
         # RAW-domain boundary regression (adversarial review, 2026-07-04): the dark16
         # threshold is 16<<4 = 256 in the HLS raw12 domain (NOT the dataset-domain
         # 16<<8 = 4096, which would mark every 12-bit pixel dark). Pixels at exactly

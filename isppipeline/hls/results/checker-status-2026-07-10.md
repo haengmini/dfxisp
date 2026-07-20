@@ -20,18 +20,22 @@ Sources: checker-principles-2026-07-05.md, checker-principled-versions-2026-07-0
 
 ## 1. 운영점 — 배포 vs 권장
 
+> **[2026-07-20 갱신]** C1이 정식 배포됐다(관문 4 실행,
+> `checker-c1-deploy-2026-07-20.md`). 아래 표의 "배포(현행 HLS)"는 이제
+> **C1**이고 C0는 구 배포값이다.
+
 | | 규칙 | recall | FT | J | HW |
 |---|---|---|---|---|---|
-| **배포(현행 HLS)** | C0: dark50 ratio > 0.80 | 0.918 | 0.125 | 0.793 | 1 비교기 + 1 카운터 |
-| **권장(검증됨, 미배포)** | C1: dark16 ratio > 0.62 + Schmitt δ=2%p | 0.936 | 0.089 | 0.847 | **동일 RTL** (레지스터값·PCT만 변경) |
+| **구 배포(~07-20)** | C0: dark50 ratio > 0.80 | 0.918 | 0.125 | 0.793 | 1 비교기 + 1 카운터 |
+| **배포(현행 HLS, 2026-07-20~)** | C1: dark16 ratio > 0.62 + Schmitt δ=2%p(드라이버측) | 0.936 | 0.089 | 0.847 | **동일 RTL** (레지스터값·PCT만 변경) |
 
 - **C1이 C0를 전 지표에서 지배**하고 HW 변경이 0이다(`dark_pixel_threshold`는
   AXI-lite 런타임 레지스터 — 값만 다르게 쓰면 되고, `DARK_RATIO_PCT`만
   80→62 컴파일 상수 변경).
-- **배포는 보류 중**: 근거가 pseudo-RAW(COCO/ExDark) + 단일센서(SonyNOD)라,
-  dark16의 **절대 임계값**은 실센서(LOD)에서 재보정이 필요하다. 상대 결론
-  ("낮은 dark 임계가 우월")은 견고해 유지 전망. LOD real-RAW 재평가 후
-  C1(또는 재보정된 τ)을 정식 배포한다(§4).
+- ~~**배포는 보류 중**~~ **[해소, 2026-07-20]**: 보류 사유였던 실센서 재확인이
+  관문 1·3 완료(SonyNOD recall + PASCALRAW false-trigger 실측, C0 92.9% →
+  C1 41.8%)로 충족되어 C1을 정식 배포했다. adaptive-τ가 아닌 C1을 택한
+  이유는 `checker-c1-deploy-2026-07-20.md` §1 참고.
 
 ## 2. 강화안 채택/기각 확정 (SOTA 검토 7항목)
 
@@ -55,11 +59,14 @@ Sources: checker-principles-2026-07-05.md, checker-principled-versions-2026-07-0
 
 ## 3. 지금 코드에 반영된 것 / 안 된 것
 
-- **반영됨:** 완화 BLC(저조도 모듈, 배포 완료), Schmitt 히스테리시스 설계
-  (스케줄러), demosaic bilinear 정합 수정(SW eval, 2026-07-09).
-- **미반영(의도적):** C1 운영점(dark16>0.62) — LOD 재보정 대기. 적응 τ Path A —
-  실센서 EXIF 대기. 이들은 **런타임 레지스터/드라이버 사안이라 HW 재합성
-  불필요**, LOD 결과 확정 즉시 반영 가능.
+- **반영됨:** 완화 BLC(저조도 모듈, 배포 완료 — 이후 2026-07-20에 BLC 자체가
+  16/8→2/2로 재보정됨, `blc-recalibration-deploy-2026-07-20.md`), Schmitt
+  히스테리시스 설계(스케줄러), demosaic bilinear 정합 수정(SW eval,
+  2026-07-09), **C1 운영점(dark16>0.62) — 2026-07-20 배포 완료**
+  (`checker-c1-deploy-2026-07-20.md`).
+- **미반영(의도적):** 적응 τ Path A — ISO[800,1600) 역전 규명 대기(§4 관문 3
+  잔여). 런타임 레지스터/드라이버 사안이라 HW 재합성 불필요, 규명 즉시 반영
+  가능.
 
 ## 4. 다음 관문 (순서)
 
@@ -73,8 +80,10 @@ Sources: checker-principles-2026-07-05.md, checker-principled-versions-2026-07-0
    ISO층화(`pascalraw-adapter-2026-07-13.md` §7, 2026-07-15). adaptive가
    C1 대비 양쪽 다 우위/동등이나 ISO[800,1600) n=28(PASCALRAW)에서 역전 —
    미결.
-4. **C1(또는 재보정 τ) 정식 배포** — `DARK_RATIO_PCT` + 드라이버 레지스터값
-   갱신, golden 재생성 + `make verify` bit-exact 재확인. §3 완료로 착수 가능,
-   단 ISO[800,1600) 역전 원인 규명 후 권장.
+4. ~~**C1(또는 재보정 τ) 정식 배포** — `DARK_RATIO_PCT` + 드라이버 레지스터값
+   갱신, golden 재생성 + `make verify` bit-exact 재확인.~~ **완료
+   (2026-07-20, C1 선택)** — `checker-c1-deploy-2026-07-20.md`. ISO[800,1600)
+   역전은 adaptive-τ 한정 이슈라 C1 배포와 분리, τ 재검토의 선행 조건으로
+   이관.
 
 **차단 요인:** GPU(mAP, #2용). #1/LOD/PASCAL 데이터 확보는 완료됨.

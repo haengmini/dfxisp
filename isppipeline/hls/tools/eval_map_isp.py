@@ -60,7 +60,8 @@ def load_adaptive_verdicts(manifest: Path) -> dict[str, bool]:
     #1-strengthening-plan-adopted Path A scheme -- see
     checker-status-2026-07-10.md SS2 #1) and carried in the split manifest's
     `adaptive_verdict_lowlight` column. This is NOT the same as
-    checker.py's selected_mode() (the deployed C0 rule, dark50>0.80) --
+    checker.py's selected_mode() (the deployed rule -- C1 dark16>0.62 since
+    2026-07-20, C0 dark50>0.80 before that) --
     conflating the two was a 2026-07-15 handoff bug (see
     results/HANDOFF-lod-pascal-isp-simulation-2026-07-15.md SS4 vs the actual
     eval_map_isp.py code at that time)."""
@@ -130,8 +131,9 @@ def main() -> int:
                      help="build_matched_splits.py manifest CSV (lod/pascal/shuffle_split_*.csv) "
                           "supplying precomputed adaptive-tau verdicts per stem for the "
                           "'adaptive' arm. Required for LOD/PASCAL/Shuffle split runs -- without "
-                          "it, 'adaptive' silently falls back to the deployed C0 checker "
-                          "(checker.selected_mode), which is NOT the adopted adaptive-tau scheme.")
+                          "it, 'adaptive' silently falls back to the deployed checker "
+                          "(checker.selected_mode; C1 dark16>0.62 since 2026-07-20), which is "
+                          "NOT the adopted adaptive-tau scheme.")
     args = ap.parse_args()
 
     arms = [a.strip() for a in args.arms.split(",") if a.strip()]
