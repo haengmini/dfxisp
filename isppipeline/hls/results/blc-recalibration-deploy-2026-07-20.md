@@ -67,9 +67,11 @@ BLC=8 lowlight 0.1030 vs BLC=2 0.2140을 별도 실측했으므로, 기존 배�
 
 ## 4. 남은 것 / 리스크
 
-- **csynth/cosim 미재실행** — constexpr 상수 하나가 바뀐 것이라 자원/타이밍
-  영향은 사실상 없겠지만, 실 배포(비트스트림) 전에는 HW 트랙 관례대로
-  csynth 재실행으로 확인할 것 (`build/vitis_hls` 산출물은 아직 구 상수 기준).
+- ~~**csynth/cosim 미재실행**~~ **완료(2026-07-20, 같은 날 늦게)** — csynth 자원/타이밍
+  완전 동일(BRAM 9/DSP 24/FF 5,536/LUT 8,264/3.650ns, 상수 변경 전과 일치), cosim RTL
+  시뮬레이션 10/10 트랜잭션 완주. 자동 post-check만 기존에 이미 알려진 WSL2+Vitis HLS
+  2024.1+XSIM SIGSEGV 버그로 미완주(회귀 아님) — 상세:
+  `results/blc-c1-csynth-cosim-rerun-2026-07-20.md`.
 - **화질 vs detector-선호 미분리** — `lod-pascal-isp-simulation-2026-07-15.md`
   §8.4가 지적한 대로, BLC=2의 압도적 mAP 우위가 실제 화질 개선인지 detector가
   잔류 노이즈/암전류를 선호하는 것인지는 육안/PSNR로 별도 확인된 바 없다.
