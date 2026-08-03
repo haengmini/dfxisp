@@ -82,6 +82,41 @@ HLS 추정 자원이 동일하더라도 downstream Vivado mapping까지 동일�
 실측으로 반증됐다. 기능 RTL 자체는 최신 상수를 포함하며, 감소는 오류가 아니라 합성
 최적화 결과로 보인다.
 
+### 후속 조사 (2026-08-03): 근본 원인 확정
+
+위 "판단"을 실측으로 확정했다. `deliverables/verilog/{rm_normal,rm_low_light}_tone_top/`
+(08-01, 신규)와 `deliverables/archive/2026-07-03-stale-blc16-checker80/verilog/...`
+(07-03, 구)의 HLS export Verilog를 파일 단위로 전부 대조했다. HLS가 소스 라인 번호를
+그대로 신호명(`_lnNNN`)과 모듈/파일명(`VITIS_LOOP_NNN`)에 새겨 넣으므로 그 번호만
+정규화(`sed -E 's/ln[0-9]+/lnN/g; s/LOOP_[0-9]+/LOOP_N/g'`)한 뒤 대조했다.
+
+**결과: 두 RM 모두 파이프라인 본체 파일 단 하나씩만 실질적으로 다르고, 그 안의 차이는
+정확히 BLC 상수에서 유도된 리터럴 값 교체뿐이다.** 나머지 모든 파일(top, control_s_axi,
+gmem AXI, mul_*, sparsemux_*, row buffer RAM 등)은 라인 번호를 제외하고 완전히
+바이트 단위로 동일했다.
+
+- `rm_normal_tone_top`(BLC_OFFSET12, 256→32): 파이프라인 본체에서
+  `13'd7936`→`13'd8160`(= `8192 - 256`→`8192 - 32`, `-blc_offset`의 13비트 2의 보수
+  인코딩), `13'd3839`→`13'd4063`(= `RAW12_MAX(4095) - blc_offset`) 세 채널(R/G/B) 반복.
+- `rm_low_light_tone_top`(BLC_OFFSET12_LOWLIGHT, 128→32): 같은 패턴으로
+  `17'd130944`→`17'd131040`(= `131072 - 128`→`131072 - 32`) 세 채널 반복. (`13'd4574`/
+  `13'd4910` 등 다른 클램프 상수는 이번 변경과 무관 — 값 자체는 불변, 파일 내 statement
+  순서만 달라 diff에 잠깐 걸렸을 뿐.)
+- 그 외 폭·연산자·인스턴스 구조는 단 하나도 다르지 않다 — 새 게이트, 새 레지스터,
+  새 뮤텍스/멀티플렉서가 추가되거나 사라진 적이 없다.
+
+즉 08-01과 07-03의 RM RTL은 **정확히 6개의 상수 리터럴**(채널당 2개 × 2 RM, 실질적으로는
+`-blc_offset`과 `RAW12_MAX-blc_offset` 두 파생값)만 다르고 그 외에는 100% 동일하다.
+CLB LUT 34~37% 감소는 이 상수 리터럴이 바뀐 것에 대해 Vivado의 technology mapping/LUT
+패킹이 다른 결과를 낸 것 — 표준적인 상수 기반 합성 최적화 거동이며, 회로 구조나 기능
+로직이 빠지거나 잘못 합성된 것이 아니다(같은 폭의 가산기/비교기에 다른 상수가 들어가면
+LUT truth table 내용과 그에 따른 패킹 효율이 달라지는 것은 Vivado 합성기에서 통상적).
+이번 조사로 §3의 "판단"은 재현 가능한 실측 근거를 갖춘 확정 결론으로 종결한다 — 추가
+조치 불필요, 08-01 report의 routed 수치는 그대로 신뢰 가능.
+
+재현: `deliverables/verilog/`와 `deliverables/archive/2026-07-03-stale-blc16-checker80/verilog/`
+의 대응 파일을 위 sed 정규화 후 `diff`하면 위 상수 치환만 남는다(다른 모든 파일은 diff 0).
+
 ## 4. 트러블슈팅
 
 1. 첫 HLS 시도에서 절대경로 `add_files`도 프로젝트 기준 상대경로로 다시 기록되어

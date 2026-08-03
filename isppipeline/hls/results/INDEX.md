@@ -71,6 +71,8 @@ superseded 중간 산출물은 `archive/`로 이동한다(맨 아래 "아카이�
 | `design-limitations-2026-07-03.md` | 07-03 | 설계 한계 종합 보고서 |
 | `dfx-vivado-considerations-2026-07-03.md` | 07-03 | FPGA DFX 적용 고려사항 (Vivado 실측 기반) |
 | `dfxisp-accel-connectivity-2026-07-03.md` | 07-03 | top-level 연결 테이블 (434 signal wires) |
+| `blc-c1-csynth-cosim-rerun-2026-07-20.md` | 07-20 | BLC 2/2 + checker C1 반영 csynth/cosim 재실행 — 자원/타이밍 완전 동일 확인 |
+| `dfx-reimplementation-2026-08-01.md` | 08-01 | 최신 BLC/C1 상수 반영 Vivado DFX fabric-only 재구현 — BRAM/DSP/timing/pr_verify/bitstream 전부 07-03 기준과 일치, CLB LUT만 34~37% 감소했으나 08-03 후속 조사로 근본 원인 확정(BLC 상수 유도 리터럴 6개뿐 차이 — 상수 기반 Vivado technology mapping의 정상 거동) |
 
 ## 4. 다이어그램 / RTL 부속물
 

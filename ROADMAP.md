@@ -21,14 +21,20 @@ Goal   : "ROADMAP.md를 stage1~stage6까지 모두 작성해줘" 요청에 대�
 **정본 문서:** 아키텍처 `RESEARCH.md`, 시스템 스펙 `SPEC.md`, Stage 계획
 `isppipeline/hls/results/experiment-stages-2026-07-02.md`. 이 문서는 그
 계획 대비 진행 상태 추적용.
-**마지막 갱신:** 2026-07-20 — 2026-07-13~07-20 real-RAW 캠페인 전체 반영:
-LOD(SonyNOD)/PASCAL(PASCALRAW)/Shuffle_split 642장 정본 real-RAW 교차검증
-완료(R6), BLC 재보정 16/8→2/2 배포(R7), checker C0→C1 정식 배포(관문 4),
-checker 오라클 라벨 재정의 완료로 checker SOTA 강화 4개 관문 전부 종결
-(관문 2). **체커·BLC 트랙은 이제 보드 없이 할 수 있는 절차가 전부 완료** —
-남은 것은 csynth/cosim 재실행(형식 확인)과 교차 모델 검증(신뢰도 보강)뿐,
-Stage 6(보드)만 유일하게 남은 실질 단계. 상세는 Stage 1·3 절의 신규 라운드와
-"즉시 다음"의 갱신된 우선순위 참고.
+**마지막 갱신:** 2026-08-03 — 2026-07-20 이후 진행 반영: BLC 2/2 + checker C1
+반영 csynth/cosim 재실행 완료(자원/타이밍 완전 동일, `blc-c1-csynth-cosim-
+rerun-2026-07-20.md`), 그 상수를 반영한 Vivado DFX fabric-only 재구현 완료
+(`dfx-reimplementation-2026-08-01.md` — BRAM/DSP/timing/pr_verify/partition
+pin/bitstream 크기 전부 07-03 기준과 일치, CLB LUT만 34~37% 감소했으나
+08-03 후속 조사로 근본 원인 확정: RM RTL 차이는 BLC 상수에서 유도된 리터럴
+6개뿐, 나머지 전부 바이트 단위로 동일 — Vivado 상수 기반 technology
+mapping의 정상 거동으로 결론, 추가 조치 불필요), 교차 모델 검증
+1단계(YOLOv8s) 노트북 RTX 5060에 인수인계·진행 중
+(`HANDOFF-cross-model-yolov8s-2026-08-03.md`). **체커·BLC·DFX 트랙은 이제
+보드 없이 할 수 있는 절차가 전부 완료** — 남은 것은 교차 모델 검증 결과
+회수·정리(YOLOv8s 진행 중, SSDLite는 별도 인수인계 예정)뿐, Stage 6(보드)만
+유일하게 남은 실질 단계. 상세는 Stage 1·3 절의 신규 라운드와 "즉시 다음"의
+갱신된 우선순위 참고.
 
 ## 상태 범례
 
@@ -572,16 +578,23 @@ Stage 3의 mAP 수치는 이제 R6/R7(real-RAW, canonical 파이프라인, 배�
 기준)이 최신 정본이다 — R1~R4(및 R3b)는 여전히 정성적 근거로 유효하나
 정밀 수치 인용 시 R6/R7로 대체됐음을 명시할 것.
 
-**즉시 다음 (최우선, 둘 다 무엇도 막고 있지 않음 — 병행 가능):**
+**완료(2026-07-20~08-03):** csynth/cosim 재실행(구 항목 1 — 자원/타이밍 완전
+동일 확인, `blc-c1-csynth-cosim-rerun-2026-07-20.md`), 그 상수 반영 Vivado DFX
+fabric-only 재구현(`dfx-reimplementation-2026-08-01.md`) 및 그 안에서 나온
+CLB LUT 34~37% 감소의 근본 원인 확정(RM RTL 차이는 BLC 상수 유도 리터럴
+6개뿐 — 상수 기반 technology mapping의 정상 거동, 08-03 후속 조사로 종결).
+교차 모델 검증(구 항목 2)은 1단계 착수 — YOLOv8s 재실행을 노트북 RTX 5060에
+인수인계(`HANDOFF-cross-model-yolov8s-2026-08-03.md`), 실행 중.
 
-1. **csynth/cosim 재실행** — BLC 재보정(R7) + checker C1(관문 4)이 바꾼 상수
-   (`BLC_OFFSET12`, `BLC_OFFSET12_LOWLIGHT`, `DARK_RATIO_PCT`)를 반영해
-   Vitis HLS C-synthesis + co-sim을 1회 재실행. 상수만 변경이라 자원 영향
-   없음 예상(구조 불변) — 비트스트림 배포 전 형식 확인 성격의 빠른 작업.
-2. **교차 모델 검증(YOLOv8s/SSDLite)** — 순수 SW, R6/관문2의 부차 발견(BLC=1/2
-   우위, lowlight≥normal-on-PASCAL, "일부 arm이 검출기 무관하게 유리"
-   가설)이 YOLOv8n 특이적 아티팩트가 아님을 확인. 이미 배포된 결정(BLC 2/2,
-   C1)을 막고 있지는 않으나, 논문의 일반화 주장을 위해 필요.
+**즉시 다음 (최우선, 서로 막고 있지 않음 — 병행 가능):**
+
+1. **교차 모델 검증 YOLOv8s 결과 회수·정리** — 노트북 완료 후
+   `cross-model-yolov8s-2026-08-03.md` 작성, §8.3(lowlight≥normal-on-PASCAL
+   9/9) 재현 여부 우선 판정.
+2. **교차 모델 검증 2단계(SSDLite-MobileNetV3)** — `eval_map_isp.py`가 아직
+   torchvision SSDLite 경로를 지원하지 않음(`eval_map_ssd.py`에만 있음) —
+   글루 코드 작성 후 별도 인수인계. YOLOv8s와 마찬가지로 이미 배포된 결정
+   (BLC 2/2, C1)을 막고 있지 않음, 논문 일반화 주장 보강용.
 
 **Stage 6 착수 준비 (순서 유지, 실질적으로 유일하게 남은 큰 단계):**
 
