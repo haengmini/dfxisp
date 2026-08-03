@@ -73,6 +73,7 @@ superseded 중간 산출물은 `archive/`로 이동한다(맨 아래 "아카이�
 | `dfxisp-accel-connectivity-2026-07-03.md` | 07-03 | top-level 연결 테이블 (434 signal wires) |
 | `blc-c1-csynth-cosim-rerun-2026-07-20.md` | 07-20 | BLC 2/2 + checker C1 반영 csynth/cosim 재실행 — 자원/타이밍 완전 동일 확인 |
 | `dfx-reimplementation-2026-08-01.md` | 08-01 | 최신 BLC/C1 상수 반영 Vivado DFX fabric-only 재구현 — BRAM/DSP/timing/pr_verify/bitstream 전부 07-03 기준과 일치, CLB LUT만 34~37% 감소했으나 08-03 후속 조사로 근본 원인 확정(BLC 상수 유도 리터럴 6개뿐 차이 — 상수 기반 Vivado technology mapping의 정상 거동) |
+| `HW-INTERFACE-PIN-MODULE-PROTOCOL-2026-08-03.md` | 08-03 | 핀 매핑(csynth 실측 RTL 포트)·모듈/RM 관계·통신 프로토콜(AXI4/AXI4-Lite/DFX 재구성) 브리핑 문서, ASCII 다이어그램 포함 — 다른 세션에 HW 인터페이스 인수인계용 |
 
 ## 4. 다이어그램 / RTL 부속물
 
