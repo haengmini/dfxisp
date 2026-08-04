@@ -222,6 +222,17 @@ Input or RM output
 
 각 operation에는 정확히 하나의 owner만 있어야 한다. Gain/gamma는 normal과 low-light 동작 모두에 필요할 수 있지만, baseline core와 RM 양쪽에 중복 배치하면 안 된다. 따라서 gain/gamma는 영구적인 baseline-core stage가 아니라 **mode-specific tone RM**이 된다.
 
+> **이 규칙의 적용 범위 — 소스 레벨이다(2026-08-04 명시).** 아래 owner 표는 *어떤
+> 연산이 논리적으로 어디에 속하는가*를 정의하며, C-sim 아키텍처 게이트("gain/gamma
+> 중복 없음")가 검증하는 것도 이 소스 레벨 계약이다. **물리적 파티션 경계는 이와
+> 다르다** — 합성된 RP(`rm_normal_tone_top`/`rm_low_light_tone_top`)는 모드별
+> 전체 파이프라인을 감싸므로 `apply_blc_wb12()`(BLC/AWB/CCM)는 실리콘에서 RM마다
+> 중복 구현된다(`results/design-limitations-2026-07-03.md` §4.3, `SPEC.md` §7·§11.12).
+> 즉 "baseline core 공유"는 **한 개의 함수 정의를 두 경로가 호출한다**는 뜻이고,
+> 이것이 두 모드의 BLC/WB 산술이 bit-exact 일치함을 보장하는 실질적 안전장치다.
+> 하드웨어 자원을 공유한다는 뜻은 아니다. RP를 tone만으로 축소할지는 미결정
+> (`STRATEGY.md` 열린 질문 #4).
+
 | Operation | Owner | Normal mode | Low-light mode |
 |---|---|---|---|
 | normal gain / normal gamma | `RM_NORMAL_TONE` or identity bypass | active | inactive |
@@ -233,6 +244,15 @@ Input or RM output
 | demosaic / RGB bypass | baseline ISP core | active | active after selected RM |
 | CCM | baseline ISP core | active | active after selected RM |
 | RGB32 packing | baseline ISP core/output wrapper | active | active |
+
+> **baseline core의 색보정 상수를 모드별로 나눌 필요는 없다(2026-08-04 확정).**
+> 위 표에서 `baseline ISP core`가 소유한 두 색보정 상수를 각각 모드별로 분리해봤고,
+> 둘 다 "분리 불필요"로 수렴했다: **BLC**는 모드별로 나눠 배포했다가(07-03) real-RAW
+> 재보정에서 양쪽 모두 2가 정점으로 확인됐고(07-20), **AWB**는 real-RAW에서 분리
+> 재튜닝을 실측했으나 mAP가 반응하지 않아 기각됐다(08-03,
+> `results/lowlight-wb-mode-split-2026-08-03.md`). 즉 두 모드의 실질적 차이는
+> **색보정 상수가 아니라 구조**(binning 유무, 노출 게인 배율)에 있다 — 위 표의
+> owner 구분이 실측으로 뒷받침된 셈이다.
 
 Reset 이후 기본 구조는 다음이다.
 

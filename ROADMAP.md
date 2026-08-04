@@ -21,7 +21,17 @@ Goal   : "ROADMAP.md를 stage1~stage6까지 모두 작성해줘" 요청에 대�
 **정본 문서:** 아키텍처 `RESEARCH.md`, 시스템 스펙 `SPEC.md`, Stage 계획
 `isppipeline/hls/results/experiment-stages-2026-07-02.md`. 이 문서는 그
 계획 대비 진행 상태 추적용.
-**마지막 갱신:** 2026-08-03 — 2026-07-20 이후 진행 반영: BLC 2/2 + checker C1
+**마지막 갱신:** 2026-08-04 — **저조도 WB 모드별 분리 기각**(Stage 3 R8): 배포
+공유 WB가 저조도에 잘못 맞춰져 있다는 진단은 실측 확인됐으나(SonyNOD 요구 B
+게인의 0.50배, 두 조건 간 B 1.84배 차) mAP가 반응하지 않아 분리하지 않는다
+(전 범위 spread 0.0020 = BLC 레버의 1/44, 채널 분리 실험이 효과 반증;
+`lowlight-wb-mode-split-2026-08-03.md`). 이로써 **모드별 분리 후보였던 색보정
+상수 두 개가 모두 "분리 불필요"로 수렴**(BLC 07-20, WB 08-03) — 두 모드의 실질적
+차이는 색보정 상수가 아니라 구조(binning, 노출 게인)에 있다. 같은 날 **RP 경계
+서술의 문서-구현 불일치 해소**(`SPEC.md` §7·§11.12): 합성된 RP는 tone만이 아니라
+모드별 전체 파이프라인을 감싸며 BLC/WB는 소스 레벨에서만 공유된다는 사실
+(`design-limitations-2026-07-03.md` §4.3에 있었으나 정본 스펙 미반영이던 것)을
+명시. 아래는 2026-07-20 이후 진행 반영: BLC 2/2 + checker C1
 반영 csynth/cosim 재실행 완료(자원/타이밍 완전 동일, `blc-c1-csynth-cosim-
 rerun-2026-07-20.md`), 그 상수를 반영한 Vivado DFX fabric-only 재구현 완료
 (`dfx-reimplementation-2026-08-01.md` — BRAM/DSP/timing/pr_verify/partition
@@ -103,7 +113,7 @@ Stage 4 재합성이 원칙적으로 다시 필요할 수 있다(단 지금까�
 Stage 0  SW golden + shared baseline core 확정        ✅   2026-07-01 ~ 07-03(누적 보강)
 Stage 1  checker + N-frame 히스테리시스                ✅+  2026-07-01 ~ 07-20(+principled-v3 C1 권장 → real-RAW 재확인 → C1 배포 → 오라클 라벨 재정의, 4관문 전부 완료)
 Stage 2  tone RM 산술 확정 + 이미지 지표               ✅+  2026-07-01 ~ 07-05(+RM 이득원인 정정: binning 제거)
-Stage 3  정확도(mAP) 평가 + 알고리즘 개정              ✅+  2026-07-01 ~ 07-20(R1~R4 완료, R5는 R6에 흡수, R6 정본 real-RAW 교차검증 완료, R7 BLC 2/2 배포)
+Stage 3  정확도(mAP) 평가 + 알고리즘 개정              ✅+  2026-07-01 ~ 08-03(R1~R4 완료, R5는 R6에 흡수, R6 정본 real-RAW 교차검증 완료, R7 BLC 2/2 배포, R8 WB 모드별 분리 기각)
 Stage 4  HLS 합성 + C/RTL Co-sim                       ✅⚠️ 2026-07-02 ~ 07-03(3라운드; cosim 자동비교 미완주; BLC/C1 반영 재합성은 open item)
 Stage 5  DFX(PR) 구현 + pr_verify + latency/PR 컨트롤러 ✅⚠️🔄 2026-07-02 ~ 07-03(4라운드; PR컨트롤러 1차만)
 Stage 6  보드 실장 + DPU end-to-end                    ⬜   미착수(실물 보드 필요 — 유일하게 시작조차 못한 단계)
@@ -144,6 +154,7 @@ Stage 6  보드 실장 + DPU end-to-end                    ⬜   미착수(실�
 | SW | Stage 3 · R5 | demosaic R/B bilinear 수정(PR #9) 반영 mAP 재실행 | **트리거③(감사)** | ✅ 완료 — R6(canonical 파이프라인이 이미 이 수정을 포함) 실행분으로 흡수, 별도 라운드 불필요 | 07-16 |
 | SW | Stage 3 · R6 | **정본 real-RAW 교차검증(§10.2 요구 이행)** — LOD_split(SonyNOD 321)/PASCAL_split(PASCALRAW ISO층화 321)/Shuffle_split(642) × normal/lowlight/adaptive × BLC{16,1,2} 27조합 mAP(YOLOv8n). 핵심: BLC 재보정이 checker/adaptive보다 훨씬 큰 mAP 레버(최대 5.7배); LOD에서 adaptive≈lowlight; Shuffle에서 "adaptive가 둘 다 이김" 기준은 BLC=2에서만 근소 충족 | **트리거②(실데이터, PASCALRAW 도착)** | ✅ 완료(노트북 RTX 5060, 6h50m) | 07-15~16 |
 | SW | Stage 3 · R7 | R6 실측 근거로 **BLC 재보정 배포**: normal 16→2, low-light 8→2(단일값, 모드별 완화 폐기) — HW golden 재생성, `make verify`/`rm-verify` bit-exact 통과 | R6에서 전파 | ✅ 완료 | 07-20 |
+| SW | Stage 3 · R8 | **저조도 WB 모드별 분리 검토 → 기각.** 07-03 분리 ablation이 pseudo-RAW(이미 카메라 AWB됨)·BLC=16 클리핑이라는 두 결함 위에서 측정됐다는 문제 제기로 실 RAW 재검증(SonyNOD 321, BLC=2, 후보 6종). **진단은 확인**(배포 WB는 PASCAL 요구값의 0.92배지만 SonyNOD 요구값의 0.50배, 두 조건 간 B 1.84배 차) **그러나 mAP 무반응**(전 범위 spread 0.0020 = BLC 레버의 1/44; 채널 분리에서 R만 −0.05%/B만 −0.19%/둘 다 +0.61% = 초가산 = jitter). **HW 상수 불변, 재합성 불필요.** 부수 성과: `design-limitations` §1.4의 포화율 공백 해소(최대 2.13%) | **트리거③(아키텍처 검토)** — normal/low-light 독립 모듈화 제안의 하위 질문 | ✅ 완료(기각) | 08-03 |
 | HW | Stage 4 · R1 | 최초 실합성(streaming line buffer 리팩터, gamma Newton→ROM LUT), unified+RM독립 top 2종 Fmax 273.97MHz | 계획 | ✅⚠️ 완료(cosim 자동비교 미완주) | 07-02 |
 | HW | Stage 4 · R2 | adversarial 수정(binning 스칼라평균 버그, 메타데이터 포인터) 재합성 → LUT −26.3%/−41.3% | **트리거①(HW감사)** | ✅ 완료 | 07-02 |
 | HW | Stage 4 · R3 | BLC 완화 반영 재합성 → 3개 top 자원 완전 불변(순수 파라미터 변경) | R3(SW)에서 전파 | ✅ 완료 | 07-03 |
@@ -586,6 +597,14 @@ CLB LUT 34~37% 감소의 근본 원인 확정(RM RTL 차이는 BLC 상수 유도
 교차 모델 검증(구 항목 2)은 1단계 착수 — YOLOv8s 재실행을 노트북 RTX 5060에
 인수인계(`HANDOFF-cross-model-yolov8s-2026-08-03.md`), 실행 중.
 
+**완료(2026-08-03~04):** 저조도 **WB 모드별 분리 검토·기각**(위 "마지막 갱신" 참조)
+— 07-03 분리 ablation이 pseudo-RAW(이미 카메라 AWB됨)와 BLC=16 클리핑이라는 두
+결함 위에서 측정됐다는 문제 제기로 실 RAW·BLC=2·n=321에서 재검증했으나 결론이
+그대로였다(가설 기각). WB는 3회 검증 수렴으로 **재실험 불필요**. 도구
+(`--wb-lowlight`)는 남겨둠. 같은 기간 **HW 인터페이스 브리핑 문서** 작성
+(`HW-INTERFACE-PIN-MODULE-PROTOCOL-2026-08-03.md` — 핀 매핑/모듈 관계/프로토콜)과
+**RP 경계 서술 정정**(`SPEC.md` §7·§11.12) 완료.
+
 **즉시 다음 (최우선, 서로 막고 있지 않음 — 병행 가능):**
 
 1. **교차 모델 검증 YOLOv8s 결과 회수·정리** — 노트북 완료 후
@@ -609,7 +628,16 @@ CLB LUT 34~37% 감소의 근본 원인 확정(RM RTL 차이는 BLC 상수 유도
 7. **(선택, 우선순위 미정) STRATEGY.md Vitis-first 리팩터** — 2026-07-03에
    제안됐으나 착수되지 않았다(`src/`에 `base_vitis.cpp` 등 Task 1~18 산출물
    없음) — checker/BLC real-RAW 재보정 트랙이 대신 우선됐다. Stage 6 착수
-   전에 할지, 논문 마감(2026-10) 압박을 고려해 보류할지 결정 필요.
+   전에 할지, 논문 마감(2026-10) 압박을 고려해 보류할지 결정 필요. **이 항목은
+   `SPEC.md` §11.12(RP 경계)와 연동된다** — Vitis-first가 선호하는 "RP=Tone만"과
+   현재 구현인 "RP=모드별 전체 파이프라인"은 양립 불가라, 어느 논문 서사를
+   택할지가 곧 이 리팩터의 착수 여부다(`STRATEGY.md` 열린 질문 #4).
+8. **(선택, 신규 2026-08-04) BLC=0 미검증** — 정본 캠페인(07-15)은
+   `--blc-offsets 16,1,2`만 돌렸고 **0은 한 번도 테스트되지 않았다**. WB 조사
+   중 실측된 바로는 BLC=2에서도 저조도 픽셀의 **52~73%가 0으로 클리핑**되므로
+   (`lowlight-wb-mode-split-2026-08-03.md` §2), BLC=0이 근-흑색 픽셀(8-bit 1~2 →
+   gamma 2.0 후 15~22)을 살려 이득을 줄 가능성이 열려 있다. 비용은 WB 스윕과
+   동일(SonyNOD 321 × 후보 1~2개, GPU 약 15분). 도구는 이미 있음(`--blc-offsets 0`).
 
 ## 주의 (지어내지 않기)
 

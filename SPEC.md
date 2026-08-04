@@ -2,13 +2,18 @@
 type: spec
 title: "DFXISP 시스템 사양서 (입력 데이터셋 → 출력)"
 project: DFXISP
-version: 1.1
+version: 1.2
 created: 2026-07-02
-updated: 2026-07-20 — BLC/checker 파라미터를 07-13~07-20 real-RAW 캠페인
+updated: 2026-08-04 — (a) WB 모드별 분리 기각(§4, §11.11): 배포 공유 WB가 저조도에
+  잘못 맞춰져 있다는 진단은 실측 확인됐으나 mAP 무반응이라 분리하지 않는다
+  (`results/lowlight-wb-mode-split-2026-08-03.md`). (b) RP 경계 서술을 실제 구현에
+  맞게 정정(§7, §11.12): 합성된 RP는 "tone만"이 아니라 모드별 전체 파이프라인을
+  감싼다. 이전 갱신(2026-07-20): BLC/checker 파라미터를 07-13~07-20 real-RAW 캠페인
   배포값으로 갱신(§3.1, §4). 정본 근거: `results/blc-recalibration-deploy-2026-07-20.md`,
   `results/checker-c1-deploy-2026-07-20.md`, `results/checker-oracle-label-gate2-2026-07-20.md`.
 target: Zynq UltraScale+ ZCU104 / XCZU7EV (xczu7ev-ffvc1156-2-e)
-status: active — reset 아키텍처(shared baseline core + 상호배타 tone RM slot)
+status: active — 소스 레벨 shared baseline core + 상호배타 tone RM slot;
+  물리 RP 경계는 모드별 전체 파이프라인 단위(§7·§11.12)
 refs: "README.md · RESEARCH.md · isppipeline/hls · results/experiment-report-2026-07-02.md"
 ---
 
@@ -214,7 +219,7 @@ tone RM(core 뒤)에 둔다(RESEARCH §4.2). de-dup 불변식 유지(gain/gamma�
 | checker | DARK_RATIO_PCT | **62**(C1, 2026-07-20 배포, 관문 4·2 완료) — dark16 raw 도메인 직접비교, 구 80(C0, dark50, demosaic 후 Y<50 근사)는 폐기 | AUTO→LOW_LIGHT 임계, `dark_pixel_threshold` 레지스터(HW raw12 규약값 256=16<<4)와 짝 |
 | baseline core | BLC_OFFSET12 | **32(=2<<4)**, normal (2026-07-20 재보정, 구 256=16<<4) | 12-bit black-level |
 | baseline core | BLC_OFFSET12_LOWLIGHT | **32(=2<<4)**, low-light (2026-07-20 재보정, 구 128=8<<4) — normal과 동일값(모드별 완화 불필요, 2가 양쪽 실측 정점) | 12-bit black-level |
-| baseline core | AWB_R / G / B | 286 / 256 / 307 | Q8(/256) white balance |
+| baseline core | AWB_R / G / B | 286 / 256 / 307 | Q8(/256) white balance — **모드 공통**(2026-08-03 모드별 분리 검토 후 기각, §11.11) |
 | baseline core | CCM | identity(256) | placeholder |
 | normal tone | GAIN_NORMAL | 5/4 (1.25×) | 노출 게인 (ver1 추가) |
 | low-light tone | GAIN_LOWLIGHT | 2/1 (2.0×) | 노출 게인 |
@@ -229,6 +234,13 @@ tone RM(core 뒤)에 둔다(RESEARCH §4.2). de-dup 불변식 유지(gain/gamma�
 > HW 상수 직접 미러)로 대체됐다(2026-07-08, `results/isp-pipeline-recalibration-2026-07-08.md`).
 > BLC/checker 값은 2026-07-20 실 RAW(SonyNOD+PASCALRAW) 캠페인으로 재보정·배포됐다 — 위 표가
 > 현재 정본.
+>
+> **모드별 색보정 상수는 둘 다 "분리 불필요"로 수렴했다(2026-08-04 확정).** BLC는
+> 모드별로 나눠 배포했다가(07-03, 256→128) real-RAW 재보정에서 **양쪽 모두 2가 정점**으로
+> 확인됐고(07-20), WB는 real-RAW에서 분리 재튜닝을 실측했으나 **mAP 무반응**으로 기각됐다
+> (08-03, §11.11). 즉 normal/low-light의 실질적 차이는 **색보정 상수가 아니라 구조**
+> (2×2 binning 유무, 노출 게인 1.25× vs 2.0×)에 있다 — baseline core의 색보정
+> 파라미터는 조도 조건에 대해 견고하다.
 
 ---
 
@@ -292,8 +304,9 @@ AXI: `raw_bayer`/`rgb_out` = `m_axi`(gmem0/gmem1); 나머지 스칼라 인자·�
 | 타깃 디바이스 | ZCU104, `xczu7ev-ffvc1156-2-e` |
 | 합성 도구 | Vitis HLS 2024.1 |
 | 클럭 타깃 | 5.0 ns (200 MHz) |
-| static region | AXI/control wrapper, checker/mode FSM, baseline ISP core, DFX/PR controller, output/metadata packer |
-| RM slot(재구성) | RM_NORMAL_TONE / RM_LOW_LIGHT_TONE (상호배타, 동일 downstream 계약 또는 shape 메타 노출) |
+| static region | AXI/control wrapper, checker/mode FSM, DFX/PR controller, output/metadata packer (**baseline ISP core는 static이 아니다** — 아래 RP 경계 항목 참조) |
+| RM slot(재구성) | RM_NORMAL_TONE / RM_LOW_LIGHT_TONE (상호배타, 동일 port 시그니처 = DFX 계약) |
+| **RP 경계 (실측, 중요)** | 합성된 RP(`rm_normal_tone_top`/`rm_low_light_tone_top`)는 **tone만이 아니라 demosaic→BLC→WB→tone 모드별 전체 파이프라인**을 감싼다. `apply_blc_wb12()`는 **소스 레벨에서만 공유**되고 실리콘에는 RM마다 중복 구현된다. partition pin 3개. 근거: `results/design-limitations-2026-07-03.md` §4.3, `deliverables/verilog/rm_*_tone_top/`, `results/dfx-reimplementation-2026-08-01.md`. 더 세밀한 분할(baseline core를 진짜 static 모듈로 분리)은 **시도되지 않았다** |
 | 전환 정책 | 장면 단위(프레임 단위 아님), 히스테리시스 checker |
 | 재구성 지연 | drain+ICAP+warm-up 이론적 분해: **peak 1.72 ms / 전형 6.87 ms**(스펙 유도, 보드 미실측). 상세 `results/pr-latency-breakdown-2026-07-02.md`. 드라이버/FSM 오버헤드는 TODO(보드) |
 
@@ -450,6 +463,31 @@ Arm2 인스턴스 분해(unified top 내부, DFX 순이득 추정의 참조점, 
     **partial bitstream이 2.11배 커짐**(686,664B→1,447,424B) — pblock 용량 2배
     확장의 직접적 대가(재구성 지연도 2.11배: peak 1.72ms→3.62ms). 상세:
     `results/blc-fix-resynthesis-2026-07-03.md`.
+11. **저조도 WB 모드별 분리 — 검토 후 기각(2026-08-03, 실 RAW 최종 판정):**
+    "gain/gamma를 tone RM으로 빼면 모듈 간 상호작용이 달라지니 normal/low-light를
+    독립 모듈로 나누자"는 제안의 하위 질문으로 저조도 WB 재튜닝을 실측했다.
+    **진단은 사실로 확인**됐다 — 배포된 공유 WB(286/256/307)는 PASCAL(밝음)이
+    요구하는 B 게인의 0.92배로 거의 정확한 반면 SonyNOD(저조도)가 요구하는 값의
+    **0.50배**이고, 두 조건의 요구 게인은 **B에서 1.84배** 차이난다(gray-world 실측,
+    n=321×2). **그러나 검출은 반응하지 않았다** — WB 완전 제거부터 2배 과보정까지
+    전 범위의 mAP spread가 **0.0020으로 BLC 레버(0.0876)의 1/44**이고, 채널 분리
+    실험이 효과를 반증했다(R만 −0.05% / B만 −0.19% / 둘 다 +0.61% = 물리적 메커니즘
+    없는 초가산 패턴 = mAP jitter). 채널별 전역 게인은 대각 선형변환이라 에지·형태를
+    움직이지 않고, WB가 BLC 클리핑 **이후**라 이미 0이 된 저조도 픽셀 52~73%에는
+    작용하지 못한다. **결정: 분리하지 않음**(HW 상수 불변, 재합성·golden 재생성
+    불필요). WB는 이로써 3회(07-02 combined / 07-03 분리 / 08-03 실 RAW) 검증되어
+    모두 "레버가 아니다"로 수렴 — 재실험 불필요. 부수 성과로 §1.4가 미측정으로
+    남겨둔 **포화율 공백을 메웠다**(최대 2.13%, 우려됐던 11.25% 과포화는 현
+    파라미터에서 재현 안 됨). 상세: `results/lowlight-wb-mode-split-2026-08-03.md`.
+12. **RP 경계 서술 정정(2026-08-04, 문서-구현 불일치 해소):** 이 문서의 이전
+    개념도는 "baseline core는 static, tone RM만 reconfigurable"로 읽혔으나,
+    **실제 합성된 RP는 모드별 전체 파이프라인(demosaic→BLC→WB→tone)을 통째로
+    감싼다** — `apply_blc_wb12()`는 소스 레벨 공유일 뿐 실리콘에는 RM마다 중복
+    구현된다. 이 사실 자체는 `design-limitations-2026-07-03.md` §4.3에 기록돼
+    있었으나 정본 스펙에 반영되지 않아 §7과 어긋나 있었다 — 2026-08-04에 §7의
+    "RP 경계" 행으로 명시. **기능적 버그가 아니라 서술 부채였고**, `pr_verify`는
+    계속 PASS다. 남은 선택지(baseline core를 진짜 static으로 분리 = RP를 tone만으로
+    축소)는 `STRATEGY.md` 열린 질문 #4로 여전히 미결정.
 
 ---
 
