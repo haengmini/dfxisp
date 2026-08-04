@@ -5,8 +5,20 @@
 #           normal and low-light SW proxy pipelines.
 # =============================================================================
 """checker: dark-ratio scene checker matching checker_select_mode in
-src/dfxisp_accel.cpp (DARK_RATIO_PCT=80, i.e. ratio threshold 0.80; dark-pixel
-luminance threshold DARK_Y=50).
+src/dfxisp_accel.cpp. Deployed rule is C1 since 2026-07-20 (gate 4,
+checker-status-2026-07-10.md §1/§4): dark16 ratio > 0.62, i.e. fraction of
+RAW pixels strictly below 16 (8-bit terms; 16<<8 in this pseudo-RAW16 domain,
+16<<4 = 256 in the HW's raw12 `dark_pixel_threshold` register) strictly
+greater than DARK_RATIO_PCT=62.
+
+C1 fidelity note (2026-07-20): `selected_mode` now thresholds RAW Bayer
+pixels directly, exactly like the HLS `checker_select_mode` (raw <
+dark_pixel_threshold) and exactly like the domain the C1 operating point was
+calibrated in (checker_stat_sweep dark16 / analyze_adaptive_tau_*
+`dark_ratio_at`). The previous C0-era implementation approximated the HW by
+computing luminance < DARK_Y on a demosaiced view -- that approximation is
+gone; the demosaic helpers below remain only for the cross-check scripts and
+the "none" reference view.
 
 This is the decoupled checker used by an eval harness to decide which of
 baseline_isp_pipeline.run_normal / low_light_isp_pipeline.run_lowlight to
@@ -36,8 +48,9 @@ import numpy as np
 
 # ---- parameters (must match dfxisp_accel.cpp checker_select_mode) ---------
 SHIFT = 8               # raw16 -> 8-bit domain (>>8 = /256)
-DARK_Y = 50             # checker dark-pixel luminance threshold (DARK_Y-equivalent)
-DARK_RATIO_PCT = 80     # AUTO -> LOW_LIGHT when dark pixels > 80% (DARK_RATIO_PCT in dfxisp_accel.cpp)
+DARK_T8 = 16            # C1 dark-pixel threshold, 8-bit terms (HW raw12 register = 16<<4 = 256)
+DARK_RAW = DARK_T8 << SHIFT   # same threshold in this pseudo-RAW16 domain
+DARK_RATIO_PCT = 62     # AUTO -> LOW_LIGHT when dark pixels > 62% (DARK_RATIO_PCT in dfxisp_accel.cpp)
 DARK_RATIO = DARK_RATIO_PCT / 100.0
 
 
@@ -87,15 +100,14 @@ def demosaic_rggb(bayer16, w, h):
     return np.clip(_demosaic_rggb16(bayer16, w, h) >> SHIFT, 0, 255).astype(np.uint8)
 
 
-def luminance(rgb):
-    r = rgb[..., 0].astype(np.int32); g = rgb[..., 1].astype(np.int32); b = rgb[..., 2].astype(np.int32)
-    return (r + 2 * g + b) // 4
-
-
-def dark_ratio(rgb):
-    return float(np.mean(luminance(rgb) < DARK_Y))
+def dark_ratio(bayer16):
+    """Fraction of RAW Bayer pixels strictly below DARK_RAW -- same per-pixel
+    compare as the HLS checker (raw < dark_pixel_threshold) and the dark16
+    statistic the C1 threshold was calibrated on."""
+    return float(np.mean(np.asarray(bayer16) < DARK_RAW))
 
 
 def selected_mode(bayer16, w, h):
-    """Return "lowlight" or "normal" per the canonical dark-ratio checker."""
-    return "lowlight" if dark_ratio(demosaic_rggb(bayer16, w, h)) > DARK_RATIO else "normal"
+    """Return "lowlight" or "normal" per the deployed C1 dark-ratio checker."""
+    del w, h  # kept for signature compatibility; the RAW compare needs no geometry
+    return "lowlight" if dark_ratio(bayer16) > DARK_RATIO else "normal"

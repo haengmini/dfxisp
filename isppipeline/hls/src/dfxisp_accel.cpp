@@ -4,7 +4,9 @@
 
 // =============================================================================
 // File   : isppipeline/hls/src/dfxisp_accel.cpp
-// Updated: 2026-07-03 (low-light BLC relaxation, see below); 2026-07-02 (adversarial-review fixes)
+// Updated: 2026-07-20 (BLC recalibration 16/8 -> 2/2 + checker C1 deployment
+//          DARK_RATIO_PCT 80 -> 62, see constants below);
+//          2026-07-03 (low-light BLC relaxation); 2026-07-02 (adversarial-review fixes)
 // 2026-07-03 change: root-cause ablation (results/lowlight-rm-map-rootcause-2026-07-02.md,
 //   results/phase0-2-execution-2026-07-03.md) isolated WHICH part of the shared
 //   baseline core actually costs low-light mAP on ExDark. Splitting the earlier
@@ -73,11 +75,15 @@
 namespace {
 
 // --- shared baseline-core parameters (12-bit RAW domain) ---
-constexpr int BLC_OFFSET12 = 16 << 4;   // black level 16 (8-bit) -> 256 (12-bit), normal mode
-// Low-light-only BLC relaxation (2026-07-03, root-cause ablation): the full
-// BLC_OFFSET12 clips too much real signal in already-low-SNR dark scenes.
-// Half offset -- WB/CCM unchanged, still the same apply_blc_wb12() code path.
-constexpr int BLC_OFFSET12_LOWLIGHT = 8 << 4;   // black level 8 (8-bit) -> 128 (12-bit)
+// BLC recalibration (2026-07-20, approved): real-sensor RAW sweeps on the
+// canonical gamma-2.0 pipeline (results/isp-pipeline-recalibration-2026-07-08.md,
+// results/lod-pascal-isp-simulation-2026-07-15.md; SonyNOD 321 + PASCALRAW 321,
+// BLC in {0,1,2,4,8,16}) put the mAP peak at BLC 1~2 for every arm and every
+// split -- the previous 16 (normal) / 8 (low-light) cost up to 5.7x mAP on
+// night data. Both modes now share black level 2; per-mode relaxation
+// (2026-07-03) is superseded since 2 sits at the measured peak of both arms.
+constexpr int BLC_OFFSET12 = 2 << 4;   // black level 2 (8-bit) -> 32 (12-bit), normal mode
+constexpr int BLC_OFFSET12_LOWLIGHT = 2 << 4;   // black level 2 (8-bit) -> 32 (12-bit)
 constexpr int RAW12_MAX = 4095;
 constexpr int AWB_R = 286;              // Q8 per-channel white balance (color)
 constexpr int AWB_G = 256;
@@ -87,11 +93,20 @@ constexpr int GAIN_NORMAL_NUM = 5, GAIN_NORMAL_DEN = 4;      // normal 1.25x
 constexpr int GAIN_LOWLIGHT_NUM = 2, GAIN_LOWLIGHT_DEN = 1;  // low-light 2.0x
 // gamma 2.0 realized exactly as integer sqrt: 255*(v/255)^(1/2) = floor(sqrt(255*v))
 // --- checker ---
-// Recalibrated 2026-07-02 from measured dataset separation (Youden's J sweep,
-// data/{coco_val,exdark_val}): old 40% gave ExDark recall=1.00 but COCO
-// false-trigger=0.80 (checker almost never says NORMAL). 80% gives recall=0.90,
-// false-trigger=0.11 (near-optimal J=0.79, close to the J-max at 83%).
-constexpr int DARK_RATIO_PCT = 80;      // AUTO -> LOW_LIGHT when dark pixels > 80%
+// C1 operating point deployed 2026-07-20 (gate 4, checker-status-2026-07-10.md
+// §1/§4): dark16 ratio > 0.62 replaces the 2026-07-02 C0 rule (dark50 > 0.80).
+// C1 dominates C0 on every metric (recall 0.936 vs 0.918, false-trigger 0.089
+// vs 0.125, Youden J 0.847 vs 0.793) with ZERO RTL change: the dark-pixel
+// threshold is the runtime `dark_pixel_threshold` AXI-lite register -- the
+// driver must now write 256 (= 16<<4 in this raw12 domain; dataset pseudo-RAW16
+// equivalent is 16<<8 = 4096) instead of the old dark50 value -- and only this
+// ratio constant changes at compile time. Gate-3 real-sensor validation:
+// SonyNOD recall + PASCALRAW false-trigger (C0 92.9% -> C1 41.8%), see
+// checker-adaptive-tau-realdata-2026-07-13.md / pascalraw-adapter-2026-07-13.md
+// §7. The Schmitt hysteresis band (delta = 2%p) of the C1 spec is driver-side
+// policy state (one mode FF, see tools/scheduler_sim.py); the single-frame
+// rule here stays a pure threshold compare.
+constexpr int DARK_RATIO_PCT = 62;      // AUTO -> LOW_LIGHT when dark pixels > 62%
 
 static inline int clamp_i(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
 static inline uint8_t clamp_u8(int v) { return static_cast<uint8_t>(clamp_i(v, 0, 255)); }

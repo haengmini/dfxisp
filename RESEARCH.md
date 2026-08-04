@@ -1,9 +1,18 @@
 # RESEARCH.md — DFXISP 연구 정본
 
-최종 수정: 2026-07-10 (아키텍처 reset v2 — RM 경계를 tone에서 전체 ISP 파이프라인으로 확장)  
+최종 수정: 2026-07-10 (아키텍처 reset v2 — RM 경계를 tone에서 전체 ISP 파이프라인으로 확장) · 파라미터/checker 각주 2026-07-20 갱신  
 소유자: 이형민  
 대상 보드: Zynq UltraScale+ ZCU104 / XCZU7EV  
 핵심 논지: **static shell(비-ISP 제어/라우팅) + 상호 배타적인 mode-specific 전체 ISP pipeline RM**
+
+> **현재 상태 한 줄 요약(2026-07-20):** 아래 §0~14의 아키텍처·증명전략은
+> 그대로 유효하다(변경 없음). §10.2가 요구한 **PASCAL RAW/LOD RAW 실측
+> 교차검증은 완료**됐다(2026-07-15/16, Shuffle_split 642장) — BLC/checker
+> 파라미터가 그 실측을 근거로 재보정·배포됐고(BLC 2/2, checker C1
+> dark16>0.62), checker의 마지막 관문(오라클 라벨 재정의)도 닫혔다. 최신
+> 상태·수치는 `ROADMAP.md`(진행 추적)와 `SPEC.md`(파라미터 정본)를 따를 것 —
+> 이 문서는 아키텍처·연구목표·증명전략의 정본이며 세부 파라미터 값은 여기서
+> 동결하지 않는다.
 
 ---
 
@@ -443,10 +452,11 @@ dark_ratio = count(Y < dark_pixel_threshold) / frame_pixels
 후보 transition threshold:
 
 ```text
-NORMAL -> LOW_LIGHT: dark_ratio > 0.80   # recalibrated 2026-07-02 (was 0.40; see SPEC.md §3.1)
-LOW_LIGHT -> NORMAL: dark_ratio < 0.20   # exit/hysteresis stays scheduler-layer (§5.2);
-                                         # dfxisp_accel's single-frame AUTO checker only
-                                         # implements the enter-side ratio, no exit/hysteresis.
+NORMAL -> LOW_LIGHT: dark16 ratio > 0.62   # deployed 2026-07-20 (C1, was C0 dark50>0.80
+                                            # from 2026-07-02; see SPEC.md §3.1/§4)
+LOW_LIGHT -> NORMAL: dark_ratio < 0.20     # exit/hysteresis stays scheduler-layer (§5.2);
+                                            # dfxisp_accel's single-frame AUTO checker only
+                                            # implements the enter-side ratio, no exit/hysteresis.
 ```
 
 ### 5.2 Hysteresis requirement
@@ -716,6 +726,19 @@ PASCAL RAW / LOD RAW 쌍으로 재수립**한다.
 - JPEG/PNG dataset은 이미 ISP 처리된 데이터라 RAW-style ISP를 다시 적용하면
   double-processing artifact가 생긴다 — pseudo-RAW/real-RAW를 써야 하는 이유.
 - arm 비교는 `normal`/`lowlight`/`adaptive` 세 가지로 한정한다(§1.2, `none` 제외).
+
+**완료(2026-07-15/16):** 위 정본 평가가 실행됐다 — LOD_split(SonyNOD 321,
+전량)·PASCAL_split(PASCALRAW ISO-stratified 321)·Shuffle_split(둘의 합,
+642) × normal/lowlight/adaptive arm × BLC{16,1,2} 스윕, 27개 조합 전수
+(YOLOv8n, mAP@[.5:.95]/@50). 결과: (1) **BLC 재보정(16→1~2)이 checker/adaptive
+선택보다 훨씬 큰 mAP 레버**(최대 5.7배, LOD) — §1.1의 목표 1·2 논증과는
+별개로 발견된 가장 큰 단일 효과, 배포 반영됨(BLC 2/2, 2026-07-20). (2)
+LOD(야간)에서 adaptive≈lowlight(예상대로, §1.3 알고리즘 주장 지지). (3)
+Shuffle(혼합)에서 "adaptive가 normal·lowlight 둘 다 이겨야 pass"라는
+목표 2 검증 기준은 BLC=2에서만, 근소한 차이(+0.0002)로 충족 — "확실한 승리"로
+과장하지 않음. 상세: `results/lod-pascal-isp-simulation-2026-07-15.md`.
+Checker의 오라클 라벨 관문(#4)도 이 real-RAW 데이터 위에서 닫혔다 —
+`results/checker-oracle-label-gate2-2026-07-20.md`.
 
 ---
 

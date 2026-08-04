@@ -8,14 +8,12 @@ board: dfxisp
 created: 2026-06-23
 owner: 이형민
 tags: [fpga, dfx, isp, machine-vision, zynq-ultrascale, low-light]
-updated: 2026-07-10
+updated: 2026-07-20
 ---
 
 # DFXISP
 
-DFXISP는 Zynq UltraScale+ ZCU104에서 **static shell(checker + DFX 컨트롤러 + AXI + packer, ISP 연산 없음)**을 얇게 유지하고, 조도 조건에 따라 **전체 ISP pipeline 단위의 Reconfigurable Module(RM)** 을 통째로 교체하는 Dynamic Function eXchange 기반 AI-ISP 연구 프로젝트다. 평상시에는 stock Vitis Vision 기준 `RM_NORMAL`, 어두운 환경에서는 저조도 특화 `RM_LOW_LIGHT`를 (체커가 판단해) 트리거한다.
-
-> **아키텍처 reset (2026-07-10, v2):** 이전 버전(v1)은 "공유 baseline ISP core + 작은 tone RM(gain/gamma만 swap)" 구조였다. v2는 RM 경계를 ISP 데이터패스 전체(BLC/AWB/demosaic/CCM/gain/gamma)로 넓혀 static 공유 스테이지를 없앤다 — 스왑 단위가 커야 DFX의 자원/전력 이득(목표 2)이 register-only 대비 실질적으로 방어된다. 상세: `RESEARCH.md` §0. 현재 코드(`isppipeline/hls/`)는 아직 v1이며, 마이그레이션은 다음 단계다.
+DFXISP는 Zynq UltraScale+ ZCU104에서 **shared baseline ISP core**를 공통 경로로 유지하고, 조도 조건에 따라 **mode-specific tone Reconfigurable Module(RM)** 을 선택하는 Dynamic Function eXchange 기반 AI-ISP 연구 프로젝트다. 평상시에는 `RM_NORMAL_TONE`, 어두운 환경에서는 `RM_LOW_LIGHT_TONE`을 (체커가 판단해) 트리거한다.
 
 ## 연구 목표 (정본: RESEARCH.md §1)
 
@@ -26,50 +24,51 @@ DFXISP는 Zynq UltraScale+ ZCU104에서 **static shell(checker + DFX 컨트롤�
 
 **증명 순서: SW(golden/mAP)로 필요성·전환을 먼저 확립 → HW(HLS→DFX→보드)로 이식**, HW/보드의 고유 기여는 효율이다. CV 성능 비교 arm은 **`normal`/`lowlight`/`adaptive`** 세 가지이며, 색보정을 거치지 않는 `none`(무처리)은 배포 가능한 ISP 출력이 아니므로 **비교에서 제외**한다.
 
-## Active architecture (v2, 2026-07-10 reset)
+## Active architecture
 
 ```text
 Input real-RAW Bayer (PASCAL RAW 밝음 / LOD RAW 저조도; 초기엔 pseudo-RAW proxy)
-  -> Scene checker                (static)
-  -> DFX / PR controller          (static, selects RM)
-  -> Mutually exclusive 전체 ISP pipeline RM
-       RM_NORMAL:     stock Vitis Vision 기준 ISP pipeline
-                       (BLC -> demosaic -> AWB/CCM -> gain -> gamma)
-       RM_LOW_LIGHT:  저조도 특화 ISP pipeline
-                       (2x2 binning-demosaic -> 완화 BLC -> AWB/CCM -> gain -> gamma)
-  -> output / metadata packer     (static)
+  -> Scene checker
+       - 평상시: normal tone RM 또는 identity bypass
+       - 어두운 환경: low-light tone RM trigger
+  -> Mutually exclusive tone RM slot
+       NORMAL: gain -> gamma, or identity
+       LOW_LIGHT: 2x2 binning -> gain -> gamma
+  -> Baseline ISP core
+       BLC -> AWB/color calibration -> demosaic or bypass -> CCM -> RGB32 pack
   -> RGB32 / DPU-facing output
 ```
 
 핵심 원칙:
 
-1. **Static shell은 ISP 연산을 전혀 포함하지 않는다.** Checker, DFX 컨트롤러, AXI wrapper, output/metadata packer만 static이다.
-2. **BLC/AWB/demosaic/CCM/gain/gamma 전부를 각 RM이 통째로 소유한다.** v1의 "baseline core 공유 + tone RM만 분리" 구조와 de-dup 규칙은 폐기됐다(RESEARCH.md §0/§3).
-3. **`RM_NORMAL`과 `RM_LOW_LIGHT`는 mutually exclusive한 전체 ISP pipeline이다.**
-4. **Checker가 어두운 장면을 감지했을 때만 `RM_LOW_LIGHT`를 트리거한다.**
-5. **`RM_LOW_LIGHT`는 `binning-demosaic + 완화 BLC + 저조도 AWB/CCM + gain + gamma`다.** 이득 귀속(기대 vs 실측)은 `results/lowlight-module-techniques-2026-07-10.md` — 주효인은 완화 BLC, binning은 real-RAW에서 조건부, 별도 톤 LUT는 기각. (이 실측은 v1 tone-RM 기준이며, v2 전체 파이프라인 RM으로 재확인 필요.)
+1. **Shared baseline ISP core는 공통 후단 경로다.**
+2. **Gain/gamma는 baseline core에 중복 배치하지 않고 mode-specific tone RM으로 분리한다.**
+3. **Normal tone RM과 low-light tone RM은 mutually exclusive다.**
+4. **Checker가 어두운 장면을 감지했을 때만 low-light tone RM을 트리거한다.**
+5. **Low-light tone RM은 `binning + gain + gamma + 완화 BLC`다.** 이득 귀속(기대 vs 실측)은 `results/lowlight-module-techniques-2026-07-10.md` — 주효인은 완화 BLC, binning은 real-RAW에서 조건부, 별도 톤 LUT는 기각.
 6. DFX 실증 전에는 C-Sim/Python golden으로 산술 정합을 먼저 고정한다.
-7. **v1 코드는 삭제하지 않고 `Ref`/ablation으로 보존한다** — v1 vs v2 자원·전력·mAP 비교 기준.
 
-## Current status (2026-07-10)
+## Current status (2026-07-20)
 
-- **SW 트랙 (Stage 0~3): 절차 완료, Stage 3 재검증 진행중** — golden/baseline core, checker(+principled-v3 SOTA 후속), tone RM 산술+이득귀속, mAP 평가. **Stage 3은 "정확도 재검증 허브"**로 되먹임마다 재진입한다 — 현재 demosaic 수정 반영(R5, GPU 대기)과 **정본 데이터셋(PASCAL RAW/LOD RAW) 재평가**가 미완. 정성적 결론(저조도 모듈이 dark 조건에서 normal 상회)은 견고.
-- **HW 트랙 (Stage 4~5): 완료(한계 기록됨)** — Vitis HLS 합성 + C/RTL Co-sim, Vivado DFX 구현 + pr_verify + PR latency 분석.
-- **Stage 6 (보드 실장 + DPU end-to-end): 미착수** — 실물 ZCU104 필요. 목표 2의 효율(전력) 실증이 여기 걸림.
+- **SW 트랙 (Stage 0~3): 절차 완료, real-RAW 기준으로 동결** — golden/baseline core, checker(+principled-v3 SOTA 후속), tone RM 산술+이득귀속, mAP 평가. **Stage 3 "정확도 재검증 허브"**가 2026-07-20에 한 바퀴 완주했다 — 정본 데이터셋(LOD=SonyNOD/PASCAL=PASCALRAW real-RAW, Shuffle_split 642장) 교차검증 완료, 그 실측 근거로 **BLC 재보정(16/8→2/2) 배포**. 정성적 결론(저조도 모듈이 dark 조건에서 normal 상회)은 견고하게 재확인됨.
+- **Checker: SOTA 강화 4개 관문 전부 완료(2026-07-20)** — C0(dark50>0.80)→**C1(dark16>0.62) 정식 배포**, 오라클 라벨 재정의로 잔존오차의 89.6%가 라벨 아티팩트임을 확인해 **C1 재조정 불필요**로 결론. 상세: `isppipeline/hls/results/checker-status-2026-07-10.md` §4.
+- **HW 트랙 (Stage 4~5): 완료(한계 기록됨)** — Vitis HLS 합성 + C/RTL Co-sim, Vivado DFX 구현 + pr_verify + PR latency 분석. BLC/checker 배포로 HW 소스 상수는 이미 갱신됐으나 **csynth/cosim 재실행은 아직(open)**.
+- **Stage 6 (보드 실장 + DPU end-to-end): 미착수** — 실물 ZCU104 필요, **보드 없이 할 수 있는 절차 중 유일하게 남은 것**. 목표 2의 효율(전력) 실증이 여기 걸림.
 - 실제 진행은 선형이 아니라 **나선형**(Stage 5까지 올라갔다 SW Stage 3으로 되돌아오는 되먹임 반복) — 상세는 `ROADMAP.md`.
-- **아키텍처 reset v2(2026-07-10):** RM 경계가 tone에서 전체 ISP pipeline으로 넓어졌다(위 "Active architecture" 참고). Stage 0~5의 실측 수치는 전부 v1(공유 baseline core + tone RM) 기준이며, v2 마이그레이션 후 재검증이 필요하다 — 아직 코드 변경은 시작하지 않았다.
 
 ## Next direction
 
-다음 리팩토링 방향은 **Vitis Vision Library 기준 ISP를 `RM_NORMAL`로 그대로 사용하고, 저조도 특화 ISP를 `RM_LOW_LIGHT`로 나란히 구현 + DFX가 그 둘을 통째로 swap** 하는 구조다. Check(checker)와 DFX Ctrl만 static으로 남고, Vitis Vision 기반 ISP(구 "Base")도 저조도 ISP(구 "Tone")도 둘 다 재구성 영역(RP) 안에 들어간다 — 어느 한쪽만 static으로 고정하지 않는다. 계획 전문은 `STRATEGY.md` 참조(2026-07-10 갱신: RP = Tone+Base 전체로 결정).
+**즉시(둘 다 SW/형식 확인 위주, Stage 6과 독립):** (1) csynth/cosim 재실행(BLC/checker 상수 변경 반영, 자원 영향 없음 예상), (2) YOLOv8s/SSDLite 교차 모델 검증(부차 발견 견고성 확인). 그 다음은 Stage 6(보드) 착수 준비.
+
+**보류 중인 리팩토링 방향:** `STRATEGY.md`가 제안한 **Vitis Vision Library 기준 baseline + DFXISP 확장 모듈** 구조(Vitis Base를 고정하고 Check/Dark/DFX Ctrl을 확장)는 2026-07-03에 제안됐으나 **아직 착수되지 않았다** — checker/BLC real-RAW 재보정 트랙이 우선됐다. 착수 여부·시점은 미결정.
 
 ## Active documents
 
 - `README.md` — 프로젝트 한 페이지 요약 (이 문서)
-- `RESEARCH.md` — 연구 정본: 배경, 아키텍처(v2), RM 명세, 실험/검증 계획
-- `SPEC.md` — 시스템 사양서: 현재(v1) 구현의 입력 데이터셋 → checker → tone RM → baseline core → RGB32 출력 → 평가 (v2 마이그레이션 전)
+- `RESEARCH.md` — 연구 정본: 배경, 아키텍처, RM 명세, 실험/검증 계획
+- `SPEC.md` — 시스템 사양서: 입력 데이터셋 → checker → tone RM → baseline core → RGB32 출력 → 평가
 - `ROADMAP.md` — Stage 0~6 진행 상태 추적 (근거 문서 링크 포함)
-- `STRATEGY.md` — Vitis-first 리팩토링 전략 (2026-07-10 갱신, 다음 구현 방향)
+- `STRATEGY.md` — Vitis-first 리팩토링 전략 (2026-07-03, 다음 구현 방향)
 
 실험/시뮬레이션 산출물 전체 목록은 `isppipeline/hls/results/INDEX.md` 에서 찾을 수 있다.
 
@@ -97,7 +96,7 @@ make verify        # Python golden ↔ C-sim bit-exact + binning cross-check
 make report        # reports/latest.md 갱신
 ```
 
-`reports/latest.md` 기준: golden PASS, C-sim PASS, 아키텍처 gate 6종 PASS (shared baseline core / RM 2종 / 상호배타 / gain·gamma 중복없음 / 형상정책). **이 gate는 v1(현재 코드) 기준** — v2로 마이그레이션하면 gate 정의도 RESEARCH.md §8.2에 맞춰 갱신한다.
+`reports/latest.md` 기준: golden PASS, C-sim PASS, 아키텍처 gate 6종 PASS (shared baseline core / RM 2종 / 상호배타 / gain·gamma 중복없음 / 형상정책).
 
 ## Related locations
 

@@ -54,7 +54,22 @@ def jpg_dims(p: Path):
     raise ValueError(f"no SOF in {p}")
 
 
-def render_arm(bayer, w, h, arm, blc_offset):
+def load_adaptive_verdicts(manifest: Path) -> dict[str, bool]:
+    """stem -> adaptive-tau LOW_LIGHT verdict, precomputed by
+    build_matched_splits.py (checker_adaptive_tau.tau_for_frame-based, the
+    #1-strengthening-plan-adopted Path A scheme -- see
+    checker-status-2026-07-10.md SS2 #1) and carried in the split manifest's
+    `adaptive_verdict_lowlight` column. This is NOT the same as
+    checker.py's selected_mode() (the deployed rule -- C1 dark16>0.62 since
+    2026-07-20, C0 dark50>0.80 before that) --
+    conflating the two was a 2026-07-15 handoff bug (see
+    results/HANDOFF-lod-pascal-isp-simulation-2026-07-15.md SS4 vs the actual
+    eval_map_isp.py code at that time)."""
+    with manifest.open() as f:
+        return {row["stem"]: row["adaptive_verdict_lowlight"] == "True" for row in csv.DictReader(f)}
+
+
+def render_arm(bayer, w, h, arm, blc_offset, stem=None, adaptive_verdicts=None):
     """Synthesize the uint8 RGB image for a given arm + swept BLC offset,
     using the new independent normal/lowlight/checker modules."""
     if arm == "normal":
@@ -62,14 +77,23 @@ def render_arm(bayer, w, h, arm, blc_offset):
     if arm == "lowlight":
         return PL.run_arm(bayer, w, h, "lowlight", blc_offset=blc_offset)
     if arm == "adaptive":
-        mode = PC.selected_mode(bayer, w, h)
-        if mode == "lowlight":
+        if adaptive_verdicts is not None:
+            if stem not in adaptive_verdicts:
+                raise KeyError(f"stem {stem!r} missing from --manifest adaptive verdicts")
+            is_lowlight = adaptive_verdicts[stem]
+        else:
+            # Back-compat fallback for standalone (non-split, no --manifest)
+            # runs: the deployed C0 checker, NOT adaptive-tau. Prefer passing
+            # --manifest whenever a build_matched_splits.py manifest exists.
+            is_lowlight = PC.selected_mode(bayer, w, h) == "lowlight"
+        if is_lowlight:
             return PL.run_arm(bayer, w, h, "lowlight", blc_offset=blc_offset)
         return PB.run_arm(bayer, w, h, "normal", blc_offset=blc_offset)
     raise ValueError(f"unsupported arm for BLC ablation: {arm}")
 
 
-def build_arm_images(root: Path, work: Path, arms, limit: int, blc_offset: int) -> int:
+def build_arm_images(root: Path, work: Path, arms, limit: int, blc_offset: int,
+                      adaptive_verdicts=None) -> int:
     raw_dir = root / "raw_bin"; lab_dir = root / "labels"; img_dir = root / "images"
     stems = sorted(p.stem for p in raw_dir.glob("*.bin")
                    if (img_dir / f"{p.stem}.jpg").exists() and (lab_dir / f"{p.stem}.txt").exists())
@@ -86,7 +110,7 @@ def build_arm_images(root: Path, work: Path, arms, limit: int, blc_offset: int) 
             continue
         bayer = bayer.reshape(h, w)
         for a in arms:
-            out = render_arm(bayer, w, h, a, blc_offset)
+            out = render_arm(bayer, w, h, a, blc_offset, stem=stem, adaptive_verdicts=adaptive_verdicts)
             Image.fromarray(out).save(work / a / "images" / f"{stem}.jpg", quality=95)
             shutil.copy(lab_dir / f"{stem}.txt", work / a / "labels" / f"{stem}.txt")
         built += 1
@@ -103,11 +127,19 @@ def main() -> int:
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--arms", default=",".join(ARMS))
     ap.add_argument("--out", default="results/map_isp_sonynod_blcfix_yolov8n.csv")
+    ap.add_argument("--manifest", type=Path, default=None,
+                     help="build_matched_splits.py manifest CSV (lod/pascal/shuffle_split_*.csv) "
+                          "supplying precomputed adaptive-tau verdicts per stem for the "
+                          "'adaptive' arm. Required for LOD/PASCAL/Shuffle split runs -- without "
+                          "it, 'adaptive' silently falls back to the deployed checker "
+                          "(checker.selected_mode; C1 dark16>0.62 since 2026-07-20), which is "
+                          "NOT the adopted adaptive-tau scheme.")
     args = ap.parse_args()
 
     arms = [a.strip() for a in args.arms.split(",") if a.strip()]
     blc_offsets = [int(v.strip()) for v in args.blc_offsets.split(",") if v.strip() != ""]
     root = Path(args.root)
+    adaptive_verdicts = load_adaptive_verdicts(args.manifest) if args.manifest else None
 
     from ultralytics import YOLO
     import yaml  # type: ignore
@@ -118,7 +150,7 @@ def main() -> int:
     n = None
     for blc in blc_offsets:
         work = Path(args.work) / f"{args.tag.lower()}_blc{blc}"
-        n = build_arm_images(root, work, arms, args.limit, blc)
+        n = build_arm_images(root, work, arms, args.limit, blc, adaptive_verdicts=adaptive_verdicts)
         print(f"[{args.tag}] blc_offset={blc}: built arm images for {n} frames: {arms}")
         for a in arms:
             ds = work / a

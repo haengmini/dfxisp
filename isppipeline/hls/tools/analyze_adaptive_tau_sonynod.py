@@ -41,6 +41,10 @@ BLACK_LEVEL = 800  # build_sonynod_dataset.py -- measured 2026-07-06
 WHITE_LEVEL = 16380
 DARK_RATIO_PCT = 80  # deployed C0 constant, src/dfxisp_accel.cpp:94
 C1_DARK16_THR = 0.62  # recommended-but-undeployed C1, checker-status-2026-07-10.md
+# NOTE: also reused below as the judgement cutoff for the *adaptive* dark
+# ratio (adaptive_lowlight). That's a known-open methodological gap -- see
+# checker_adaptive_tau.py's "KNOWN OPEN ISSUE" docstring and
+# results/checker-adaptive-tau-realdata-2026-07-13.md Sec.4.
 
 ISO_BINS = [0, 400, 800, 1600, 3200, 6400, 12800, 1_000_000]
 

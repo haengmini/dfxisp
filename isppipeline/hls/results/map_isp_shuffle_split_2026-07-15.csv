@@ -1,0 +1,10 @@
+dataset,blc_offset,arm,mAP_50_95,mAP_50,model,n
+Shuffle-split-2026-07-15,16,normal,0.1006,0.2467,/home/user/dfxisp/model/detectors/yolo/yolov8n.pt,642
+Shuffle-split-2026-07-15,16,lowlight,0.1049,0.2538,/home/user/dfxisp/model/detectors/yolo/yolov8n.pt,642
+Shuffle-split-2026-07-15,16,adaptive,0.1037,0.2532,/home/user/dfxisp/model/detectors/yolo/yolov8n.pt,642
+Shuffle-split-2026-07-15,1,normal,0.2230,0.4883,/home/user/dfxisp/model/detectors/yolo/yolov8n.pt,642
+Shuffle-split-2026-07-15,1,lowlight,0.2312,0.5045,/home/user/dfxisp/model/detectors/yolo/yolov8n.pt,642
+Shuffle-split-2026-07-15,1,adaptive,0.2309,0.5042,/home/user/dfxisp/model/detectors/yolo/yolov8n.pt,642
+Shuffle-split-2026-07-15,2,normal,0.2184,0.4808,/home/user/dfxisp/model/detectors/yolo/yolov8n.pt,642
+Shuffle-split-2026-07-15,2,lowlight,0.2315,0.5050,/home/user/dfxisp/model/detectors/yolo/yolov8n.pt,642
+Shuffle-split-2026-07-15,2,adaptive,0.2317,0.5036,/home/user/dfxisp/model/detectors/yolo/yolov8n.pt,642

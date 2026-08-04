@@ -2,8 +2,11 @@
 type: spec
 title: "DFXISP 시스템 사양서 (입력 데이터셋 → 출력)"
 project: DFXISP
-version: 1.0
+version: 1.1
 created: 2026-07-02
+updated: 2026-07-20 — BLC/checker 파라미터를 07-13~07-20 real-RAW 캠페인
+  배포값으로 갱신(§3.1, §4). 정본 근거: `results/blc-recalibration-deploy-2026-07-20.md`,
+  `results/checker-c1-deploy-2026-07-20.md`, `results/checker-oracle-label-gate2-2026-07-20.md`.
 target: Zynq UltraScale+ ZCU104 / XCZU7EV (xczu7ev-ffvc1156-2-e)
 status: active — 아래 본문은 현재 구현(v1: shared baseline core + 상호배타 tone RM slot)을 기술한다. 목표 아키텍처(v2)는 RESEARCH.md §0 참고
 refs: "README.md · RESEARCH.md · isppipeline/hls · results/experiment-report-2026-07-02.md"
@@ -132,18 +135,31 @@ RAW 비트 표현(HW 12-bit vs SW 8-bit shift8)뿐이며, 이로 인해 데이�
 NORMAL     -> selected_mode = NORMAL
 LOW_LIGHT  -> selected_mode = LOW_LIGHT
 AUTO       -> dark_ratio = count(dark) / (W*H)
-              HW/C-sim: dark = (raw < dark_pixel_threshold)          # RAW 도메인
-              SW eval : dark = (Y < 50),  Y = (R + 2G + B) / 4        # 8-bit 휘도
-              selected_mode = LOW_LIGHT  if  dark_ratio > 0.80  else NORMAL
-              (정수 비교: dark_count*100 > 80*(W*H))
+              dark = (raw < dark_pixel_threshold)     # RAW 도메인, HW·SW(checker.py) 동일
+              # dark_pixel_threshold: raw16(SW 사전계산)에서는 16<<8, HW raw12
+              # 레지스터값은 규약상 256(=16<<4) — "dark16" 통계
+              selected_mode = LOW_LIGHT  if  dark_ratio > 0.62  else NORMAL
+              (정수 비교: dark_count*100 > 62*(W*H))
 ```
-- **임계 재보정(2026-07-02, ver2):** 기존 0.40은 Youden's J 관점에서 사실상 미분류(ExDark
-  recall=1.00이지만 COCO false-trigger=0.80 — 정상조도도 거의 다 저조도로 오판). 실측
-  데이터셋(`data/{coco_val,exdark_val}`)에서 임계를 스윕한 결과 **0.80이 근사 최적**
-  (recall=0.90, false-trigger=0.11, J=0.79; J-max는 0.83에서 0.80). 상세: `results/experiment_ver2_2026-07-02.md`.
+- **배포 이력:** 최초 0.40(2026-07-01) → **C0** dark50>0.80(2026-07-02 ver2 재보정,
+  Youden's J 관점 최적화) → **C1** dark16>0.62(**2026-07-20 정식 배포, 관문 4**) — C0를
+  전 지표에서 지배(recall 0.936 vs 0.918, false-trigger 0.089 vs 0.125, J 0.847 vs 0.793)
+  하면서 HW 변경 0(`DARK_RATIO_PCT` 상수 + 런타임 `dark_pixel_threshold` 레지스터값만
+  변경). 이번 배포에서 SW 미러(`checker.py`)도 **raw 도메인 직접비교**로 바뀌어 구
+  luminance<50 근사(demosaic 후 판정)를 제거, HW·보정 도메인과 정확히 일치시켰다.
+  실 RAW 642장(SonyNOD 321 + PASCALRAW 321)에서 manifest 사전계산 dark16/verdict와
+  불일치 0. 상세: `results/checker-c1-deploy-2026-07-20.md`.
+- **오라클 라벨 재검증(2026-07-20, 관문 2, 최종 관문):** dual-arm 렌더(normal/lowlight) +
+  프레임별 YOLOv8n 검출 델타로 "정답 모드"를 데이터셋 provenance가 아니라 실제 검출
+  개선 여부로 재정의했다. C1의 naive-라벨 잔존오차 154장 중 **89.6%가 라벨
+  아티팩트**(진짜 오류 10.4%뿐)임을 확인 — dark16의 판별력은 "장면이 야간이냐"에는
+  강하지만(J 0.847) "이 프레임에서 lowlight가 실제로 검출을 돕는가"에는 약함(오라클
+  기준 J 0.008)에도, C1 임계의 **비용-중립점 성질(C_miss≈C_FA)은 오라클 기준에서도
+  유지**되어 **재조정 불필요**로 결론. 상세: `results/checker-oracle-label-gate2-2026-07-20.md`.
 - **히스테리시스(시퀀스 레벨):** 단일 프레임 entry에는 없음. 장면 단위 안정화(N 안정프레임,
-  히스테리시스 밴드, min-dwell)는 스케줄러(`tools/scheduler_sim.py`/`scheduler_sweep.py`)가 담당.
-  권장 파라미터(실측): narrow 밴드 + temporal_N=3 (mismatch 0.015, thrashing 0).
+  히스테리시스 밴드, min-dwell)는 스케줄러(`tools/scheduler_sim.py`/`scheduler_sweep.py`)가
+  담당. 권장 파라미터(실측): narrow 밴드 + temporal_N=3 (mismatch 0.015, thrashing 0).
+  C1 스펙의 Schmitt δ=2%p 히스테리시스는 드라이버측 정책(레포 밖, mode FF 1개).
 
 ### 3.2 ② Baseline ISP core (shared code path, mode-specific BLC) — ver1
 **gain/gamma 없음.** 보정을 **12-bit RAW 도메인에서 수행**하고 최종 `>>4`는 tone에서 한다
@@ -204,10 +220,9 @@ tone RM(core 뒤)에 둔다(RESEARCH §4.2). de-dup 불변식 유지(gain/gamma�
 
 | 스테이지 | 파라미터 | 값 | 비고 |
 |---|---|---|---|
-| checker | DARK_Y (SW) | 50 | Y<50 = dark 픽셀 |
-| checker | DARK_RATIO | **0.80**(재보정 2026-07-02, 구 0.40) | AUTO→LOW_LIGHT 임계 |
-| baseline core | BLC_OFFSET12 | 256 (=16<<4), normal only | 12-bit black-level |
-| baseline core | BLC_OFFSET12_LOWLIGHT | **128 (=8<<4)**, low-light only (2026-07-03) | 완화된 black-level |
+| checker | DARK_RATIO_PCT | **62**(C1, 2026-07-20 배포, 관문 4·2 완료) — dark16 raw 도메인 직접비교, 구 80(C0, dark50, demosaic 후 Y<50 근사)는 폐기 | AUTO→LOW_LIGHT 임계, `dark_pixel_threshold` 레지스터(HW raw12 규약값 256=16<<4)와 짝 |
+| baseline core | BLC_OFFSET12 | **32(=2<<4)**, normal (2026-07-20 재보정, 구 256=16<<4) | 12-bit black-level |
+| baseline core | BLC_OFFSET12_LOWLIGHT | **32(=2<<4)**, low-light (2026-07-20 재보정, 구 128=8<<4) — normal과 동일값(모드별 완화 불필요, 2가 양쪽 실측 정점) | 12-bit black-level |
 | baseline core | AWB_R / G / B | 286 / 256 / 307 | Q8(/256) white balance |
 | baseline core | CCM | identity(256) | placeholder |
 | normal tone | GAIN_NORMAL | 5/4 (1.25×) | 노출 게인 (ver1 추가) |
@@ -218,7 +233,11 @@ tone RM(core 뒤)에 둔다(RESEARCH §4.2). de-dup 불변식 유지(gain/gamma�
 | 형상 | bin_dim | `max(1, d/2)` | Policy A |
 
 > ver1(2026-07-02) 반영 완료: 보정 12-bit RAW-domain, normal에 gain+gamma, low-light γ4.0→2.0(완화).
-> SW proxy(`isp_pipeline_ver1.py`)는 float γ2.2/2.5·8-bit 근사(정본은 HW 정수 γ2.0).
+> SW proxy(`isp_pipeline_ver1.py`)는 float γ2.2/2.5·8-bit 근사(정본은 HW 정수 γ2.0) — 이 파일
+> 자체는 이후 `baseline_isp_pipeline.py`/`low_light_isp_pipeline.py`/`checker.py`(canonical,
+> HW 상수 직접 미러)로 대체됐다(2026-07-08, `results/isp-pipeline-recalibration-2026-07-08.md`).
+> BLC/checker 값은 2026-07-20 실 RAW(SonyNOD+PASCALRAW) 캠페인으로 재보정·배포됐다 — 위 표가
+> 현재 정본.
 
 ---
 

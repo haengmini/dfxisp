@@ -180,7 +180,11 @@ def parse_tag(tag) -> tuple[str, str]:
 # --------------------------------------------------------------------- EXIF --
 def extract_exif(path: Path, exiftool: str | None) -> dict:
     """Best-effort ISO / exposure / f-number for #1's tau(exposure,gain).
-    Tries exiftool (-j) if given/available; else records nulls. rawpy does NOT
+    Tries exiftool (-j) if given/available, then falls back to the pure-python
+    `exifread` package (found missing the exiftool CLI binary during the
+    PASCALRAW ingest, 2026-07-15 -- every one of 4259 frames came back null;
+    exifread reads the same TIFF/EXIF IFD that ARW/NEF both embed, no
+    subprocess needed). Records nulls only if BOTH fail. rawpy does NOT
     expose these, so this stays a separate, optional pass."""
     out = {"iso": None, "exposure_s": None, "f_number": None}
     tool = exiftool or "exiftool"
@@ -193,8 +197,21 @@ def extract_exif(path: Path, exiftool: str | None) -> dict:
             out["iso"] = d.get("ISO")
             out["exposure_s"] = d.get("ExposureTime")
             out["f_number"] = d.get("FNumber")
+            return out
     except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError,
             IndexError):
+        pass
+    try:
+        import exifread  # noqa: PLC0415  (optional dep; exiftool-CLI fallback)
+        with open(path, "rb") as f:
+            tags = exifread.process_file(f, details=False)
+        if "EXIF ISOSpeedRatings" in tags:
+            out["iso"] = float(str(tags["EXIF ISOSpeedRatings"]))
+        if "EXIF ExposureTime" in tags:
+            out["exposure_s"] = float(tags["EXIF ExposureTime"].values[0])
+        if "EXIF FNumber" in tags:
+            out["f_number"] = float(tags["EXIF FNumber"].values[0])
+    except Exception:  # noqa: BLE001  (missing dep, corrupt tags, etc.)
         pass
     return out
 

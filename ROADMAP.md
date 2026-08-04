@@ -21,12 +21,20 @@ Goal   : "ROADMAP.md를 stage1~stage6까지 모두 작성해줘" 요청에 대�
 **정본 문서:** 아키텍처 `RESEARCH.md`, 시스템 스펙 `SPEC.md`, Stage 계획
 `isppipeline/hls/results/experiment-stages-2026-07-02.md`. 이 문서는 그
 계획 대비 진행 상태 추적용.
-**마지막 갱신:** 2026-07-09 — 트랙별 세부 진행 표 추가 + 2026-07-04~08 사이
-main에 병합된 후속 사건 반영: checker principled-v3(5원리, C1 권장)와
-RM 서사 정정(binning 제거가 실이득, PR #4), SonyNOD 실센서 BLC ablation
-(R3b), canonical-matched 파이프라인 재보정으로 Stage 3 수치 재검증(R4,
-PR #8), Hermes 병렬 리뷰(PR #6)와 PR #3 복구(PR #5). 상세는 각 Stage
-절의 "후속/정정/R3b/R4" 항목과 "즉시 다음"의 신규 우선순위 참고.
+**마지막 갱신:** 2026-08-03 — 2026-07-20 이후 진행 반영: BLC 2/2 + checker C1
+반영 csynth/cosim 재실행 완료(자원/타이밍 완전 동일, `blc-c1-csynth-cosim-
+rerun-2026-07-20.md`), 그 상수를 반영한 Vivado DFX fabric-only 재구현 완료
+(`dfx-reimplementation-2026-08-01.md` — BRAM/DSP/timing/pr_verify/partition
+pin/bitstream 크기 전부 07-03 기준과 일치, CLB LUT만 34~37% 감소했으나
+08-03 후속 조사로 근본 원인 확정: RM RTL 차이는 BLC 상수에서 유도된 리터럴
+6개뿐, 나머지 전부 바이트 단위로 동일 — Vivado 상수 기반 technology
+mapping의 정상 거동으로 결론, 추가 조치 불필요), 교차 모델 검증
+1단계(YOLOv8s) 노트북 RTX 5060에 인수인계·진행 중
+(`HANDOFF-cross-model-yolov8s-2026-08-03.md`). **체커·BLC·DFX 트랙은 이제
+보드 없이 할 수 있는 절차가 전부 완료** — 남은 것은 교차 모델 검증 결과
+회수·정리(YOLOv8s 진행 중, SSDLite는 별도 인수인계 예정)뿐, Stage 6(보드)만
+유일하게 남은 실질 단계. 상세는 Stage 1·3 절의 신규 라운드와 "즉시 다음"의
+갱신된 우선순위 참고.
 
 ## 상태 범례
 
@@ -82,38 +90,33 @@ Stage 4 재합성이 원칙적으로 다시 필요할 수 있다(단 지금까�
 > 모든 결론은 두 목표에 종속된다 — **목표 1**(저조도 특화 모듈이 CV에
 > 필요; 단일 모듈은 각각 자기 조건 데이터셋에서 최고 → 전환 필요),
 > **목표 2**(DFX로 상황별 모듈 전환 → 효율·성능 개선, SW→HW 순 증명).
-> 이에 따른 결정 4가지: **(a) `none`(무처리) arm은 비교에서 제외**(색보정
+> 이에 따른 결정 3가지: **(a) `none`(무처리) arm은 비교에서 제외**(색보정
 > 안 된 배포 불가 출력 — 아래 R1/R2 기록의 "none 최고"는 **당시 관찰일
 > 뿐 기여 비교 대상 아님**). **(b) 정본 평가 데이터셋 = PASCAL RAW(밝음)
 > + LOD RAW(저조도)** real-RAW 쌍(§Stage 3, 이전 COCO/ExDark/SonyNOD는
 > superseded proxy). **(c) 저조도 모듈의 기술·기대·실측 이득은
 > `results/lowlight-module-techniques-2026-07-10.md`에 정본화.**
-> **(d) 아키텍처 reset v2(2026-07-10, RESEARCH.md §0):** RM 경계가 tone(gain/gamma)에서
-> ISP 데이터패스 전체(BLC/AWB/demosaic/CCM/gain/gamma)로 넓어졌다 — static shell은
-> checker/DFX 컨트롤러/AXI/packer만 남고, `RM_NORMAL`(stock Vitis Vision 기준)과
-> `RM_LOW_LIGHT`(저조도 특화) 두 전체 ISP pipeline이 상호배타로 재구성된다. **아래
-> Stage 0~5의 모든 실측 수치(golden bit-exact, mAP, HLS 자원/타이밍, DFX pr_verify/
-> bitstream 크기)는 v1(공유 baseline core + tone RM) 코드 기준**이다 — v2 코드
-> 마이그레이션은 아직 시작하지 않았고(§STRATEGY.md), 마이그레이션 후에는 Stage 3(mAP)과
-> Stage 4/5(HLS/DFX 자원·전력)를 v2 기준으로 재실측해야 한다.
 
 ## 전체 진행률 한눈에
 
 ```text
 Stage 0  SW golden + shared baseline core 확정        ✅   2026-07-01 ~ 07-03(누적 보강)
-Stage 1  checker + N-frame 히스테리시스                ✅+  2026-07-01 ~ 07-05(+principled-v3 후속, C1 권장·미배포)
+Stage 1  checker + N-frame 히스테리시스                ✅+  2026-07-01 ~ 07-20(+principled-v3 C1 권장 → real-RAW 재확인 → C1 배포 → 오라클 라벨 재정의, 4관문 전부 완료)
 Stage 2  tone RM 산술 확정 + 이미지 지표               ✅+  2026-07-01 ~ 07-05(+RM 이득원인 정정: binning 제거)
-Stage 3  정확도(mAP) 평가 + 알고리즘 개정              🔄⚠️ 2026-07-01 ~ 진행중(R1~R4 완료 + R5 mAP 재검증 GPU 대기 — 재검증 허브)
-Stage 4  HLS 합성 + C/RTL Co-sim                       ✅⚠️ 2026-07-02 ~ 07-03(3라운드; cosim 자동비교 미완주)
+Stage 3  정확도(mAP) 평가 + 알고리즘 개정              ✅+  2026-07-01 ~ 07-20(R1~R4 완료, R5는 R6에 흡수, R6 정본 real-RAW 교차검증 완료, R7 BLC 2/2 배포)
+Stage 4  HLS 합성 + C/RTL Co-sim                       ✅⚠️ 2026-07-02 ~ 07-03(3라운드; cosim 자동비교 미완주; BLC/C1 반영 재합성은 open item)
 Stage 5  DFX(PR) 구현 + pr_verify + latency/PR 컨트롤러 ✅⚠️🔄 2026-07-02 ~ 07-03(4라운드; PR컨트롤러 1차만)
 Stage 6  보드 실장 + DPU end-to-end                    ⬜   미착수(실물 보드 필요 — 유일하게 시작조차 못한 단계)
 
 범례: ✅ 완료 · ✅+ 완료 후 후속 개정 있었음 · 🔄 재진입/진행중 · ⚠️ 알려진 한계 · ⬜ 미착수
 ```
 
-**한 줄로:** 척추(0→5)는 다 올라갔다. 지금은 **Stage 3으로 되돌아와 SW를
-재검증·수정하는 나선의 한 바퀴 안**에 있고(demosaic 수정 → R5 대기), 보드가
-필요한 Stage 6만 아직 시작 못했다.
+**한 줄로:** 척추(0→5)는 다 올라갔고, Stage 1·3의 나선(SW 재검증)도
+2026-07-20에 한 바퀴 완주했다(real-RAW 교차검증 + BLC/checker 재보정·배포 +
+오라클 라벨까지) — **보드 없이 할 수 있는 절차는 이제 전부 완료**. 남은
+비-보드 작업은 csynth/cosim 재실행(BLC/C1 상수 변경분, 형식 확인)과 교차
+모델 검증(부차 발견의 견고성 확인)뿐이고, 보드가 필요한 Stage 6만 유일하게
+남은 실질 단계다.
 
 ## 트랙별 세부 진행 표 (Stage + 라운드 단위)
 
@@ -127,7 +130,10 @@ Stage 6  보드 실장 + DPU end-to-end                    ⬜   미착수(실�
 |---|---|---|---|---|---|
 | SW | Stage 0 | golden(Python) ↔ C-sim(C++) bit-exact 확정, 아키텍처 gate 6종 + 독립 교차검증 게이트(binning fuzz 500회) | 계획 | ✅ 완료 | 07-03 |
 | SW | Stage 1 | dark-ratio checker + N-frame 히스테리시스, 스케줄러 스윕(narrow+N=3), 임계값 재보정(0.40→0.80) | 계획 | ✅ 완료 | 07-02 |
-| SW | Stage 1 후속 | principled-v3: 체커 5원리 정본화 + C0~C4 비교, C1(dark16>0.62) 권장 | 트리거③(감사) | ✅ 완료(권장; 배포 보류) | 07-05 |
+| SW | Stage 1 후속 | principled-v3: 체커 5원리 정본화 + C0~C4 비교, C1(dark16>0.62) 권장 | 트리거③(감사) | ✅ 완료(권장; 당시 배포 보류) | 07-05 |
+| SW | Stage 1 후속 · 관문4 | R6/R7 실측 근거로 **C1 정식 배포**(구 C0 dark50>0.80 폐기) — HW `DARK_RATIO_PCT` 80→62, `checker.py`를 raw 도메인 직접비교로 전환(구 luminance 근사 제거), 실 RAW 642장 대조 판정 불일치 0 | R6에서 전파 | ✅ 완료 | 07-20 |
+| SW | Stage 1 후속 · 관문2 | **오라클 라벨 재정의(강화안 #4, 마지막 관문)** — Shuffle_split 642장 dual-arm 렌더+YOLOv8n 프레임별 F1 델타로 프레임별 정답 재정의. C1 잔존오차의 89.6%가 라벨 아티팩트(진짜 오류 10.4%), dark16 판별력은 naive-라벨 J 0.847→오라클 J 0.008로 붕괴하나 C1 임계의 비용-중립점(C_miss≈C_FA)은 오라클 기준에서도 유지 → **C1 재조정 불필요** 결론 | 계획(강화안 §4 최우선) | ✅ 완료 | 07-20 |
+| SW | Stage 1 후속 · adaptive-τ | adaptive-τ(Path A) 개선 실험 3종(Codex) — 센서별 τ8 피팅은 sensor/label confounding 누설로 기각, tau_floor-only가 최선 비누설 변형이나 ISO[800,1600) 역전 못 고침, 공동보정은 표본부족으로 악화 — **정직한 부정적 결과**, Path-A를 C1 대신 배포할 근거 없음 확정 | 트리거③(재검토) | ✅ 완료(부정적 결과, adaptive-τ는 실험코드로만 유지) | 07-20 |
 | SW | Stage 2 | tone RM 산술 확정(Policy A), arm별 이미지 지표, gain·gamma 중복없음 | 계획 | ✅ 완료 | 07-02 |
 | SW | Stage 2 정정 | RM 저조도 이득 원인 규명 — 톤커브 아님, binning 제거(해상도)가 지배. 권장 arm `F_g20` | 트리거③(감사) | ✅ 완료(1차 서사 정정) | 07-05 |
 | SW | Stage 3 · R1 | 최초 조건표 A~G, 3-detector 교차검증 → 전 조건 `none` 최고, guardrail 최초 탈락 | 계획 | ✅ 완료 | 07-02 |
@@ -135,7 +141,9 @@ Stage 6  보드 실장 + DPU end-to-end                    ⬜   미착수(실�
 | SW | Stage 3 · R3 | 저조도 root-cause(BLC=손실 70%) + BLC 완화 반영 → ExDark lowlight +78%, 최초로 normal 상회 | 계획(R2 되짚기) | ✅ 완료 | 07-03 |
 | SW | Stage 3 · R3b | SonyNOD 실센서 RAW(321장) BLC ablation → 역전이 실센서에서도 재현 | **트리거②(실데이터)** | ✅ 완료 | 07-07 |
 | SW | Stage 3 · R4 | canonical 파이프라인 재보정(Hermes가 발견한 SW/HW gamma 불일치 수정) → 결론 유지, 마진 +76%→+12.6%, "normal 단조감소" 정정 | **트리거③(감사)** | ✅ 완료(수치 재검증) | 07-08 |
-| SW | Stage 3 · R5 | demosaic R/B bilinear 수정(PR #9) 반영 mAP 재실행 — **코드·bit-exact 검증 완료, mAP 재실행만 GPU 대기** | **트리거③(감사)** | 🔄 대기(미착수) | — (GPU 필요) |
+| SW | Stage 3 · R5 | demosaic R/B bilinear 수정(PR #9) 반영 mAP 재실행 | **트리거③(감사)** | ✅ 완료 — R6(canonical 파이프라인이 이미 이 수정을 포함) 실행분으로 흡수, 별도 라운드 불필요 | 07-16 |
+| SW | Stage 3 · R6 | **정본 real-RAW 교차검증(§10.2 요구 이행)** — LOD_split(SonyNOD 321)/PASCAL_split(PASCALRAW ISO층화 321)/Shuffle_split(642) × normal/lowlight/adaptive × BLC{16,1,2} 27조합 mAP(YOLOv8n). 핵심: BLC 재보정이 checker/adaptive보다 훨씬 큰 mAP 레버(최대 5.7배); LOD에서 adaptive≈lowlight; Shuffle에서 "adaptive가 둘 다 이김" 기준은 BLC=2에서만 근소 충족 | **트리거②(실데이터, PASCALRAW 도착)** | ✅ 완료(노트북 RTX 5060, 6h50m) | 07-15~16 |
+| SW | Stage 3 · R7 | R6 실측 근거로 **BLC 재보정 배포**: normal 16→2, low-light 8→2(단일값, 모드별 완화 폐기) — HW golden 재생성, `make verify`/`rm-verify` bit-exact 통과 | R6에서 전파 | ✅ 완료 | 07-20 |
 | HW | Stage 4 · R1 | 최초 실합성(streaming line buffer 리팩터, gamma Newton→ROM LUT), unified+RM독립 top 2종 Fmax 273.97MHz | 계획 | ✅⚠️ 완료(cosim 자동비교 미완주) | 07-02 |
 | HW | Stage 4 · R2 | adversarial 수정(binning 스칼라평균 버그, 메타데이터 포인터) 재합성 → LUT −26.3%/−41.3% | **트리거①(HW감사)** | ✅ 완료 | 07-02 |
 | HW | Stage 4 · R3 | BLC 완화 반영 재합성 → 3개 top 자원 완전 불변(순수 파라미터 변경) | R3(SW)에서 전파 | ✅ 완료 | 07-03 |
@@ -150,6 +158,7 @@ Stage 6  보드 실장 + DPU end-to-end                    ⬜   미착수(실�
 | HW | Stage 6 · 5 | DPU/검출기 end-to-end(Vitis-AI, real-RAW, RGB32 직결) | 계획 | ⬜ 미착수 | — (보드) |
 | HW | Stage 6 · 6 | Stage 3 BLC 완화가 real-RAW에서도 유효한지 최종 확인(DPU mAP vs SW 예측 정합) | 계획 | ⬜ 미착수 | — (보드) |
 | SW | Stage 3 후속(SOTA) | checker SOTA 강화 7항목 판정 완료(#1·#6 채택 / #2·#3·#5 기각 / #4·#7 대기) + AODRaw/LOD 어댑터. 종합=`checker-status-2026-07-10.md` | 트리거③(감사) | ✅ 판정완료(배포는 LOD 대기) | 07-10 |
+| SW | Stage 3 후속(SOTA) · 관문1~4 마감 | `checker-status-2026-07-10.md` §4의 4개 관문(LOD real-RAW 확보 / 오라클 라벨 / 적응τ 스트라텀 검증 / C1·τ 정식 배포) **전부 완료** — 위 R6/R7·관문2·관문4·adaptive-τ 행이 각 관문의 실행 기록. 종합 갱신은 같은 문서(`checker-status-2026-07-10.md`) §4에 in-place 반영 | 계획(§4 로드맵) | ✅ 4/4 완료 | 07-20 |
 | 거버넌스 | — | "Hermes" 병렬 리뷰 → Python robustness 수정(경계 문서화, edge-clamp demosaic 버그) | 트리거③ 원천 | ✅ 완료(PR #6) | 07-08 |
 | 거버넌스 | — | PR #3(references) 브랜치 삭제로 자동 종료 → 리베이스 후 PR #5로 복구, 데이터 유실 없음 | 프로세스 | ✅ 완료 | 07-08 |
 
@@ -234,17 +243,17 @@ gamma-2.5였다. 정정된 결론: **저조도 RM의 유의미한 이득은 톤�
 
 ---
 
-## Stage 3 — 정확도(mAP) 평가: arm & 조건표 + 알고리즘 개정 ✅⚠️ (4라운드 + R5 대기)
+## Stage 3 — 정확도(mAP) 평가: arm & 조건표 + 알고리즘 개정 ✅+ (7라운드, 2026-07-20 완료)
 
-> **상태 주의:** 비교 arm은 normal/lowlight/adaptive다(`none` 제외 —
+> **상태(2026-07-20 갱신):** 비교 arm은 normal/lowlight/adaptive다(`none` 제외 —
 > 상단 프레이밍 노트). 목표 1 관점의 결론(**저조도 모듈이 dark 조건에서
-> `normal` 상회**)은 안정적으로 재확인돼 왔으나, **R4까지의 정밀 mAP는
-> 아직 두 번 더 갱신될 예정이다:** (1) PR #9 demosaic 수정 반영(R5, GPU
-> 대기), (2) **정본 데이터셋(PASCAL RAW/LOD RAW) 재평가** — 아래 R1~R4는
-> COCO/ExDark pseudo-RAW + 단일센서 SonyNOD 기반이라, real-RAW 쌍에서의
-> 교차 우위(normal@PASCAL / lowlight@LOD)로 재수립해야 목표 1의 최종
-> 근거가 된다. "완료"는 보드 없이 할 수 있는 절차가 최소 한 번씩 실행됐다는
-> 뜻이지 수치·데이터셋이 동결됐다는 뜻이 아니다.
+> `normal` 상회**)은 R1~R7 전 라운드에서 안정적으로 재확인됐다. §10.2가
+> 요구한 **정본 데이터셋(PASCAL RAW/LOD RAW) real-RAW 교차검증도 R6에서
+> 완료**됐고(demosaic 수정은 R6 실행분에 이미 포함돼 있어 R5가 별도로
+> 필요 없어짐), 그 실측 근거로 R7에서 BLC 재보정(16/8→2/2)이 배포됐다.
+> "완료"는 여전히 "보드 없이 할 수 있는 절차를 다 돌렸다"는 뜻이지만,
+> 이제 Stage 3의 정성적 결론과 배포 파라미터가 **둘 다 real-RAW 실측
+> 기준으로 동결**됐다는 점이 R4까지와 다르다.
 
 **목표:** H1(적응 이득)·H2(중복제거해도 정확도 유지)를 조건별 mAP로 검증하고,
 탈락 시 원인을 규명해 알고리즘을 개정.
@@ -325,19 +334,52 @@ canonical 파일(`baseline_isp_pipeline.py`/`low_light_isp_pipeline.py`/
 **근거:** `results/isp-pipeline-recalibration-2026-07-08.md`,
 `daily-reports/2026-07-08.md`, PR #6(`fix/python-robustness-hermes-2026-07-08`).
 
-**라운드 5 — demosaic bilinear 수정 반영 mAP 재검증 🔄 대기 중 (착수 미정):**
+**라운드 5 — demosaic bilinear 수정 반영 mAP 재검증 ✅ 완료(R6에 흡수):**
 PR #9(위 R4 절의 2026-07-09 정정)가 canonical `_demosaic_rggb16`의 R/B
-단일탭 버그를 고쳤다. 코드 수정과 bit-exact 교차검증은 완료됐지만
-(`results/demosaic-bilinear-fix-2026-07-09.md`), **이 수정을 반영한 mAP
-재실행은 아직 하지 않았다** — R4와 같은 카테고리의 재보정이 한 번 더
-필요하다는 뜻이며, 이번에도 SW 트랙 소관이다. 착수 조건: (1) PR #9
-main 병합, (2) GPU 가용 세션(07-08 R4는 RTX 5060에서 4.5시간 소요 —
-이 저장소 작업이 이뤄진 샌드박스는 CUDA 불가라 완료 못함). 예상 결과
-(픽셀 단위 사전측정 기반): 정성적 결론 반전 가능성은 낮고, R4의 정밀
-수치(마진 +12.6% 등)가 다시 소폭 이동할 것으로 예상.
+단일탭 버그를 고쳤다. 코드 수정과 bit-exact 교차검증은 07-09에 완료됐고
+(`results/demosaic-bilinear-fix-2026-07-09.md`), 이 수정을 반영한 mAP
+재실행은 별도 라운드로 하지 않고 **R6(아래, PASCALRAW 도착 후 canonical
+파이프라인으로 실행)에 자연스럽게 포함**됐다 — R6이 쓰는
+`baseline_isp_pipeline.py`/`low_light_isp_pipeline.py`/`checker.py`는
+이미 수정된 demosaic을 담고 있다.
 
-**근거:** `results/demosaic-bilinear-fix-2026-07-09.md`,
-PR #9(`fix/canonical-demosaic-bilinear-2026-07-09`, 리뷰 대기).
+**근거:** `results/demosaic-bilinear-fix-2026-07-09.md`.
+
+**라운드 6 — 정본 real-RAW 교차검증: LOD/PASCAL/Shuffle_split (2026-07-15~16,
+노트북 RTX 5060):** §10.2가 요구한 정본 평가를 처음 실행했다. PASCALRAW
+도착(07-14, 4,259장 Nikon `.NEF`, 100% 주간)으로 LOD_split(SonyNOD 전량
+321)과 크기 매칭한 PASCAL_split(ISO층화 샘플 321)·Shuffle_split(합쳐서
+셔플 642)을 구성, normal/lowlight/adaptive arm × BLC{16,1,2} = 27조합
+mAP(YOLOv8n)를 전수 실측했다. 실행 중 `eval_map_isp.py`의 "adaptive" arm이
+채택된 adaptive-τ가 아니라 배포 C0를 측정하던 버그를 발견·수정(`--manifest`
+인자 추가)하고 재실행했다.
+
+- **핵심 발견 1(이 캠페인의 최대 레버):** BLC 재보정(16→1/2)이 checker/adaptive
+  선택보다 훨씬 큰 mAP 효과 — LOD 최대 5.7배, PASCAL +35%, Shuffle 최대
+  2.2배. 2026-07-08 recalibration(`isp-pipeline-recalibration-2026-07-08.md`)의
+  결론을 **처음으로 real 센서 RAW(LOD+PASCAL)로 재확인**.
+- **핵심 발견 2:** LOD(야간)에서 adaptive≈lowlight(모든 BLC에서 ±0.0001) —
+  §1.3 알고리즘 주장과 정합.
+- **핵심 발견 3:** Shuffle(혼합)에서 "adaptive가 normal·lowlight 둘 다
+  이겨야 pass"라는 목표 2 통과 기준은 **BLC=2에서만, 근소하게(+0.0002)**
+  충족 — "확실한 승리"로 과장하지 않음(정직한 기록 원칙 유지).
+- **부수 발견:** lowlight arm이 100% 주간인 PASCAL에서도 9/9 BLC×비교
+  조합 전부 normal과 같거나 우위 — 단일 모델·단일 run이라 확대해석 금지,
+  교차 모델 검증 필요(§4 관문 항목, 아직 open).
+
+**근거:** `results/HANDOFF-lod-pascal-isp-simulation-2026-07-15.md`(인수인계),
+`results/lod-pascal-isp-simulation-2026-07-15.md`(정본 결과+버그 수정 기록).
+
+**라운드 7 — BLC 재보정 배포 (2026-07-20):** R6 실측(BLC 1~2가 전 split·전
+arm에서 정점)을 근거로 배포 상수를 변경 — `BLC_OFFSET12`(normal) 16→2,
+`BLC_OFFSET12_LOWLIGHT` 8→2(모드별 완화 폐기, 단일값 2로 통일 — 1/2 혼합은
+측정된 적 없음). `src/dfxisp_accel.cpp` + SW 미러 3파일 동기화, HW golden
+재생성, `make verify`/`rm-verify` bit-exact 전부 통과, 새 기본값이 스윕의
+`blc_offset=2` 출력과 bit-exact 동일 확인.
+
+**근거:** `results/blc-recalibration-deploy-2026-07-20.md`. **남은 것:**
+csynth/cosim 재실행(비트스트림 배포 전, 상수만 변경이라 자원 영향 없음
+예상 — 아직 미실행).
 
 ---
 
@@ -482,40 +524,43 @@ arm 비교표.
 
 ```text
 [x] Stage 0  SW golden + baseline core 정합            (gate 6종 + cross-check 게이트)
-[x] Stage 1  checker + 히스테리시스 시퀀스              (narrow band + N=3 최적; +principled-v3 후속 C1 권장)
+[x] Stage 1  checker + 히스테리시스 시퀀스              (narrow band + N=3 최적; +principled-v3 C1 권장 → real-RAW 재확인 → C1 배포 → 오라클 라벨, 4관문 완료)
 [x] Stage 2  tone RM 산술 + 이미지 지표                 (Policy A 확정; +RM 이득원인 정정)
-[~] Stage 3  정확도 mAP arm/조건표 + 알고리즘 개정       (재검증 허브 — R1~R4 완료, R5 대기: demosaic 수정 mAP 재실행이 GPU 대기 ⚠️ 아래 Stage 3 절)
-[x] Stage 4  HLS 합성 + C/RTL Co-sim                    (csynth 3라운드 완료; cosim 자동비교만 미완주)
+[x] Stage 3  정확도 mAP arm/조건표 + 알고리즘 개정       (재검증 허브 — R1~R7 완료: real-RAW 교차검증(R6) + BLC 2/2 배포(R7)까지 완주)
+[x] Stage 4  HLS 합성 + C/RTL Co-sim                    (csynth 3라운드 완료; cosim 자동비교만 미완주; BLC/C1 반영 재합성은 open)
 [x] Stage 5  DFX PR 구현 + pr_verify + latency/컨트롤러  (4라운드, pr_verify 매 라운드 PASS; PR컨트롤러는 1차만)
 [ ] Stage 6  보드 실장 + DPU end-to-end                  (보드 필요 — 유일하게 시작조차 못한 단계)
 범례: [x] 절차 완료 · [~] 재진입/재검증 진행중 · [ ] 미착수 · (⚠️/🔄 = 세부 한계)
 ```
 
-> **읽는 법:** `[x]`는 "절차를 다 돌렸다"이지 "수치 동결"이 아니다. Stage
-> 3이 `[~]`인 것은 위 나선 모델대로 새 발견(demosaic 수정)이 들어와 다시
-> 재검증 중이기 때문 — 정성적 결론은 안 바뀌고, 정밀 mAP만 R5에서 갱신된다.
+> **읽는 법:** `[x]`는 "절차를 다 돌렸다"는 뜻이다. Stage 3은 2026-07-20에
+> R6(real-RAW 교차검증)·R7(BLC 배포)로 나선의 이번 바퀴를 완주해 `[~]`에서
+> `[x]`로 승격했다 — 정성적 결론 유지, 정밀 mAP는 이제 real-RAW·배포값
+> 기준으로 동결.
 
 > **핵심 발견(SW, Stage 0~3) — 목표 1 관점:** 비교 arm은 normal/lowlight/
 > adaptive다(`none` 제외, 위 프레이밍 노트). **저조도 모듈이 dark 조건에서
 > `normal`을 앞지른다**는 것이 핵심 성과 — 완화 BLC가 결정타였다(ExDark
 > `lowlight` 처음으로 `normal` 상회). 이 역전은 실센서 RAW(R3b)·canonical
-> 파이프라인(R4)으로 독립 재확인됐고, **정량 마진은 R4에서 축소**(+76%→
-> +12.6%, 이전 마진 상당부분이 gamma 불일치 인공물). **아직 최종 아님** —
-> demosaic 수정(R5) mAP 재검증 GPU 대기 + **정본 근거는 PASCAL RAW(normal
-> 우위)↔LOD RAW(lowlight 우위) 교차 우위**로 재수립 예정(그게 "전환 필요"
-> = 목표 1→2 연결의 실증). 정성적 결론 반전 가능성은 낮음. DFX 정당화는
-> 자원/전력(목표 2 효율)이 우선(방향 A 유지).
+> 파이프라인(R4)·**정본 real-RAW 교차검증(R6, LOD/PASCAL/Shuffle)**으로
+> 3중 재확인됐다. **BLC 재보정(16/8→2/2)이 checker/adaptive 선택보다 훨씬
+> 큰 mAP 레버**(최대 5.7배)임이 R6에서 처음 정량화돼 R7에서 배포됐다.
+> Shuffle_split(혼합 스트림)에서 adaptive가 normal·lowlight 둘 다 이긴다는
+> 목표 2 통과 기준은 BLC=2에서만 근소하게 충족(과장 금지). DFX 정당화는
+> 자원/전력(목표 2 효율)이 우선(방향 A 유지), Stage 6에서 최종 확인.
 > **핵심 발견(HW, Stage 4~5):** gamma를 런타임 sqrt→ROM LUT로 바꿔 자원
 > −88%/−78%; adversarial 수정으로 저조도 RM 자원 추가 −41.3%; **pr_verify는
 > 4라운드 전부 PASS**로 DFX 전환 가능함을 실측 확인; pblock 확장(용량 2배)은
 > partial bitstream·재구성 지연을 2.1배로 늘리는 명시적 트레이드오프. **HW
-> 소스(`src/dfxisp_accel.cpp`)는 이 SW 재보정과 무관하게 전 라운드 불변.**
-> **핵심 발견(SW, Stage 1~3 후속, 2026-07-04~09):** checker 5원리
-> 정본화로 C1(dark16>0.62) 채택 권장(미배포)했고, RM 이득의 실제 원인이
-> 톤커브가 아니라 binning 제거임을 규명(1차 서사 정정, 권장 arm `F_g20`로
-> 변경). 이후 checker를 SOTA 기준으로 더 강화하는 후속 작업(히스토그램
-> LRT는 정직하게 기각, AODRaw 실센서 데이터 어댑터는 선작성 완료)이 별도
-> 브랜치에서 진행 중.
+> 소스(`src/dfxisp_accel.cpp`)는 2026-07-20 BLC/checker 상수 변경까지 반영
+> 완료(값만 변경, 구조 불변) — 단 csynth/cosim 재실행은 아직 안 함(open).**
+> **핵심 발견(SW, Stage 1~3 후속, 2026-07-04~20):** checker 5원리
+> 정본화로 C1(dark16>0.62) 채택 권장 → real-RAW로 재확인 → **2026-07-20
+> 정식 배포**, RM 이득의 실제 원인이 톤커브가 아니라 binning 제거임을 규명,
+> checker SOTA 강화 4개 관문(LOD real-RAW/오라클 라벨/적응τ 검증/C1·τ
+> 배포) **전부 완료** — 오라클 라벨 재정의로 잔존오차의 89.6%가 라벨
+> 아티팩트임을 확인하고 C1은 재조정 불필요로 결론, adaptive-τ 개선은
+> 정직한 부정적 결과로 실험코드에 남김.
 
 ## 즉시 다음 (우선순위)
 
@@ -526,43 +571,45 @@ arm 비교표.
 강화안 7항목 판정: #1·#6 채택, #2·#3·#5 기각, #4·#7 대기). stale 병합 브랜치 5개
 삭제 완료. 아래는 남은 실질 과제다.
 
-**즉시 다음 (최우선):**
+**완료(2026-07-20, 이전 "즉시 다음" 전부 종결):** 정본 데이터셋 재평가(R6),
+BLC 재보정 배포(R7), checker C1 배포(관문 4), 오라클 라벨 재정의(관문 2),
+adaptive-τ 개선 실험(부정적 결과 확정) — 위 Stage 1·3 절 신규 라운드 참고.
+Stage 3의 mAP 수치는 이제 R6/R7(real-RAW, canonical 파이프라인, 배포값
+기준)이 최신 정본이다 — R1~R4(및 R3b)는 여전히 정성적 근거로 유효하나
+정밀 수치 인용 시 R6/R7로 대체됐음을 명시할 것.
 
-0. **아키텍처 v2 코드 마이그레이션(2026-07-10 신규, RESEARCH.md §0 / STRATEGY.md 참고)** —
-   문서 reset은 완료됐으나 코드(`isppipeline/hls/src/dfxisp_accel.cpp`)는 아직 v1(공유
-   baseline core + tone RM)이다. `RM_NORMAL`(base_vitis 통합)과 `RM_LOW_LIGHT`(tone +
-   저조도 ISP 통합) 두 개의 전체 ISP pipeline top으로 재구성하는 작업이 이 항목 아래
-   1~8보다 선행돼야 한다 — 아래 Stage 3(mAP)·Stage 4/5(HLS/DFX 자원) 재실측 항목들은
-   이 마이그레이션이 끝난 뒤 v2 기준으로 다시 실행해야 의미가 있다(v1 수치를 인용할 때는
-   "v1 기준"임을 명시).
-1. **Stage 3 수치 재확인 대상 정리** — 2026-07-08 이전에 계산된 mAP
-   수치(R1~R3, R3b 포함)는 canonical 파이프라인 기준으로 최종 확정된 것이
-   아니므로, 앞으로 이 수치들을 인용할 때는 R4(`isp-pipeline-recalibration
-   -2026-07-08.md`)로 대체(superseded)됐음을 명시할 것. demosaic 수정(R5)의
-   mAP 재실행은 코드·bit-exact 검증만 끝났고 GPU 대기.
-2. **정본 데이터셋 재평가(목표 1·2의 핵심 실증)** — PASCAL RAW(밝음)/
-   LOD RAW(저조도) real-RAW 쌍으로 세 arm(normal/lowlight/adaptive) 재실행:
-   (a) normal이 PASCAL RAW, lowlight가 LOD RAW에서 각각 우위인지(교차 우위
-   = 전환 필요성), (b) 혼합 스트림에서 adaptive가 최적 단일 static 상회인지.
-   저조도 모듈 이득표(`lowlight-module-techniques-2026-07-10.md`)의 실측
-   열을 이 real-RAW 수치로 대체. **어댑터: 저조도 LOD는 Sony `.ARW`라
-   기존 `aodraw_adapter.py`의 rawpy 경로가 그대로 적용된다**(sonynod 선례와
-   동일 포맷; 파일별 흑레벨/화이트레벨/베이어를 rawpy에서 읽으므로 하드코딩
-   불필요). PASCAL RAW(밝음)도 rawpy가 처리하는 RAW 포맷이면 같은 경로 —
-   실 다운로드 파일로 `read_raw()` 한 함수만 확인하면 된다.
-5. **checker SOTA 강화 후속** — 오라클 라벨 재정의(#4)·센서 적응 임계 τ(#1)는
-   위 real-RAW 데이터셋 위에서 착수 (`checker-strengthening-2026-07-10.md`).
+**완료(2026-07-20~08-03):** csynth/cosim 재실행(구 항목 1 — 자원/타이밍 완전
+동일 확인, `blc-c1-csynth-cosim-rerun-2026-07-20.md`), 그 상수 반영 Vivado DFX
+fabric-only 재구현(`dfx-reimplementation-2026-08-01.md`) 및 그 안에서 나온
+CLB LUT 34~37% 감소의 근본 원인 확정(RM RTL 차이는 BLC 상수 유도 리터럴
+6개뿐 — 상수 기반 technology mapping의 정상 거동, 08-03 후속 조사로 종결).
+교차 모델 검증(구 항목 2)은 1단계 착수 — YOLOv8s 재실행을 노트북 RTX 5060에
+인수인계(`HANDOFF-cross-model-yolov8s-2026-08-03.md`), 실행 중.
 
-**기존(Stage 6 착수 준비, 순서 유지):**
+**즉시 다음 (최우선, 서로 막고 있지 않음 — 병행 가능):**
 
-5. **Stage 6 착수 선결 과제** — PR 컨트롤러의 `drain_ready`를 실제 RM
+1. **교차 모델 검증 YOLOv8s 결과 회수·정리** — 노트북 완료 후
+   `cross-model-yolov8s-2026-08-03.md` 작성, §8.3(lowlight≥normal-on-PASCAL
+   9/9) 재현 여부 우선 판정.
+2. **교차 모델 검증 2단계(SSDLite-MobileNetV3)** — `eval_map_isp.py`가 아직
+   torchvision SSDLite 경로를 지원하지 않음(`eval_map_ssd.py`에만 있음) —
+   글루 코드 작성 후 별도 인수인계. YOLOv8s와 마찬가지로 이미 배포된 결정
+   (BLC 2/2, C1)을 막고 있지 않음, 논문 일반화 주장 보강용.
+
+**Stage 6 착수 준비 (순서 유지, 실질적으로 유일하게 남은 큰 단계):**
+
+3. **Stage 6 착수 선결 과제** — PR 컨트롤러의 `drain_ready`를 실제 RM
    `ap_idle`에 연결, BRAM 시뮬레이션 소스를 실제 SD/DDR 경로로 교체.
-6. **Stage 6 순서 1~2** — PS/DDR 통합(Block Design) → 신 pblock 기준
+4. **Stage 6 순서 1~2** — PS/DDR 통합(Block Design) → 신 pblock 기준
    clock/reset 핀 배정 + WNS 재검증.
-7. **(선택) Stage 5 open item** — partition pin 수 15→3 감소 원인 조사
+5. **(선택) Stage 5 open item** — partition pin 수 15→3 감소 원인 조사
    (SPEC.md §10에 미조사로 기록됨).
-8. **(선택) Stage 4 cosim 완주** — WSL2+XSIM 하네스 SIGSEGV 원인(struct-pointer
+6. **(선택) Stage 4 cosim 완주** — WSL2+XSIM 하네스 SIGSEGV 원인(struct-pointer
    인터페이스 추정) 해소.
+7. **(선택, 우선순위 미정) STRATEGY.md Vitis-first 리팩터** — 2026-07-03에
+   제안됐으나 착수되지 않았다(`src/`에 `base_vitis.cpp` 등 Task 1~18 산출물
+   없음) — checker/BLC real-RAW 재보정 트랙이 대신 우선됐다. Stage 6 착수
+   전에 할지, 논문 마감(2026-10) 압박을 고려해 보류할지 결정 필요.
 
 ## 주의 (지어내지 않기)
 
