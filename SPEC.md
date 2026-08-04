@@ -420,11 +420,59 @@ Reconfigurable Partition으로 재구현·**pr_verify PASS**·partial bitstream 
 천장**을 이 수치가 규정한다. 타이밍은 세 arm 모두 동일해 적응성이 Fmax를 희생시키지
 않음도 확인됐다.
 
-> **비교 시 주의(중요):** Arm1·Arm2는 **HLS csynth 추정치**이고 Arm3 config1/config2는
-> **Vivado post-route 실측치**다. 서로 다른 측정 단계이므로 **Arm1/Arm2와 Arm3를 직접
-> 빼서 비교하면 안 된다.** 위 Δ는 Arm1 vs Arm2(둘 다 csynth)에 한해 유효하다.
-> Arm1 vs Arm3의 엄밀한 비교에는 Arm1의 Vivado 구현(post-route)이 추가로 필요하며
-> 이는 미착수다.
+### 10.2 Arm1·Arm2 post-route 실측 (2026-08-04)
+
+§10.1의 Δ는 csynth 추정치였다. Arm1·Arm2를 **Vivado로 실제 배치·배선**해 post-route
+축으로 옮겼다(fabric-only tie-off 래퍼는 Arm3와 동일 기법, `ap_clk`/`ap_rst_n`만
+칩 I/O로 남기고 110개 포트 중 나머지는 tie-off + 출력 XOR 관측).
+
+| 지표 | Arm1 | Arm2 | Δ (적응성 비용) |
+|---|---:|---:|---:|
+| CLB LUT | **3,363** | **4,768** | **+1,405 (+41.8%)** |
+| CLB Register | 4,057 | 5,369 | +1,312 (+32.3%) |
+| Block RAM Tile | 1.5 | 3.5 | +2 |
+| DSP | 12 | 23 | +11 |
+| WNS @5.0ns | +0.682 ns | +0.893 ns | 둘 다 제약 충족 |
+
+**csynth 추정 대비:** 적응성 비용이 csynth에서는 +58.9% LUT였으나 post-route에서는
+**+41.8%** — csynth가 오버헤드를 과대추정한다. 방향은 동일.
+
+**견고성 확인(측정값이 플로우에 민감하지 않음):** 같은 설계를 (a) in-context 평탄
+합성, (b) Arm3와 동일한 OOC 합성 + DCP 링크, (c) (b)에 config1과 동일한 pblock
+(`CLOCKREGION_X1Y0:X2Y0`, CONTAIN_ROUTING, EXCLUDE_PLACEMENT) 추가 — 세 방식으로
+구현한 결과 Arm1은 3,400 / 3,363 / 3,364 LUT, Arm2는 4,769 / 4,768 LUT로 **1% 이내
+일치**했다. 즉 위 수치는 플로우 선택이나 floorplan 제약에 흔들리지 않는다.
+
+> ### ⚠️ Arm3는 아직 같은 축에 올리지 못했다 (미해결, 2026-08-04)
+>
+> B8의 목표는 세 arm을 모두 post-route 축에 놓는 것이었으나 **Arm3에서 막혔다.**
+> 동일 RTL(오늘 csynth한 `syn/verilog`)을 **수정 없는 공식 `scripts/dfx/dfx_flow.tcl`**
+> 에 넣어 config1을 재실행한 결과:
+>
+> | 출처 | CLB LUT | BRAM tile | DSP |
+> |---|---:|---:|---:|
+> | Arm1 (파티션 없음, 위 표) | 3,363 | 1.5 | 12 |
+> | 같은 RTL + 공식 DFX 플로우 (2026-08-04 재실행) | **2,317** | **1** | **10** |
+> | config1 published (2026-08-01) | 2,630 | 1.5 | 12 |
+> | config1 published (2026-07-03) | 3,972 | 1.5 | 12 |
+>
+> 두 가지 문제가 있다:
+> 1. **동일 RTL인데 DFX 플로우가 31% 적은 LUT를 낸다**(3,363→2,317). pblock 제약은
+>    원인이 아님을 대조 실험으로 배제했으므로(위 견고성 확인 (c)), 남은 차이는
+>    `HD.RECONFIGURABLE` 파티션 속성이다 — 파티션 설계의 자원 보고/최적화가 평탄
+>    설계와 다르다는 뜻이며, **그렇다면 Arm3 수치는 Arm1/Arm2와 직접 빼서 비교할 수
+>    없다.**
+> 2. **published config1을 재현하지 못했다** — 2026-08-04 재실행이 BRAM 1 / DSP 10을
+>    내어 published 1.5 / 12와 다르다. `dfx_flow.tcl`이 읽는 RTL 경로는
+>    `impl/ip/hdl/verilog`(HLS `export_design` 산출물)인데 그 산출물은 `/tmp` 정리로
+>    사라졌고, 이번엔 `syn/verilog`를 대신 넣었다. 즉 **published Arm3 수치는 현재
+>    소스만으로 재생산되지 않는다.**
+>
+> **함의(중요):** 목표 2의 "DFX가 자원을 아낀다"는 주장은 Arm3 수치에 의존하는데,
+> 그 수치의 재현 경로가 확보되지 않았다. **보드 착수 전에 반드시 해소해야 할
+> 항목**이며 `ROADMAP.md` "즉시 다음"에 등록했다. 해소 방법: `export_design`까지
+> 포함한 RTL 생성 절차를 스크립트로 고정하고 config1/config2를 재생성해
+> published 수치와 대조.
 
 Arm2 인스턴스 분해(unified top 내부, DFX 순이득 추정의 참조점, 재합성 후):
 
