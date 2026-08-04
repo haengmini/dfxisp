@@ -1,9 +1,9 @@
 # RESEARCH.md — DFXISP 연구 정본
 
-최종 수정: 2026-07-02 (아키텍처 본문) · 파라미터/checker 각주 2026-07-20 갱신  
+최종 수정: 2026-07-10 (아키텍처 reset v2 — RM 경계를 tone에서 전체 ISP 파이프라인으로 확장) · 파라미터/checker 각주 2026-07-20 갱신  
 소유자: 이형민  
 대상 보드: Zynq UltraScale+ ZCU104 / XCZU7EV  
-핵심 논지: **공유 baseline ISP core + 상호 배타적인 mode-specific tone RM**
+핵심 논지: **static shell(비-ISP 제어/라우팅) + 상호 배타적인 mode-specific 전체 ISP pipeline RM**
 
 > **현재 상태 한 줄 요약(2026-07-20):** 아래 §0~14의 아키텍처·증명전략은
 > 그대로 유효하다(변경 없음). §10.2가 요구한 **PASCAL RAW/LOD RAW 실측
@@ -18,23 +18,50 @@
 
 ## 0. 이 reset의 목적
 
-이 문서는 현재 HLS C-sim scaffold가 의도한 연구 아키텍처에서 벗어난 것을 확인한 뒤, DFXISP 연구 방향을 다시 정렬하기 위한 정본 문서다.
+**2026-07-10 reset v2:** 2026-07-02 reset(v1)은 "공유 baseline ISP core(BLC/AWB/demosaic/CCM) +
+작은 tone RM(gain/gamma만 swap)" 구조를 정본으로 삼았다. 이 v2는 그 구조를 대체한다 — RM
+경계를 **tone(gain/gamma)에서 ISP 데이터패스 전체(BLC/AWB/demosaic/CCM/gain/gamma)로 바깥으로
+확장**하고, "공유 baseline ISP core"라는 static 스테이지 자체를 없앤다.
 
-의도한 설계는 다음과 같다.
+이유(상세는 §1.3, §2): v1의 tone-only RM은 스왑 단위가 너무 작아(gain 곱셈 + gamma LUT
+수준) DFX의 존재 이유(목표 2)를 스스로 약화시켰다 — register-only(Arm 2)로 두 tone 구현을
+동시 상주시켜도 자원 비용이 무시할 만해, "왜 부분재구성까지 필요한가"라는 반론에 취약했다.
+ISP 파이프라인 전체를 RM으로 삼으면 Arm 2(두 개 full 파이프라인 상주)와 Arm 3(DFX, 하나만
+상주) 사이의 자원/전력 격차가 실질적으로 커져 DFX 동기가 방어 가능해진다.
+
+의도한 설계(v2)는 다음과 같다.
 
 ```text
-mode-specific tone RM slot + shared baseline ISP core
+static shell (비-ISP 제어/라우팅만) + mode-specific 전체 ISP pipeline RM
 
 NORMAL:
-  RM_NORMAL_TONE = normal gain + normal gamma, or identity bypass
+  RM_NORMAL = stock Vitis Vision 기준 ISP pipeline 전체
+              (BLC + AWB/color calibration + demosaic + CCM + gain + gamma)
 
 LOW_LIGHT:
-  RM_LOW_LIGHT_TONE = 2x2 binning + low-light gain + low-light gamma
+  RM_LOW_LIGHT = 저조도 특화 ISP pipeline 전체
+                 (2x2 binning-demosaic + 저조도 BLC/AWB/CCM + 저조도 gain + 저조도 gamma)
 ```
 
-RM slot은 **상호 배타적(mutually exclusive)** 이다. Normal frame과 low-light frame은 tone/gain/gamma 구현을 둘 다 통과하지 않는다. 공유 baseline ISP core는 선택된 RM 뒤에 오는 공통 경로이며, 비교 기준(reference path)으로 유지한다.
+RM은 **상호 배타적(mutually exclusive)** 이다 — 프레임/세그먼트당 정확히 하나의 전체 ISP
+pipeline만 활성화된다. Static shell은 ISP 데이터패스를 전혀 포함하지 않는다: AXI/control
+wrapper, checker/mode-FSM, DFX/PR 컨트롤러, output/metadata packer만 static이다.
 
-현재 `isppipeline/hls/` 아래 HLS scaffold는 C-sim/golden-vector harness로는 유용하지만, 그 low-light 동작은 최종 의도한 RM 동작이 아니다. 현재 scaffold는 demosaic 이후 RGB8 gain/lift를 수행한다. 따라서 이것은 연구 아키텍처가 아니라 임시 scaffold 또는 ablation baseline으로 취급한다.
+**v1(공유 baseline core + tone RM)과의 핵심 차이:**
+
+| | v1 (superseded) | v2 (정본) |
+|---|---|---|
+| Static 영역 | AXI/제어 + checker + **baseline ISP core(BLC/AWB/demosaic/CCM)** + DFX 컨트롤러 + packer | AXI/제어 + checker + DFX 컨트롤러 + packer (ISP 데이터패스 없음) |
+| RM 내용물 | gain + gamma (+ low-light binning)만 | BLC/AWB/demosaic/CCM/gain/gamma **전체** |
+| RM_NORMAL | gain 1.25× + gamma, or identity | stock Vitis Vision ISP pipeline 전체 |
+| RM_LOW_LIGHT | binning + gain + gamma | 저조도 특화 ISP pipeline 전체(binning-demosaic + 저조도 BLC/AWB/CCM/gain/gamma) |
+| de-dup 규칙(§3.1, v1) | gain/gamma가 baseline core와 RM에 중복 배치되지 않게 관리 | 불필요 — 각 RM이 자기 파이프라인을 통째로 소유, 공유 스테이지가 없음 |
+| DFX 동기 | 약함(스왑 단위가 tone 곡선 수준) | 강함(스왑 단위가 전체 ISP 데이터패스) |
+
+현재 `isppipeline/hls/`의 HLS C-sim 구현(`dfxisp_accel.cpp` 등)은 아직 **v1 구조**다 —
+공유 baseline core + tone RM. v2로의 코드 마이그레이션은 이 문서 reset 다음 단계이며, 이
+문서 자체는 문서 우선 정렬(architecture-first)만 다룬다. v1 코드는 그대로 유효한 ablation/
+비교 기준(`Ref`, STRATEGY.md 참고)으로 취급하고, 성급히 지우지 않는다.
 
 ---
 
@@ -59,11 +86,10 @@ RM slot은 **상호 배타적(mutually exclusive)** 이다. Normal frame과 low-
   FPGA Dynamic Function eXchange(DFX)로 구현하면 static/always-on 설계
   대비 **자원·전력 효율**까지 개선한다.
 
-**핵심 연구 질문:** 공유 baseline ISP core에 상호 배타적인 tone RM slot을
-결합해 normal scene에서는 `RM_NORMAL_TONE`, dark scene에서는
-`RM_LOW_LIGHT_TONE`으로 (체커가 판단해) 전환하면, gain/gamma를 core에
-중복 배치하지 않으면서 (목표 1) 저조도 CV 성능을 살리고 (목표 2) DFX로
-효율을 얻을 수 있는가?
+**핵심 연구 질문:** ISP 데이터패스 전체를 static shell에서 분리해 상호 배타적인 전체
+ISP pipeline RM으로 나누고, normal scene에서는 `RM_NORMAL`, dark scene에서는
+`RM_LOW_LIGHT`로 (체커가 판단해) 전환하면, (목표 1) 저조도 CV 성능을 살리고 (목표 2)
+register-only adaptive 대비 DFX로 자원·전력 효율을 얻을 수 있는가?
 
 ### 1.1 증명 전략 — 필요성 → 전환, SW 먼저 → HW
 
@@ -99,8 +125,11 @@ CV 성능 비교의 arm은 **`normal` / `lowlight` / `adaptive`** 세 가지다.
    기술·기대이득·실측이득은 `results/lowlight-module-techniques-2026-07-10.md`).
 
 2. **아키텍처 주장 (목표 1·2의 구조 근거)**  
-   Gain/gamma를 공유 baseline ISP core에서 제거하고, 상호 배타적인 tone RM
-   `RM_NORMAL_TONE`/`RM_LOW_LIGHT_TONE`으로 분리해 체커가 하나만 선택한다.
+   ISP 데이터패스 전체(BLC/AWB/demosaic/CCM/gain/gamma)를 static shell에서 완전히
+   분리해, 상호 배타적인 전체 ISP pipeline RM `RM_NORMAL`/`RM_LOW_LIGHT`로 나누고
+   체커가 하나만 선택한다. Static shell은 checker/DFX 컨트롤러/AXI/packer만 담당하며
+   ISP 연산을 전혀 포함하지 않는다 — 이래야 DFX가 스왑하는 단위가 충분히 커서
+   register-only(Arm 2) 대비 실질적인 자원/전력 이득(목표 2)이 성립한다.
 
 3. **DFX 효율 주장 (목표 2의 효율 근거)**  
    Register-only 또는 always-on adaptive 설계와 비교했을 때, DFX는 허용
@@ -115,62 +144,69 @@ CV 성능 비교의 arm은 **`normal` / `lowlight` / `adaptive`** 세 가지다.
 
 ```text
 Input frame
-  Bayer / pseudo-RAW / RGB32 fixture
+  Bayer / real-RAW / pseudo-RAW fixture
         │
         ▼
-Scene checker / mode decision
+Scene checker / mode decision   (static)
   - luminance 또는 dark ratio 계산
   - threshold + hysteresis 적용
   - NORMAL 또는 LOW_LIGHT 결정
         │
+        ▼
+DFX / PR controller               (static)
+  - selected RM 결정, reconfiguration 트리거
+        │
         ├───────────────────────────────────────────────┐
         │                                               │
         ▼                                               ▼
-NORMAL path                                     LOW_LIGHT trigger path
-RM_NORMAL_TONE                                  RM_LOW_LIGHT_TONE
-  normal gain / gamma                            2x2 binning
-  or identity bypass                             low-light gain
-                                                  low-light gamma
+RM_NORMAL (reconfigurable)                    RM_LOW_LIGHT (reconfigurable)
+  전체 ISP pipeline:                            전체 ISP pipeline:
+    BLC                                           2x2 binning-demosaic
+    AWB / color calibration                       저조도 BLC(완화)
+    demosaic                                       저조도 AWB / color calibration
+    CCM                                            저조도 CCM
+    gain                                           저조도 gain
+    gamma                                          저조도 gamma
         │                                               │
         └───────────────────────────────┬───────────────┘
                                         ▼
-                              Baseline ISP core
-                                BLC
-                                AWB / color calibration
-                                demosaic or RGB bypass
-                                CCM
-                                RGB32 pack
-                                # gain/gamma 중복 없음
+                       output packer / metadata packer   (static)
                                         │
                                         ▼
                                   RGB32 output
                                   DPU / detector input
 ```
 
+`RM_NORMAL`과 `RM_LOW_LIGHT`는 상호 배타적인 하나의 Reconfigurable Partition을 채우는 두
+variant다 — 동시에 두 개가 fabric에 상주하지 않는다(Arm 3/DFX). Register-only 비교군(Arm 2)에서는
+둘 다 상주하되 런타임에 하나만 선택한다.
+
 ### 2.2 동작 규칙
 
-Tone/exposure RM slot은 mode-specific이다. Normal과 low-light는 동일 gain/gamma를 두 번 통과하지 않는다.
+RM은 mode-specific 전체 ISP pipeline이다. Normal과 low-light는 서로 다른 BLC/AWB/demosaic/CCM/
+gain/gamma 구현을 갖고, 한 프레임/세그먼트는 그중 정확히 하나만 통과한다. Baseline ISP core라는
+별도 공유 스테이지는 없다 — 각 RM이 자신의 ISP 데이터패스 전체를 소유한다.
 
 ```text
 Normal lighting:
   checker selects NORMAL
-  RM_NORMAL_TONE is active, or identity bypass is used if normal gain/gamma is not needed
-  RM_LOW_LIGHT_TONE is inactive
-  baseline ISP core consumes the selected tone output
+  DFX controller selects/activates RM_NORMAL
+  RM_LOW_LIGHT is inactive (register-only) or not resident in fabric (DFX)
+  RM_NORMAL runs its full ISP pipeline: BLC -> AWB -> demosaic -> CCM -> gain -> gamma
   output is marked NORMAL mode
 
 Dark lighting:
   checker triggers LOW_LIGHT
-  controller activates or swaps in RM_LOW_LIGHT_TONE
-  RM_NORMAL_TONE is inactive
-  RM_LOW_LIGHT_TONE applies binning + gain + gamma before the baseline ISP core
-  baseline ISP core consumes the selected RM output
+  DFX controller swaps in RM_LOW_LIGHT (or selects it, register-only)
+  RM_NORMAL is inactive (register-only) or not resident in fabric (DFX)
+  RM_LOW_LIGHT runs its full ISP pipeline: binning-demosaic -> relaxed BLC -> AWB ->
+    CCM -> gain -> gamma
   output is marked LOW_LIGHT mode
 
 Return to bright lighting:
   checker sees recovery condition
-  controller switches back to RM_NORMAL_TONE or identity bypass
-  RM_LOW_LIGHT_TONE becomes inactive
+  DFX controller swaps back to RM_NORMAL
+  RM_LOW_LIGHT becomes inactive / is evicted from fabric
 ```
 
 ### 2.3 Static region과 RM boundary
@@ -178,99 +214,104 @@ Return to bright lighting:
 권장 partition은 다음과 같다.
 
 ```text
-Static region:
+Static region (non-ISP control/routing only):
   - AXI/control wrapper
   - frame metadata handling
   - checker / mode-decision FSM
-  - baseline ISP core control
   - DFX/PR controller interface
   - output packer / metadata packer
-  - all baseline ISP core blocks common to every mode
+  # ISP 데이터패스(BLC/AWB/demosaic/CCM/gain/gamma)는 static region에 없다
 
-Reconfigurable Module candidates:
-  RM_NORMAL_TONE:
-    - normal gain / normal gamma or identity tone curve
+Reconfigurable Partition (mutually exclusive, 전체 ISP pipeline 단위):
+  RM_NORMAL:
+    - stock Vitis Vision 기준 ISP pipeline (BLC, AWB/CCM, demosaic, gain, gamma)
     - active during normal lighting
 
-  RM_LOW_LIGHT_TONE:
-    - 2x2 binning
-    - low-light gain
-    - low-light gamma LUT or piecewise approximation
+  RM_LOW_LIGHT:
+    - 저조도 특화 ISP pipeline
+      (2x2 binning-demosaic, 완화 BLC, 저조도 AWB/CCM, 저조도 gain, 저조도 gamma)
     - active only after dark-scene trigger
 ```
 
-이 boundary는 baseline core에서 gain/gamma 중복을 제거한다. Baseline core는 공통/shared 경로로 남고, mode-specific tone/exposure 동작은 상호 배타적인 RM으로 분리된다. Normal lighting에서는 `RM_NORMAL_TONE` 또는 identity bypass를 사용한다. Dark lighting에서는 `RM_LOW_LIGHT_TONE`으로 전환한다. 두 RM은 같은 downstream interface contract를 제공해야 하며, shape이 다르면 명시적인 output metadata를 내보내야 한다.
+이 boundary는 "baseline ISP core"라는 static 공유 스테이지를 없애고, ISP 연산 전체를 RM 안으로
+옮긴다. 남는 static 로직은 프레임의 화소 데이터를 직접 건드리지 않는 제어/라우팅 뿐이다(checker,
+DFX 컨트롤러, AXI 셸, output/metadata packer). 두 RM은 같은 downstream interface contract(RGB32
+출력 + 메타데이터)를 제공해야 하며, shape이 다르면(§4.3 Policy A) 명시적인 output metadata를
+내보내야 한다.
+
+**v1 대비 근거:** v1의 static baseline core는 BLC/AWB/demosaic/CCM을 두 모드가 공유하게 해
+자원을 아꼈지만, 그 결과 저조도 조건에서도 정상조도용 정적 WB/BLC 파라미터를 그대로 써야 했다
+(§3.3 원인 규명 실측: 저조도 mAP 손실의 ~70%가 baseline core의 정적 BLC/WB에서 발생 — 아래
+`results/lowlight-rm-map-rootcause-2026-07-02.md`). RM이 ISP 전체를 소유하면 저조도 전용
+BLC/AWB/CCM 파라미터(또는 알고리즘 자체)를 자유롭게 바꿀 수 있어 목표 1(교차 우위)의 상한이
+더는 공유 core에 눌리지 않는다.
 
 ---
 
-## 3. Baseline ISP core
+## 3. ISP pipeline RM 명세 (공통 구조)
 
-Baseline ISP core는 선택된 tone RM 삽입 이후의 normal-mode reference path다. 중복 연산을 막기 위해 이 core는 `RM_NORMAL_TONE` 또는 `RM_LOW_LIGHT_TONE`에 속한 gain/gamma를 다시 포함하면 안 된다.
-
-개념적 stage는 다음과 같다.
+Baseline ISP core라는 별도 static 스테이지는 없다. 대신 `RM_NORMAL`과 `RM_LOW_LIGHT` 각각이
+아래 stage 전체를 자체적으로 소유한다 — 두 RM 사이에 공유되는 ISP 연산 스테이지는 없다.
 
 ```text
-Input or RM output
-  -> black-level correction, BLC
-  -> AWB / color calibration only
-  -> demosaic or RGB bypass
-  -> color correction matrix, CCM
-  -> RGB32 pack/output
+RM 공통 개념 stage (각 RM이 독립적으로 자기 파라미터/알고리즘으로 구현):
+  Input(raw)
+    -> black-level correction, BLC
+    -> demosaic (or binning-demosaic)
+    -> AWB / color calibration
+    -> color correction matrix, CCM
+    -> gain
+    -> gamma
+    -> RGB32 pack/output
 ```
 
-### 3.1 De-duplication rule
+### 3.1 Ownership rule (v1의 de-dup rule을 대체)
 
-각 operation에는 정확히 하나의 owner만 있어야 한다. Gain/gamma는 normal과 low-light 동작 모두에 필요할 수 있지만, baseline core와 RM 양쪽에 중복 배치하면 안 된다. 따라서 gain/gamma는 영구적인 baseline-core stage가 아니라 **mode-specific tone RM**이 된다.
+v1에서는 "각 operation은 정확히 하나의 owner(baseline core 또는 tone RM)를 가져야 한다"는
+de-dup 규칙으로 gain/gamma 중복을 막았다. v2에서는 이 규칙이 **불필요**하다 — BLC/AWB/
+demosaic/CCM/gain/gamma 전부가 선택된 RM 하나에 귀속되고, 공유 스테이지가 없으므로 애초에
+중복이 발생할 여지가 없다.
 
-| Operation | Owner | Normal mode | Low-light mode |
-|---|---|---|---|
-| normal gain / normal gamma | `RM_NORMAL_TONE` or identity bypass | active | inactive |
-| 2x2 binning | `RM_LOW_LIGHT_TONE` | inactive | active |
-| low-light exposure gain | `RM_LOW_LIGHT_TONE` | inactive | active |
-| low-light gamma/tone curve | `RM_LOW_LIGHT_TONE` | inactive | active |
-| BLC | baseline ISP core | active | active after selected RM |
-| AWB / color calibration | baseline ISP core | active | active after selected RM |
-| demosaic / RGB bypass | baseline ISP core | active | active after selected RM |
-| CCM | baseline ISP core | active | active after selected RM |
-| RGB32 packing | baseline ISP core/output wrapper | active | active |
+| Operation | Owner (mutually exclusive) |
+|---|---|
+| BLC | `RM_NORMAL` 자체 BLC, 또는 `RM_LOW_LIGHT` 자체(완화) BLC |
+| demosaic | `RM_NORMAL` 표준 demosaic, 또는 `RM_LOW_LIGHT` binning-demosaic |
+| AWB / color calibration | `RM_NORMAL` 자체 AWB, 또는 `RM_LOW_LIGHT` 자체 AWB |
+| CCM | `RM_NORMAL` 자체 CCM, 또는 `RM_LOW_LIGHT` 자체 CCM |
+| gain | `RM_NORMAL` normal gain, 또는 `RM_LOW_LIGHT` low-light gain |
+| gamma | `RM_NORMAL` normal gamma, 또는 `RM_LOW_LIGHT` low-light gamma |
+| RGB32 packing | static output packer(두 RM 모두 같은 output contract로 넘김) |
 
 Reset 이후 기본 구조는 다음이다.
 
 ```text
 NORMAL:
-  input
-    -> RM_NORMAL_TONE(gain + gamma) or identity bypass
-    -> baseline_isp_core(no gain/gamma duplication)
-    -> RGB32
+  input -> RM_NORMAL(BLC + demosaic + AWB/CCM + gain + gamma) -> RGB32
 
 LOW_LIGHT:
-  input
-    -> RM_LOW_LIGHT_TONE(2x2 binning + gain + gamma)
-    -> baseline_isp_core(no gain/gamma duplication)
-    -> RGB32
+  input -> RM_LOW_LIGHT(binning-demosaic + 완화 BLC + AWB/CCM + gain + gamma) -> RGB32
 ```
 
-이 설계는 normal-mode gain/gamma가 여전히 필요할 수 있다는 사실은 보존하면서, gain/gamma 중복을 피한다.
+### 3.2 RM_NORMAL의 역할
 
-### 3.2 Baseline의 역할
-
-Baseline은 다음 용도로 사용한다.
+`RM_NORMAL`(stock Vitis Vision 기준 ISP pipeline)은 다음 용도로 사용한다.
 
 1. Normal-scene output.
 2. Low-light mode와 비교하기 위한 bright-scene reference.
 3. Fixed pipeline correctness를 위한 golden-vector reference.
-4. DFX benefit analysis를 위한 resource/timing baseline.
-5. RM이 비활성 상태이거나 reconfiguration 중일 때의 fallback path.
+4. DFX benefit analysis를 위한 resource/timing baseline(Arm 1).
+5. 신뢰할 수 있는 표준 라이브러리(xf::cv) 기준선 — 리뷰어가 검증된 구현으로 인정하는 지점.
 
-### 3.3 Baseline은 안정적으로 유지해야 한다
+### 3.3 RM_NORMAL은 안정적으로 유지해야 한다
 
-Low-light RM 실험을 수행하는 동안 baseline path를 반복적으로 바꾸면 안 된다. Baseline과 RM이 동시에 바뀌면 output 차이를 RM 때문인지 baseline 때문인지 attribution할 수 없다.
+Low-light RM 실험을 수행하는 동안 `RM_NORMAL`을 반복적으로 바꾸면 안 된다. 둘 다 동시에
+바뀌면 output 차이를 어느 RM 때문인지 attribution할 수 없다.
 
 권장 discipline은 다음이다.
 
 ```text
-Phase A: lock baseline arithmetic
-Phase B: add low-light RM arithmetic
+Phase A: lock RM_NORMAL arithmetic (stock Vitis Vision 기준)
+Phase B: add RM_LOW_LIGHT arithmetic
 Phase C: add checker/mode controller
 Phase D: add DFX/RP mechanics
 Phase E: run DPU/mAP evaluation
@@ -278,14 +319,19 @@ Phase E: run DPU/mAP evaluation
 
 ---
 
-## 4. Low-light RM 명세
+## 4. Low-light RM(`RM_LOW_LIGHT`) 명세
+
+이 절은 `RM_LOW_LIGHT` 전체 ISP pipeline 안에서 **저조도 고유 처리(binning + BLC 완화 +
+gain + gamma)**를 다루며, BLC/AWB/CCM 같은 나머지 ISP 스테이지도 이 RM이 함께 소유한다는
+전제(§3)는 바뀌지 않는다. v1 문서의 "tone RM"이라는 이름은 여기서는 "저조도 특화 pipeline
+안의 tone/exposure 처리"로 좁혀 읽는다.
 
 ### 4.1 필수 operation
 
-첫 번째 low-light RM은 다음을 구현해야 한다.
+`RM_LOW_LIGHT`는 최소한 다음을 구현해야 한다.
 
 ```text
-2x2 binning + gain + gamma
+2x2 binning + gain + gamma   (+ 완화 BLC, §3의 나머지 ISP 스테이지)
 ```
 
 최소 기능 정의는 다음과 같다.
@@ -442,62 +488,48 @@ output_height
 문서 수준 요구사항은 다음이다.
 
 ```text
-NORMAL uses RM_NORMAL_TONE or identity bypass.
-LOW_LIGHT uses RM_LOW_LIGHT_TONE.
-The two tone RMs are mutually exclusive.
-The shared baseline ISP core never applies a second gain/gamma pass.
+NORMAL uses RM_NORMAL (전체 ISP pipeline).
+LOW_LIGHT uses RM_LOW_LIGHT (전체 ISP pipeline).
+The two RMs are mutually exclusive.
+Static shell은 ISP 데이터패스를 전혀 포함하지 않으며, 따라서 gain/gamma를
+두 번 적용할 여지 자체가 없다.
 ```
 
 구현은 단계별로 다음과 같이 표현할 수 있다.
 
-1. C-sim stage: `RM_NORMAL_TONE`, `RM_LOW_LIGHT_TONE`, identity 중 정확히 하나의 tone function을 선택한다.
-2. RTL stage: mode select가 정확히 하나의 RM slot implementation으로만 route한다.
-3. DFX stage: PR controller가 RM slot을 normal-tone과 low-light-tone 구현 사이에서 swap하거나, normal resident module로 identity를 사용한다.
+1. C-sim stage: `RM_NORMAL`, `RM_LOW_LIGHT` 중 정확히 하나의 전체 ISP pipeline 함수를 선택한다.
+2. RTL stage: mode select가 정확히 하나의 RM implementation으로만 route한다.
+3. DFX stage: PR controller가 RM을 `RM_NORMAL` 구현과 `RM_LOW_LIGHT` 구현 사이에서 swap한다.
 4. Board stage: 실제 reconfiguration latency와 dropped-frame behavior를 측정한다.
 
 ---
 
 ## 6. 수정된 구현 목표
 
-### 6.1 현재 scaffold의 문제
+### 6.1 현재(v1) 코드의 상태
 
-현재 HLS scaffold를 단순화하면 다음과 같다.
+현재 `isppipeline/hls/`의 코드는 여전히 v1 구조(공유 baseline core + tone RM)다.
+이것은 §0에서 설명한 대로 아직 v2로 마이그레이션되지 않은 **현재 구현**이며, v2 문서
+reset 다음 단계에서 코드가 따라온다. v1 코드 자체는 유효한 golden/ablation 기준으로
+계속 쓴다 — 지우지 않는다.
 
-```text
-raw_bayer
-  -> normal_pixel_kernel
-       3x3 Bayer window
-       GRBG demosaic
-       RAW12 -> RGB8
-  -> low_light_reconfigurable_module
-       RGB8 gain/lift only
-```
-
-이것은 목표 low-light RM이 아니다.
-
-다음 용도로만 유용하다.
-
-1. C-sim harness proof.
-2. Golden-vector flow proof.
-3. Temporary post-RGB enhancement ablation.
-
-### 6.2 목표 C-sim structure
+### 6.2 목표(v2) C-sim structure
 
 목표 HLS C-sim은 다음 구조가 되어야 한다.
 
 ```text
 raw/input frame
-  -> checker_select_mode
+  -> checker_select_mode        (static)
+  -> dfx_ctrl_select_rm         (static)
   -> if NORMAL:
-         RM_NORMAL_TONE(input) or identity_bypass(input)
-         baseline_isp_core(normal_tone_output)
+         rm_normal(input)       # 전체 ISP pipeline: BLC+demosaic+AWB/CCM+gain+gamma
      if LOW_LIGHT:
-         RM_LOW_LIGHT_TONE(input)  # 2x2 binning + gain + gamma
-         baseline_isp_core(low_light_tone_output)
-  -> output + metadata
+         rm_low_light(input)    # 전체 ISP pipeline: binning-demosaic+완화BLC+AWB/CCM+gain+gamma
+  -> output packer + metadata   (static)
 ```
 
-이 순서가 현재 project default다. 단일 mode-specific tone RM slot이 공유 baseline ISP core로 들어간다. 시스템은 frame/segment마다 정확히 하나의 tone path만 선택해야 하며, gain/gamma 중복 적용을 피해야 한다.
+이 순서가 v2 project default다. 정확히 하나의 전체 ISP pipeline RM이 선택되고, static
+shell은 그 출력을 그대로 패킹/보고한다. gain/gamma 중복 적용 여지 자체가 없다(§3.1).
 
 ---
 
@@ -505,11 +537,10 @@ raw/input frame
 
 연구 contribution을 증명하려면 최소 세 arm을 비교해야 한다.
 
-### Arm 1 — Static baseline core + normal tone
+### Arm 1 — Static RM_NORMAL only
 
 ```text
-RM_NORMAL_TONE or identity
-shared baseline ISP core
+RM_NORMAL만 상주 (전체 ISP pipeline)
 no low-light RM
 no DFX
 ```
@@ -517,33 +548,34 @@ no DFX
 목적:
 - 고정 normal-scene reference.
 - Normal-scene correctness.
-- Shared ISP core plus normal tone의 resource/timing baseline.
+- RM_NORMAL 단독의 resource/timing baseline.
 
 ### Arm 2 — Register-only adaptive
 
 ```text
-same bitstream
-mode selects normal-tone vs low-light-tone parameters/functions
+같은 bitstream에 RM_NORMAL과 RM_LOW_LIGHT(전체 ISP pipeline 2벌) 모두 상주
+checker/컨트롤러가 런타임에 하나만 선택해서 실행
 no PR/DFX
 ```
 
 목적:
 - DFX 없이 adaptation benefit을 보인다.
-- 진짜 DFX value를 분리하기 위해 필요한 baseline.
-- Partial reconfiguration을 도입하기 전에 de-duplication을 확인한다.
+- 두 개의 **전체 ISP pipeline**을 동시 상주시키므로 자원 비용이 v1(tone RM 2개 상주)보다
+  훨씬 크다 — 이것이 Arm 3(DFX) 이득을 실질적으로 만드는 지점이다.
 
-### Arm 3 — DFX adaptive tone RM slot
+### Arm 3 — DFX adaptive ISP pipeline RM
 
 ```text
-shared baseline ISP core remains static
-DFX/RP swaps the tone RM slot:
-  RM_NORMAL_TONE       = normal gain + gamma or identity
-  RM_LOW_LIGHT_TONE    = 2x2 binning + low-light gain + low-light gamma
+static shell(checker + DFX 컨트롤러 + AXI + packer)만 상주
+DFX/RP가 전체 ISP pipeline RM을 교체:
+  RM_NORMAL     = stock Vitis Vision 기준 ISP pipeline
+  RM_LOW_LIGHT  = 저조도 특화 ISP pipeline(binning-demosaic + 완화 BLC + AWB/CCM + gain + gamma)
 ```
 
 목적:
 - Main research claim.
-- Arm 2와 비교해 resource, timing, power, reconfiguration overhead를 평가한다.
+- Arm 2와 비교해 resource, timing, power, reconfiguration overhead를 평가한다 —
+  스왑 단위가 전체 ISP pipeline이라 Arm 2 대비 자원 절감폭이 v1보다 커야 한다(가설, Stage 4/5 재실측 필요).
 
 ---
 
@@ -558,20 +590,20 @@ HLS/RTL을 바꾸기 전에 Python golden behavior를 먼저 정의한다.
 ```text
 bright_normal
   expected mode: NORMAL
-  expected selected RM: RM_NORMAL_TONE or identity
-  expected inactive RM: RM_LOW_LIGHT_TONE
+  expected selected RM: RM_NORMAL
+  expected inactive RM: RM_LOW_LIGHT
   expected output shape: H x W
 
 dark_lowlight
   expected mode: LOW_LIGHT
-  expected selected RM: RM_LOW_LIGHT_TONE
-  expected inactive RM: RM_NORMAL_TONE
+  expected selected RM: RM_LOW_LIGHT
+  expected inactive RM: RM_NORMAL
   expected output shape: H/2 x W/2 if shape-changing policy is selected
 
 bright_recovery
   expected mode: NORMAL after hysteresis
-  expected selected RM: RM_NORMAL_TONE or identity
-  expected inactive RM: RM_LOW_LIGHT_TONE
+  expected selected RM: RM_NORMAL
+  expected inactive RM: RM_LOW_LIGHT
 ```
 
 ### 8.2 HLS C-sim gates
@@ -580,9 +612,10 @@ bright_recovery
 
 1. Golden vector generation이 성공한다.
 2. HLS C++ output이 Python golden output과 bit-exact하게 일치한다.
-3. Bright frame은 `RM_NORMAL_TONE` 또는 identity를 선택하고 `RM_LOW_LIGHT_TONE`을 통과하지 않는다.
-4. Dark frame은 `RM_LOW_LIGHT_TONE`을 선택하고 `RM_NORMAL_TONE`을 통과하지 않는다.
-5. 어떤 frame도 normal gain/gamma와 low-light gain/gamma를 둘 다 적용하지 않는다.
+3. Bright frame은 `RM_NORMAL`을 선택하고 `RM_LOW_LIGHT`를 통과하지 않는다.
+4. Dark frame은 `RM_LOW_LIGHT`를 선택하고 `RM_NORMAL`을 통과하지 않는다.
+5. 정확히 하나의 전체 ISP pipeline RM만 실행됐는지 확인한다(gain/gamma 중복 검사는 불필요 —
+   애초에 공유 스테이지가 없으므로).
 6. Output metadata가 expected mode, selected RM, shape과 일치한다.
 7. Boundary size를 test한다: even dimensions, odd dimensions, small frames.
 
@@ -591,11 +624,11 @@ bright_recovery
 C-sim pass 이후:
 
 1. C-synthesis report를 생성한다.
-2. Shared baseline core, `RM_NORMAL_TONE`, `RM_LOW_LIGHT_TONE`의 II/latency를 보고한다.
-3. Resource table에는 static region과 각 RM의 LUT, FF, BRAM, DSP를 포함한다.
+2. Static shell, `RM_NORMAL`, `RM_LOW_LIGHT` 각각의 II/latency를 보고한다.
+3. Resource table에는 static region과 각 RM(전체 ISP pipeline)의 LUT, FF, BRAM, DSP를 포함한다.
 4. Timing report에는 WNS/TNS와 clock target을 포함한다.
-5. Mode-specific tone RM slot에 대한 DFX partition floorplan을 정의한다.
-6. RM slot variants에 대해 `pr_verify` 또는 equivalent DFX verification을 통과한다.
+5. 전체 ISP pipeline RM에 대한 DFX partition floorplan을 정의한다.
+6. RM variants에 대해 `pr_verify` 또는 equivalent DFX verification을 통과한다.
 7. 각 RM variant의 partial bitstream size를 기록한다.
 8. Reconfiguration latency를 측정하거나 ICAP bandwidth에서 추정한다.
 
@@ -609,14 +642,13 @@ C-sim pass 이후:
 
 ```text
 mode selected
-selected RM (`RM_NORMAL_TONE`, `RM_LOW_LIGHT_TONE`, or identity)
+selected RM (`RM_NORMAL` or `RM_LOW_LIGHT`)
 inactive RM
 input size
 output size
 Y mean/std/min/max
 saturation percentage
 dark-ratio before/after
-gain/gamma duplication flag, expected false
 optional PSNR/SSIM against reference
 ```
 
@@ -735,16 +767,20 @@ paper/ thesis drafts and figure/reference plans
 
 ## 12. 즉시 수행할 다음 task
 
-### Task 1 — Shared core + mode-specific tone RM 중심으로 HLS architecture 재작성
+**주의:** 이번 reset(v2)은 문서 우선 정렬이다. 아래 task는 다음 단계(코드 마이그레이션)의
+목표이며, 이 세션에서 바로 구현하지는 않는다.
 
-다음 방향으로 구현 또는 refactor한다.
+### Task 1 — 전체 ISP pipeline RM 중심으로 HLS architecture 재작성
+
+다음 방향으로 구현 또는 refactor한다(static baseline core 스테이지를 제거하고, 각 RM이
+자기 ISP 데이터패스 전체를 소유하도록).
 
 ```text
-rm_normal_tone_gain_gamma_or_identity()
-rm_low_light_tone_binning_gain_gamma()
-baseline_isp_core_no_gain_gamma_duplication()
+rm_normal()       // BLC + demosaic + AWB/CCM + gain + gamma, stock Vitis Vision 기준
+rm_low_light()    // binning-demosaic + 완화 BLC + AWB/CCM + gain + gamma
 checker_select_mode()
-dfxisp_accel() controller with selected_rm metadata
+dfx_ctrl_select_rm()
+dfxisp_accel() shell wrapper with selected_rm metadata
 ```
 
 ### Task 2 — Python golden model 업데이트
@@ -752,13 +788,11 @@ dfxisp_accel() controller with selected_rm metadata
 Golden model은 다음을 포함해야 한다.
 
 ```text
-normal tone RM path or identity
-low-light tone RM path
-shared baseline ISP core path
+RM_NORMAL 전체 ISP pipeline path
+RM_LOW_LIGHT 전체 ISP pipeline path
 shape policy
 mode metadata
 selected RM metadata
-gain/gamma duplication flag
 ```
 
 ### Task 3 — Fixture 추가
@@ -779,22 +813,20 @@ odd_dimension_lowlight
 Report는 다음을 명시해야 한다.
 
 ```text
-Shared baseline core PASS/FAIL
-RM_NORMAL_TONE or identity PASS/FAIL
-RM_LOW_LIGHT_TONE PASS/FAIL
+RM_NORMAL PASS/FAIL
+RM_LOW_LIGHT PASS/FAIL
 Mutually exclusive RM selection: PASS/FAIL
-No duplicate gain/gamma: PASS/FAIL
 Output shape policy: H/2 x W/2 or H x W restored
 ```
 
 ### Task 5 — Ablation 보존
 
-현재 post-RGB8 gain/lift는 ablation으로만 유지한다.
+현재(v1) 공유 baseline core + tone RM 구현은 ablation/`Ref`로 유지한다.
 
 ```text
-Ablation: post_rgb_gain_lift
-Status: not the main low-light RM
-Purpose: compare against true binning+gain+gamma RM
+Ablation: v1_shared_baseline_core_plus_tone_rm
+Status: not the main architecture (superseded by v2, §0)
+Purpose: v1 vs v2 자원/전력/mAP 비교 기준
 ```
 
 ---
@@ -813,28 +845,27 @@ Purpose: compare against true binning+gain+gamma RM
 즉시 우선순위는 architectural correctness다.
 
 ```text
-mode-specific tone RM slot + shared baseline ISP core
-RM_NORMAL_TONE: normal gain + gamma, or identity
-RM_LOW_LIGHT_TONE: 2x2 binning + low-light gain + low-light gamma
+static shell(비-ISP 제어/라우팅) + mode-specific 전체 ISP pipeline RM
+RM_NORMAL: stock Vitis Vision 기준 ISP pipeline 전체
+RM_LOW_LIGHT: binning-demosaic + 완화 BLC + AWB/CCM + low-light gain + low-light gamma
 selected RM is mutually exclusive per frame/segment
-baseline ISP core does not duplicate gain/gamma
+static shell은 ISP 데이터패스를 전혀 포함하지 않는다
 ```
 
 ---
 
 ## 14. Reset acceptance criteria
 
-Reset은 다음 조건을 만족하면 완료로 본다.
+Reset(v2)은 다음 조건을 만족하면 완료로 본다.
 
 1. `README.md`와 `RESEARCH.md`가 유일한 active top-level research documents다.
 2. Historical docs는 삭제하지 않고 archive한다.
-3. `RESEARCH.md`가 shared baseline ISP core + mode-specific tone RM architecture를 명확히 정의한다.
-4. Current scaffold mismatch가 문서화되어 있다.
+3. `RESEARCH.md`가 static shell + mode-specific 전체 ISP pipeline RM architecture를 명확히 정의한다.
+4. v1(현재 코드) 대비 v2(목표 아키텍처)의 차이가 문서화되어 있다(§0).
 5. Next implementation target이 모호하지 않다.
 6. Future reports는 다음을 구분한다.
-   - shared baseline core path
-   - `RM_NORMAL_TONE` or identity path
-   - `RM_LOW_LIGHT_TONE` path
-   - post-RGB gain/lift ablation
-   - register-only adaptive baseline
-   - DFX adaptive RM-slot variant
+   - `RM_NORMAL` path (전체 ISP pipeline)
+   - `RM_LOW_LIGHT` path (전체 ISP pipeline)
+   - v1 shared-baseline-core + tone-RM ablation(`Ref`)
+   - register-only adaptive baseline (Arm 2)
+   - DFX adaptive RM variant (Arm 3)
