@@ -443,36 +443,44 @@ Reconfigurable Partition으로 재구현·**pr_verify PASS**·partial bitstream 
 구현한 결과 Arm1은 3,400 / 3,363 / 3,364 LUT, Arm2는 4,769 / 4,768 LUT로 **1% 이내
 일치**했다. 즉 위 수치는 플로우 선택이나 floorplan 제약에 흔들리지 않는다.
 
-> ### ⚠️ Arm3는 아직 같은 축에 올리지 못했다 (미해결, 2026-08-04)
->
-> B8의 목표는 세 arm을 모두 post-route 축에 놓는 것이었으나 **Arm3에서 막혔다.**
-> 동일 RTL(오늘 csynth한 `syn/verilog`)을 **수정 없는 공식 `scripts/dfx/dfx_flow.tcl`**
-> 에 넣어 config1을 재실행한 결과:
->
-> | 출처 | CLB LUT | BRAM tile | DSP |
-> |---|---:|---:|---:|
-> | Arm1 (파티션 없음, 위 표) | 3,363 | 1.5 | 12 |
-> | 같은 RTL + 공식 DFX 플로우 (2026-08-04 재실행) | **2,317** | **1** | **10** |
-> | config1 published (2026-08-01) | 2,630 | 1.5 | 12 |
-> | config1 published (2026-07-03) | 3,972 | 1.5 | 12 |
->
-> 두 가지 문제가 있다:
-> 1. **동일 RTL인데 DFX 플로우가 31% 적은 LUT를 낸다**(3,363→2,317). pblock 제약은
->    원인이 아님을 대조 실험으로 배제했으므로(위 견고성 확인 (c)), 남은 차이는
->    `HD.RECONFIGURABLE` 파티션 속성이다 — 파티션 설계의 자원 보고/최적화가 평탄
->    설계와 다르다는 뜻이며, **그렇다면 Arm3 수치는 Arm1/Arm2와 직접 빼서 비교할 수
->    없다.**
-> 2. **published config1을 재현하지 못했다** — 2026-08-04 재실행이 BRAM 1 / DSP 10을
->    내어 published 1.5 / 12와 다르다. `dfx_flow.tcl`이 읽는 RTL 경로는
->    `impl/ip/hdl/verilog`(HLS `export_design` 산출물)인데 그 산출물은 `/tmp` 정리로
->    사라졌고, 이번엔 `syn/verilog`를 대신 넣었다. 즉 **published Arm3 수치는 현재
->    소스만으로 재생산되지 않는다.**
->
-> **함의(중요):** 목표 2의 "DFX가 자원을 아낀다"는 주장은 Arm3 수치에 의존하는데,
-> 그 수치의 재현 경로가 확보되지 않았다. **보드 착수 전에 반드시 해소해야 할
-> 항목**이며 `ROADMAP.md` "즉시 다음"에 등록했다. 해소 방법: `export_design`까지
-> 포함한 RTL 생성 절차를 스크립트로 고정하고 config1/config2를 재생성해
-> published 수치와 대조.
+### 10.3 세 arm을 하나의 축에 (2026-08-04) — DFX 절감의 정본 수치
+
+**published config1은 재현된다(확인 완료).** 2026-08-04 재실행이 수정 없는
+`scripts/dfx/dfx_flow.tcl`로 **LUT 2,630 / BRAM 1.5 / DSP 12**를 내어 08-01
+published와 **정확히 일치**했다.
+
+> **정정 기록:** 이 절의 최초 작성본(같은 날 앞선 커밋)은 "published config1이
+> 재현되지 않는다"고 적었으나 **오류였다.** RTL을 DFX 플로우 경로로 옮길 때
+> `cp *.v`로 **`.v`만 복사해 감마 LUT ROM 초기화 데이터인 `.dat` 파일이 누락**된
+> 상태로 합성한 결과였다(그 탓에 BRAM 1.5→1, DSP 12→10). `.dat`을 포함해 다시
+> 복사하니 즉시 일치했다. **재현성 문제는 존재하지 않는다.**
+> 교훈: HLS `syn/verilog` 산출물은 `.v` 외에 ROM `.dat`을 포함하므로 통째로 옮겨야 한다.
+
+**자원 비교는 flat 축으로 통일한다.** 파티션 빌드(`HD.RECONFIGURABLE`)는 동일
+넷리스트에서도 flat 대비 LUT가 약 24% 낮게 나온다(RM_NORMAL: flat 3,363 vs RP
+2,544). pblock은 원인이 아님을 대조로 배제했다(§10.2 견고성 확인 (c)). 원인은
+파티션 설계에 대한 구현/보고 방식 차이로 보이며 **미규명**이지만, 실용적 결론은
+분명하다 — **파티션 수치와 flat 수치를 섞어 빼면 안 된다.** 따라서:
+
+| arm / 모드 | 상주 로직 | CLB LUT | Arm2 대비 |
+|---|---|---:|---:|
+| Arm1 (정적, normal 전용) | RM_NORMAL | 3,363 | — |
+| **Arm2 (register-only, 양쪽 상주)** | RM_NORMAL + RM_LOW_LIGHT + checker | **4,768** | 기준 |
+| **Arm3 (DFX) — normal 모드** | RM_NORMAL | **3,363** | **−1,405 (−29.5%)** |
+| **Arm3 (DFX) — low-light 모드** | RM_LOW_LIGHT | **2,344** | **−2,424 (−50.8%)** |
+
+(전부 동일 tie-off 래퍼·동일 OOC+DCP 플로우·동일 part로 배치·배선한 post-route
+실측. RM_LOW_LIGHT: Reg 3,450 / BRAM 3.5 / DSP 8, WNS +1.661 ns.)
+
+**목표 2 결론:** DFX는 always-on(Arm2) 대비 **normal 모드에서 29.5%, low-light
+모드에서 50.8%의 LUT를 절감**한다. low-light 쪽 절감이 큰 이유는 2×2 binning으로
+H/2×W/2만 처리해 데이터패스가 애초에 작기 때문이다. §10.1의 csynth 기반 추정
+(“DFX 회수 상한 = Arm2의 25.5%”)은 **과소평가였다** — post-route 실측이 그보다
+크다.
+
+> **파티션 빌드의 용도:** config1/config2(2,630/1,843 LUT)는 위 표와 **다른 축**이므로
+> 자원 비교에 섞지 않는다. 그 빌드의 고유 산출물인 **partial bitstream 크기,
+> `pr_verify`, partition pin, 재구성 지연**에만 인용한다(§10 표).
 
 Arm2 인스턴스 분해(unified top 내부, DFX 순이득 추정의 참조점, 재합성 후):
 
