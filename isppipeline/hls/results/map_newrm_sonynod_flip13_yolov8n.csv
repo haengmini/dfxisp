@@ -1,3 +1,0 @@
-dataset,arm,mAP_50_95,mAP_50,model,n
-SonyNOD-flip13,normal,0.1511,0.3161,/home/user/dfxisp/model/detectors/yolo/yolov8n.pt,13
-SonyNOD-flip13,lowlight,0.1808,0.3608,/home/user/dfxisp/model/detectors/yolo/yolov8n.pt,13
