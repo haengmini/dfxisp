@@ -8,7 +8,7 @@ board: dfxisp
 created: 2026-06-23
 owner: 이형민
 tags: [fpga, dfx, isp, machine-vision, zynq-ultrascale, low-light]
-updated: 2026-07-20
+updated: 2026-08-04
 ---
 
 # DFXISP
@@ -41,24 +41,26 @@ Input real-RAW Bayer (PASCAL RAW 밝음 / LOD RAW 저조도; 초기엔 pseudo-RA
 
 핵심 원칙:
 
-1. **Shared baseline ISP core는 공통 후단 경로다.**
-2. **Gain/gamma는 baseline core에 중복 배치하지 않고 mode-specific tone RM으로 분리한다.**
+1. **Shared baseline ISP core는 공통 후단 경로다** — 단, 이 "공유"는 **소스 레벨**이다. 한 개의 `apply_blc_wb12()` 정의를 두 경로가 호출해 BLC/WB 산술의 bit-exact 일치를 보장한다는 뜻이며, **하드웨어 자원 공유가 아니다**. 합성된 RP는 모드별 전체 파이프라인을 감싸므로 실리콘에는 BLC/WB가 RM마다 중복 구현된다(`SPEC.md` §7 "RP 경계", §11.12).
+2. **Gain/gamma는 baseline core에 중복 배치하지 않고 mode-specific tone RM으로 분리한다.** (C-sim 아키텍처 게이트가 이 소스 레벨 계약을 검증한다.)
 3. **Normal tone RM과 low-light tone RM은 mutually exclusive다.**
 4. **Checker가 어두운 장면을 감지했을 때만 low-light tone RM을 트리거한다.**
 5. **Low-light tone RM은 `binning + gain + gamma + 완화 BLC`다.** 이득 귀속(기대 vs 실측)은 `results/lowlight-module-techniques-2026-07-10.md` — 주효인은 완화 BLC, binning은 real-RAW에서 조건부, 별도 톤 LUT는 기각.
 6. DFX 실증 전에는 C-Sim/Python golden으로 산술 정합을 먼저 고정한다.
 
-## Current status (2026-07-20)
+## Current status (2026-08-04)
 
 - **SW 트랙 (Stage 0~3): 절차 완료, real-RAW 기준으로 동결** — golden/baseline core, checker(+principled-v3 SOTA 후속), tone RM 산술+이득귀속, mAP 평가. **Stage 3 "정확도 재검증 허브"**가 2026-07-20에 한 바퀴 완주했다 — 정본 데이터셋(LOD=SonyNOD/PASCAL=PASCALRAW real-RAW, Shuffle_split 642장) 교차검증 완료, 그 실측 근거로 **BLC 재보정(16/8→2/2) 배포**. 정성적 결론(저조도 모듈이 dark 조건에서 normal 상회)은 견고하게 재확인됨.
 - **Checker: SOTA 강화 4개 관문 전부 완료(2026-07-20)** — C0(dark50>0.80)→**C1(dark16>0.62) 정식 배포**, 오라클 라벨 재정의로 잔존오차의 89.6%가 라벨 아티팩트임을 확인해 **C1 재조정 불필요**로 결론. 상세: `isppipeline/hls/results/checker-status-2026-07-10.md` §4.
-- **HW 트랙 (Stage 4~5): 완료(한계 기록됨)** — Vitis HLS 합성 + C/RTL Co-sim, Vivado DFX 구현 + pr_verify + PR latency 분석. BLC/checker 배포로 HW 소스 상수는 이미 갱신됐으나 **csynth/cosim 재실행은 아직(open)**.
+- **HW 트랙 (Stage 4~5): 완료(한계 기록됨)** — Vitis HLS 합성 + C/RTL Co-sim, Vivado DFX 구현 + pr_verify + PR latency 분석. BLC/checker 상수 반영 **csynth/cosim 재실행 완료**(07-20, 자원·타이밍 완전 동일)와 **Vivado DFX fabric-only 재구현 완료**(08-01, pr_verify PASS·partition pin 3·bitstream 크기 일치).
+- **3-arm 자원 비교 완성(2026-08-04)** — 비어 있던 Arm1 칸을 메우고 세 arm을 **post-route 축으로 통일**했다. 적응성의 비용은 Arm1 3,363 → Arm2 4,768 LUT(+41.8%)이고, **DFX는 Arm2 대비 normal 모드 −29.5%, low-light 모드 −50.8% LUT를 절감**한다(모두 동일 래퍼·플로우로 배치·배선한 실측). 상세: `SPEC.md` §10.1~§10.3.
+- **색보정 상수의 모드별 분리: 두 건 모두 기각(2026-08-04 확정)** — BLC는 모드별 배포 후 real-RAW 재보정에서 양쪽 2로 수렴(07-20), WB는 real-RAW 분리 재튜닝에서 mAP 무반응으로 기각(08-03). 두 모드의 실질적 차이는 **색보정 상수가 아니라 구조**(binning, 노출 게인)에 있다. 상세: `isppipeline/hls/results/lowlight-wb-mode-split-2026-08-03.md`.
 - **Stage 6 (보드 실장 + DPU end-to-end): 미착수** — 실물 ZCU104 필요, **보드 없이 할 수 있는 절차 중 유일하게 남은 것**. 목표 2의 효율(전력) 실증이 여기 걸림.
 - 실제 진행은 선형이 아니라 **나선형**(Stage 5까지 올라갔다 SW Stage 3으로 되돌아오는 되먹임 반복) — 상세는 `ROADMAP.md`.
 
 ## Next direction
 
-**즉시(둘 다 SW/형식 확인 위주, Stage 6과 독립):** (1) csynth/cosim 재실행(BLC/checker 상수 변경 반영, 자원 영향 없음 예상), (2) YOLOv8s/SSDLite 교차 모델 검증(부차 발견 견고성 확인). 그 다음은 Stage 6(보드) 착수 준비.
+**즉시:** (1) YOLOv8s 교차 모델 검증 결과 회수·정리(노트북 RTX 5060에 인수인계, 진행 중), (2) SSDLite 교차검증(글루 코드 필요). 둘 다 이미 배포된 결정을 막지 않으며 논문 일반화 주장 보강용이다. 그 다음은 **Stage 6(보드) 착수** — 선결 과제는 PR 컨트롤러 통합(`drain_ready`를 실제 RM `ap_idle`에 연결, ICAPE3/STARTUPE3 인스턴스화)이며, 이것이 유일한 진짜 blocking item이다.
 
 **보류 중인 리팩토링 방향:** `STRATEGY.md`가 제안한 **Vitis Vision Library 기준 baseline + DFXISP 확장 모듈** 구조(Vitis Base를 고정하고 Check/Dark/DFX Ctrl을 확장)는 2026-07-03에 제안됐으나 **아직 착수되지 않았다** — checker/BLC real-RAW 재보정 트랙이 우선됐다. 착수 여부·시점은 미결정.
 

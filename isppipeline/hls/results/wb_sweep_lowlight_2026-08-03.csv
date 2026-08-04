@@ -1,0 +1,7 @@
+candidate,wb_lowlight,blc_offset,arm,mAP_50_95,mAP_50,model,n
+wboff,256:256:256,2,lowlight,0.2134,0.3782,yolov8n.pt,321
+shared,shared,2,lowlight,0.2141,0.3811,yolov8n.pt,321
+Ronly,360:256:307,2,lowlight,0.2140,0.3813,yolov8n.pt,321
+Bonly,286:256:460,2,lowlight,0.2137,0.3820,yolov8n.pt,321
+halfway,360:256:460,2,lowlight,0.2154,0.3825,yolov8n.pt,321
+grayworld,435:256:616,2,lowlight,0.2143,0.3830,yolov8n.pt,321

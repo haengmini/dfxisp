@@ -1,13 +1,25 @@
 # Vitis-First DFXISP Refactor Strategy
 
-> **상태(2026-07-20): 제안됐으나 미착수.** 이 문서는 2026-07-03에 작성된
+> **상태(2026-08-04): 제안됐으나 미착수.** 이 문서는 2026-07-03에 작성된
 > 계획이다 — `src/`에 `base_vitis.cpp`/`check.cpp`/`tone.cpp`/`ctrl.cpp`/
 > `shell.cpp`/`TERMS.md` 등 Task 1~18의 어떤 산출물도 아직 존재하지 않는다.
-> 2026-07-04~20 사이 실제로 진행된 작업은 이 문서와 무관한 checker/BLC
-> real-RAW 재보정 트랙(`ROADMAP.md` Stage 1·3 후속)이었다 — 이 문서가
-> 폐기된 것은 아니고, 우선순위상 뒤로 밀렸을 뿐이다. 착수 여부·시점은
+> 2026-07-04~08-03 사이 실제로 진행된 작업은 이 문서와 무관한 checker/BLC
+> real-RAW 재보정 트랙과 WB 분리 검토(`ROADMAP.md` Stage 1·3 후속)였다 — 이
+> 문서가 폐기된 것은 아니고, 우선순위상 뒤로 밀렸을 뿐이다. 착수 여부·시점은
 > 미결정(`ROADMAP.md` "즉시 다음" §7 참고). 아래 계획 본문은 착수 시
 > 그대로 유효하다.
+>
+> **착수 결정의 실질적 쟁점은 §9 열린 질문 #4다(2026-08-04 추가).** 이 문서가
+> 선호하는 **"RP = Tone만"** 과 현재 실제로 구현된 **"RP = 모드별 전체
+> 파이프라인"**(`SPEC.md` §7 "RP 경계"·§11.12, `results/design-limitations
+> -2026-07-03.md` §4.3)은 **양립 불가**다. Vitis Vision을 고정 Base로 쓰려면
+> Base가 static이어야 하는데, 현재 구현은 Base에 해당하는 BLC/WB를 RM마다
+> 중복 합성한다. 따라서 이 리팩터의 착수 여부는 곧 **어느 논문 서사를 택할
+> 것인가**의 문제다 — (A) "검증된 라이브러리 Base + 작은 DFX 확장"(이 문서),
+> (B) "DFX가 모드별 완결 ISP를 통째로 교체"(현재 구현, 자원 절감 논거가 더
+> 크지만 partial bitstream·재구성 지연도 큼). 논문 마감(2026-10)을 고려하면
+> (B) 유지가 저비용이다 — 이미 합성·`pr_verify`·bitstream까지 끝나 있고,
+> 필요한 것은 서술 정정뿐이며 그 정정은 2026-08-04에 완료됐다.
 
 > **For Hermes:** Use subagent-driven-development skill to implement this plan task-by-task.
 

@@ -69,13 +69,17 @@ def load_adaptive_verdicts(manifest: Path) -> dict[str, bool]:
         return {row["stem"]: row["adaptive_verdict_lowlight"] == "True" for row in csv.DictReader(f)}
 
 
-def render_arm(bayer, w, h, arm, blc_offset, stem=None, adaptive_verdicts=None):
+def render_arm(bayer, w, h, arm, blc_offset, stem=None, adaptive_verdicts=None,
+               wb_lowlight=None):
     """Synthesize the uint8 RGB image for a given arm + swept BLC offset,
-    using the new independent normal/lowlight/checker modules."""
+    using the new independent normal/lowlight/checker modules.
+
+    wb_lowlight: optional (R,G,B) Q8 WB override applied to the LOW-LIGHT path
+    only (the normal path keeps the deployed shared gains). None = unchanged."""
     if arm == "normal":
         return PB.run_arm(bayer, w, h, "normal", blc_offset=blc_offset)
     if arm == "lowlight":
-        return PL.run_arm(bayer, w, h, "lowlight", blc_offset=blc_offset)
+        return PL.run_arm(bayer, w, h, "lowlight", blc_offset=blc_offset, wb=wb_lowlight)
     if arm == "adaptive":
         if adaptive_verdicts is not None:
             if stem not in adaptive_verdicts:
@@ -87,13 +91,13 @@ def render_arm(bayer, w, h, arm, blc_offset, stem=None, adaptive_verdicts=None):
             # --manifest whenever a build_matched_splits.py manifest exists.
             is_lowlight = PC.selected_mode(bayer, w, h) == "lowlight"
         if is_lowlight:
-            return PL.run_arm(bayer, w, h, "lowlight", blc_offset=blc_offset)
+            return PL.run_arm(bayer, w, h, "lowlight", blc_offset=blc_offset, wb=wb_lowlight)
         return PB.run_arm(bayer, w, h, "normal", blc_offset=blc_offset)
     raise ValueError(f"unsupported arm for BLC ablation: {arm}")
 
 
 def build_arm_images(root: Path, work: Path, arms, limit: int, blc_offset: int,
-                      adaptive_verdicts=None) -> int:
+                      adaptive_verdicts=None, wb_lowlight=None) -> int:
     raw_dir = root / "raw_bin"; lab_dir = root / "labels"; img_dir = root / "images"
     stems = sorted(p.stem for p in raw_dir.glob("*.bin")
                    if (img_dir / f"{p.stem}.jpg").exists() and (lab_dir / f"{p.stem}.txt").exists())
@@ -110,7 +114,8 @@ def build_arm_images(root: Path, work: Path, arms, limit: int, blc_offset: int,
             continue
         bayer = bayer.reshape(h, w)
         for a in arms:
-            out = render_arm(bayer, w, h, a, blc_offset, stem=stem, adaptive_verdicts=adaptive_verdicts)
+            out = render_arm(bayer, w, h, a, blc_offset, stem=stem,
+                             adaptive_verdicts=adaptive_verdicts, wb_lowlight=wb_lowlight)
             Image.fromarray(out).save(work / a / "images" / f"{stem}.jpg", quality=95)
             shutil.copy(lab_dir / f"{stem}.txt", work / a / "labels" / f"{stem}.txt")
         built += 1
@@ -134,10 +139,21 @@ def main() -> int:
                           "it, 'adaptive' silently falls back to the deployed checker "
                           "(checker.selected_mode; C1 dark16>0.62 since 2026-07-20), which is "
                           "NOT the adopted adaptive-tau scheme.")
+    ap.add_argument("--wb-lowlight", default=None,
+                     help="mode-specific WB override for the LOW-LIGHT path only, as 'R,G,B' "
+                          "Q8 gains (e.g. '435,256,616'). Omit to keep the deployed shared "
+                          "gains (286,256,307). The normal path is never affected.")
     args = ap.parse_args()
 
     arms = [a.strip() for a in args.arms.split(",") if a.strip()]
     blc_offsets = [int(v.strip()) for v in args.blc_offsets.split(",") if v.strip() != ""]
+    wb_lowlight = None
+    if args.wb_lowlight:
+        parts = [int(v.strip()) for v in args.wb_lowlight.split(",") if v.strip() != ""]
+        if len(parts) != 3:
+            raise SystemExit(f"--wb-lowlight needs 3 comma-separated Q8 gains, got {args.wb_lowlight!r}")
+        wb_lowlight = tuple(parts)
+    wb_label = "shared" if wb_lowlight is None else ":".join(str(v) for v in wb_lowlight)
     root = Path(args.root)
     adaptive_verdicts = load_adaptive_verdicts(args.manifest) if args.manifest else None
 
@@ -149,9 +165,10 @@ def main() -> int:
     rows = []
     n = None
     for blc in blc_offsets:
-        work = Path(args.work) / f"{args.tag.lower()}_blc{blc}"
-        n = build_arm_images(root, work, arms, args.limit, blc, adaptive_verdicts=adaptive_verdicts)
-        print(f"[{args.tag}] blc_offset={blc}: built arm images for {n} frames: {arms}")
+        work = Path(args.work) / f"{args.tag.lower()}_blc{blc}_wb{wb_label.replace(':', '_')}"
+        n = build_arm_images(root, work, arms, args.limit, blc,
+                             adaptive_verdicts=adaptive_verdicts, wb_lowlight=wb_lowlight)
+        print(f"[{args.tag}] blc_offset={blc} wb_lowlight={wb_label}: built arm images for {n} frames: {arms}")
         for a in arms:
             ds = work / a
             yml = ds / "data.yaml"
@@ -161,15 +178,16 @@ def main() -> int:
             }))
             m = model.val(data=str(yml), imgsz=640, verbose=False, save_json=False, plots=False)
             map5095, map50 = float(m.box.map), float(m.box.map50)
-            print(f"[{args.tag}] blc_offset={blc:2d} {a:9s} mAP@[.5:.95]={map5095:.4f}  mAP@50={map50:.4f}")
-            rows.append((args.tag, blc, a, map5095, map50, model_path, n))
+            print(f"[{args.tag}] blc_offset={blc:2d} wb={wb_label:12s} {a:9s} "
+                  f"mAP@[.5:.95]={map5095:.4f}  mAP@50={map50:.4f}")
+            rows.append((args.tag, blc, wb_label, a, map5095, map50, model_path, n))
 
     out = Path(args.out); out.parent.mkdir(parents=True, exist_ok=True)
     with out.open("w", newline="") as f:
         wr = csv.writer(f, lineterminator="\n")
-        wr.writerow(["dataset", "blc_offset", "arm", "mAP_50_95", "mAP_50", "model", "n"])
-        for tag, blc, a, m5095, m50, model_path, n in rows:
-            wr.writerow([tag, blc, a, f"{m5095:.4f}", f"{m50:.4f}", model_path, n])
+        wr.writerow(["dataset", "blc_offset", "wb_lowlight", "arm", "mAP_50_95", "mAP_50", "model", "n"])
+        for tag, blc, wbl, a, m5095, m50, model_path, n in rows:
+            wr.writerow([tag, blc, wbl, a, f"{m5095:.4f}", f"{m50:.4f}", model_path, n])
     print(f"wrote {out}")
     return 0
 

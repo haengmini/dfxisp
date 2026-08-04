@@ -64,17 +64,18 @@ def _bin_demosaic_rggb16(bayer16, w, h):
     return np.stack([R, G, B], -1)
 
 
-def _blc_wb_gain(rgb16, gnum, gden, blk_raw=BLC_OFFSET_LOWLIGHT):
+def _blc_wb_gain(rgb16, gnum, gden, blk_raw=BLC_OFFSET_LOWLIGHT, wb=None):
     """RAW-domain corrections (before >>8): BLC -> WB(Q8) -> exposure gain."""
+    wb_r, wb_g, wb_b = (AWB_R, AWB_G, AWB_B) if wb is None else wb
     x = np.clip(rgb16 - blk_raw, 0, None)                 # BLC (subtract first)
-    x[..., 0] = x[..., 0] * AWB_R // 256                  # WB per channel (Q8)
-    x[..., 1] = x[..., 1] * AWB_G // 256
-    x[..., 2] = x[..., 2] * AWB_B // 256
+    x[..., 0] = x[..., 0] * wb_r // 256                   # WB per channel (Q8)
+    x[..., 1] = x[..., 1] * wb_g // 256
+    x[..., 2] = x[..., 2] * wb_b // 256
     x = x * gnum // gden                                  # exposure gain
     return (np.clip(x >> SHIFT, 0, 255)).astype(np.uint8)  # -> 8-bit LAST (precision preserved)
 
 
-def run_lowlight(bayer16, w, h, blc_offset=None):
+def run_lowlight(bayer16, w, h, blc_offset=None, wb=None):
     """LOW_LIGHT arm: 2x2 RAW bin-demosaic -> BLC/WB/gain(2.0x) -> CCM(identity)
     -> gamma 2.0. -> (H/2) x (W/2) x 3 uint8.
 
@@ -83,13 +84,21 @@ def run_lowlight(bayer16, w, h, blc_offset=None):
     (default), the existing module constant BLC_OFFSET_LOWLIGHT is used
     unchanged -- purely additive, backward-compatible parameter for the BLC
     recalibration ablation.
+
+    wb: optional (R,G,B) Q8 white-balance gain override. When None (default)
+    the shared module constants AWB_R/G/B are used, so existing callers are
+    bit-identical. Added for the mode-specific WB recalibration: the deployed
+    shared gains are a bright-scene calibration (measured 2026-08-03: they sit
+    at 0.92x of PASCAL's gray-world optimum but only 0.50x of SonyNOD's, i.e.
+    low-light gets half the blue correction it needs).
     """
     blk_raw = BLC_OFFSET_LOWLIGHT if blc_offset is None else (int(blc_offset) << SHIFT)
-    rgb8 = _blc_wb_gain(_bin_demosaic_rggb16(bayer16, w, h), GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN, blk_raw=blk_raw)
+    rgb8 = _blc_wb_gain(_bin_demosaic_rggb16(bayer16, w, h), GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN,
+                        blk_raw=blk_raw, wb=wb)
     return GAMMA2_LUT[rgb8]
 
 
-def run_arm(bayer16, w, h, arm, blc_offset=None):
+def run_arm(bayer16, w, h, arm, blc_offset=None, wb=None):
     if arm == "lowlight":
-        return run_lowlight(bayer16, w, h, blc_offset=blc_offset)
+        return run_lowlight(bayer16, w, h, blc_offset=blc_offset, wb=wb)
     raise ValueError(arm)
