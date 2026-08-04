@@ -351,18 +351,63 @@ adversarial-review 수정(chroma-preserving binning-demosaic + scalar 메타데�
 mode 선택, DFX 없음)은 **Arm2(register-only)**. RM_NORMAL_TONE/RM_LOW_LIGHT_TONE을 실제
 Reconfigurable Partition으로 재구현·**pr_verify PASS**·partial bitstream 재생성까지
 완료해 **Arm3(DFX) fabric-only 실측**을 확보(PS/DDR 미통합, 절대 전력·PR latency(ms)는
-보드 전용). Arm1(정적 baseline-only)은 여전히 TODO.
+보드 전용). **Arm1(정적 baseline-only)도 2026-08-04에 실측 확보** — 아래 표와 §10.1 참조.
 상세: `results/stage4-hw-synthesis-2026-07-02.md`(csynth), `results/stage5-dfx-implementation-2026-07-02.md`(DFX 구현).
 
-| 지표 | Arm1(static) | **Arm2(register-only, 실측)** | **Arm3(DFX, 실측 — BLC fix+pblock fix 반영 최종, 2026-07-03)** |
+| 지표 | **Arm1(static, 실측 2026-08-04)** | **Arm2(register-only, 실측)** | **Arm3(DFX, 실측 — BLC fix+pblock fix 반영 최종, 2026-07-03)** |
 |---|---|---|---|
-| LUT / FF / BRAM / DSP | TODO | **8,264 / 5,536 / 9 / 24**(BLC fix 반영해도 자원 불변) | config1(static+RM_NORMAL) routed: LUT 3,972/BRAM 1.5tile/DSP 12; config2(static+RM_LOW_LIGHT) routed: LUT 2,927/BRAM 3.5tile/DSP 8(`results/blc-fix-resynthesis-2026-07-03.md`) |
-| Fmax @5.0ns | TODO | **273.97 MHz**(critical path 3.650ns, 수정 전후 동일) | 기존 pblock(X0Y0:X1Y0)에서 **200MHz 제약 만족** 확인(WNS config1 +0.619ns/config2 +1.930ns, 2026-07-03; `results/dfx-vivado-considerations-2026-07-03.md` §6) — **신규 pblock(X1Y0:X2Y0)에서는 아직 타이밍 제약 재검증 TODO** |
+| LUT / FF / BRAM / DSP | **5,202 / 3,797 / 4 / 12** | **8,264 / 5,536 / 9 / 24**(BLC fix 반영해도 자원 불변) | config1(static+RM_NORMAL) routed: LUT 3,972/BRAM 1.5tile/DSP 12; config2(static+RM_LOW_LIGHT) routed: LUT 2,927/BRAM 3.5tile/DSP 8(`results/blc-fix-resynthesis-2026-07-03.md`) |
+| Fmax @5.0ns | **273.97 MHz**(critical path 3.650ns — Arm2와 동일) | **273.97 MHz**(critical path 3.650ns, 수정 전후 동일) | 기존 pblock(X0Y0:X1Y0)에서 **200MHz 제약 만족** 확인(WNS config1 +0.619ns/config2 +1.930ns, 2026-07-03; `results/dfx-vivado-considerations-2026-07-03.md` §6) — **신규 pblock(X1Y0:X2Y0)에서는 아직 타이밍 제약 재검증 TODO** |
 | pr_verify | — | — | **✅ PASS**(BLC fix+pblock fix 동시 반영 후에도 static 완전 동일; partition pin **3개** — 구 floorplan의 15개와 다름, 원인 미조사) |
 | full bitstream size | — | — | **19,311,211 bytes ≈ 19.3 MB**(불변) |
 | partial bitstream size | — | — | **1,447,424 bytes ≈ 1.38 MB**(신규 pblock, 구 686,664B 대비 **2.11배** — pblock 용량 2배 확장의 직접적 대가, `results/blc-fix-resynthesis-2026-07-03.md` §5) |
 | 재구성 지연(ms) | — | — | 신규 bitstream 기준 재계산: peak **3.618ms**/전형 **14.473ms**(구 1.72/6.87ms의 2.11배); 드라이버/FSM 포함 실측은 TODO(보드) |
 | 정상모드 전력(W) | TODO | TODO | TODO(보드 실측 필요) |
+
+### 10.1 Arm1 vs Arm2 — "적응성의 비용"(2026-08-04 신규)
+
+**Arm1의 정체:** Arm1(정적 baseline + normal tone)은 알고리즘적으로
+`run_normal()`(demosaic → BLC/WB/CCM → gain 1.25× + gamma) 그 자체이며, 이를 AXI로
+감싼 것이 이미 존재하던 `rm_normal_tone_top`이다. 즉 **Arm1은 별도 설계가 아니라
+이미 합성돼 있던 top이었고, 위 표의 `TODO`는 측정 공백이 아니라 장부 공백이었다.**
+2026-08-04에 Arm1·Arm2를 **동일 소스(BLC 2/2)·동일 툴 세션**에서 재합성해 확정했다
+(Arm1은 07-03 수치와 완전 일치 — 상수 변경이 csynth를 바꾸지 않는다는 §11.10의
+관찰을 재확인).
+
+> **부수 발견(저장소 정합성):** 이 재합성 과정에서 커밋돼 있던
+> `reports/csynth/dfxisp_accel_ver1_csynth.rpt`가 **LUT 11,217 / FF 7,008 / DSP 30**
+> 으로, 이 표가 인용해온 8,264 / 5,536 / 24와 **불일치**함을 발견했다 — 2026-07-02
+> adversarial-review 수정 **이전**(16:39) 리포트가 그대로 남아 있었고, 같은 날 20:33
+> 재합성 결과(§11.5)는 이 표에만 반영되고 리포트 파일은 갱신되지 않았던 것.
+> 2026-08-04 실측본으로 교체했다. **표의 수치가 정본이었고 리포트가 stale이었다**
+> (재합성이 표의 값을 그대로 재현해 확인).
+
+| 지표 | Arm1 | Arm2 | Δ (적응성 비용) |
+|---|---:|---:|---:|
+| LUT | 5,202 | 8,264 | **+3,062 (+58.9%)** |
+| FF | 3,797 | 5,536 | +1,739 (+45.8%) |
+| BRAM | 4 | 9 | +5 (+125%) |
+| DSP | 12 | 24 | +12 (+100%) |
+| Fmax | 273.97 MHz | 273.97 MHz | **0 (동일)** |
+
+**+3,062 LUT의 내역**(Arm2 인스턴스 분해와 정합, 합계 검증 완료):
+
+| 구성 | LUT | 비중 | DFX로 제거 가능? |
+|---|---:|---:|---|
+| `run_low_light` 데이터패스 | 2,110 | 69% | **가능**(RM 교체 대상) |
+| checker + mode mux + 추가 제어 레지스터 | 952 | 31% | **불가**(항상 static) |
+
+**함의(목표 2):** 적응 기능을 넣는 대가는 정적 ISP 대비 **LUT +58.9%**이고, 그중
+**DFX가 회수할 수 있는 상한은 2,110 LUT = Arm2 총 LUT의 25.5%**다. 나머지 31%
+(checker/mux)는 어떤 재구성 방식으로도 제거되지 않는다 — **DFX 순이득의 이론적
+천장**을 이 수치가 규정한다. 타이밍은 세 arm 모두 동일해 적응성이 Fmax를 희생시키지
+않음도 확인됐다.
+
+> **비교 시 주의(중요):** Arm1·Arm2는 **HLS csynth 추정치**이고 Arm3 config1/config2는
+> **Vivado post-route 실측치**다. 서로 다른 측정 단계이므로 **Arm1/Arm2와 Arm3를 직접
+> 빼서 비교하면 안 된다.** 위 Δ는 Arm1 vs Arm2(둘 다 csynth)에 한해 유효하다.
+> Arm1 vs Arm3의 엄밀한 비교에는 Arm1의 Vivado 구현(post-route)이 추가로 필요하며
+> 이는 미착수다.
 
 Arm2 인스턴스 분해(unified top 내부, DFX 순이득 추정의 참조점, 재합성 후):
 
