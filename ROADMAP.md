@@ -428,8 +428,12 @@ WSL2+XSIM 하네스 문제로 SIGSEGV — **⚠️ 자동 비교 미완주**(수
 
 ## Stage 5 — DFX(PR) 구현 + pr_verify + latency/PR 컨트롤러 ✅⚠️🔄 (4라운드)
 
-**목표:** static region(checker·baseline core·컨트롤러)과 tone RM slot(재구성)을
-분리하고, checker 트리거 → drain → PR 적재 → RM swap의 무손실 전환을 검증.
+**목표(당시 v1 서술):** static region(checker·baseline core·컨트롤러)과 tone RM
+slot(재구성)을 분리하고, checker 트리거 → drain → PR 적재 → RM swap의 무손실
+전환을 검증. **정정(2026-08-04, `SPEC.md` §7 "RP 경계"):** 실제 합성된 RP는
+baseline core를 포함한 모드별 전체 파이프라인이었다 — "static+baseline core
+공유"는 처음부터 실리콘에 존재한 적이 없다. 아래 라운드 기록은 원문 그대로
+보존한다(구현 이력이므로).
 
 **라운드 1 — 최초 구현 (2026-07-02):** AMD UG909 표준 절차(non-project batch
 Tcl), config1(static+NORMAL)/config2(static+LOW_LIGHT, black-box+lock 방법론)

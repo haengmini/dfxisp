@@ -13,7 +13,7 @@ updated: 2026-08-04
 
 # DFXISP
 
-DFXISP는 Zynq UltraScale+ ZCU104에서 **shared baseline ISP core**를 공통 경로로 유지하고, 조도 조건에 따라 **mode-specific tone Reconfigurable Module(RM)** 을 선택하는 Dynamic Function eXchange 기반 AI-ISP 연구 프로젝트다. 평상시에는 `RM_NORMAL_TONE`, 어두운 환경에서는 `RM_LOW_LIGHT_TONE`을 (체커가 판단해) 트리거한다.
+DFXISP는 Zynq UltraScale+ ZCU104에서 **static shell(ISP 연산이 없는 AXI/체커/DFX 컨트롤러)** 위에 조도 조건에 따라 상호배타로 스왑되는 **mode-specific 전체 ISP pipeline RM**(`RM_NORMAL`/`RM_LOW_LIGHT`, 각각 demosaic→BLC→WB/AWB→CCM→gain→gamma를 통째로 소유)을 얹는 Dynamic Function eXchange 기반 AI-ISP 연구 프로젝트다. baseline core는 두 RM 사이에 하드웨어로 공유되지 않는다(소스 함수 `apply_blc_wb12()`만 공유 — 실리콘에는 RM마다 중복 구현, `SPEC.md` §7 "RP 경계"). 평상시에는 `RM_NORMAL`, 어두운 환경에서는 `RM_LOW_LIGHT`를 (체커가 판단해) 트리거한다.
 
 ## 연구 목표 (정본: RESEARCH.md §1)
 
@@ -28,24 +28,22 @@ DFXISP는 Zynq UltraScale+ ZCU104에서 **shared baseline ISP core**를 공통 �
 
 ```text
 Input real-RAW Bayer (PASCAL RAW 밝음 / LOD RAW 저조도; 초기엔 pseudo-RAW proxy)
-  -> Scene checker
-       - 평상시: normal tone RM 또는 identity bypass
-       - 어두운 환경: low-light tone RM trigger
-  -> Mutually exclusive tone RM slot
-       NORMAL: gain -> gamma, or identity
-       LOW_LIGHT: 2x2 binning -> gain -> gamma
-  -> Baseline ISP core
-       BLC -> AWB/color calibration -> demosaic or bypass -> CCM -> RGB32 pack
-  -> RGB32 / DPU-facing output
+  -> Scene checker (static shell, ISP 연산 없음)
+       - 평상시: RM_NORMAL 트리거
+       - 어두운 환경: RM_LOW_LIGHT 트리거
+  -> Mutually exclusive 전체 ISP pipeline RM (RP가 통째로 스왑)
+       RM_NORMAL:     demosaic -> BLC -> AWB/CCM -> gain 1.25x -> gamma
+       RM_LOW_LIGHT:  2x2 binning-demosaic -> BLC(완화) -> AWB/CCM -> gain 2.0x -> gamma
+  -> RGB32 pack / DPU-facing output
 ```
 
 핵심 원칙:
 
-1. **Shared baseline ISP core는 공통 후단 경로다** — 단, 이 "공유"는 **소스 레벨**이다. 한 개의 `apply_blc_wb12()` 정의를 두 경로가 호출해 BLC/WB 산술의 bit-exact 일치를 보장한다는 뜻이며, **하드웨어 자원 공유가 아니다**. 합성된 RP는 모드별 전체 파이프라인을 감싸므로 실리콘에는 BLC/WB가 RM마다 중복 구현된다(`SPEC.md` §7 "RP 경계", §11.12).
-2. **Gain/gamma는 baseline core에 중복 배치하지 않고 mode-specific tone RM으로 분리한다.** (C-sim 아키텍처 게이트가 이 소스 레벨 계약을 검증한다.)
-3. **Normal tone RM과 low-light tone RM은 mutually exclusive다.**
-4. **Checker가 어두운 장면을 감지했을 때만 low-light tone RM을 트리거한다.**
-5. **Low-light tone RM은 `binning + gain + gamma + 완화 BLC`다.** 이득 귀속(기대 vs 실측)은 `results/lowlight-module-techniques-2026-07-10.md` — 주효인은 완화 BLC, binning은 real-RAW에서 조건부, 별도 톤 LUT는 기각.
+1. **Static shell에는 ISP 데이터패스가 없다.** static은 AXI/제어, checker/mode-FSM, DFX/PR 컨트롤러, output/metadata packer뿐이다. baseline core(BLC/AWB/demosaic/CCM)를 static·공유 하드웨어로 두지 않기로 결정했다(2026-07-10 reset v2, 이유는 `RESEARCH.md` §0) — 두 RM이 그 값보다 훨씬 작으면 always-on(Arm2)과 자원 차이가 거의 없어 DFX 채택 근거 자체가 약해지기 때문.
+2. **각 RM(`RM_NORMAL`/`RM_LOW_LIGHT`)이 자기 파이프라인 전체(demosaic→BLC→AWB/CCM→gain→gamma)를 통째로 소유한다.** 두 RM이 호출하는 `apply_blc_wb12()`는 **소스 레벨에서만** 같은 함수 정의고(BLC/WB 산술의 bit-exact 일치 보장 목적), 합성 시 RM마다 독립적으로 중복 구현된다 — 실리콘에 공유 인스턴스는 없다(`SPEC.md` §7 "RP 경계", §11.12).
+3. **RM_NORMAL과 RM_LOW_LIGHT는 mutually exclusive다** — 프레임/세그먼트당 정확히 하나만 상주·활성.
+4. **Checker가 어두운 장면을 감지했을 때만 RM_LOW_LIGHT를 트리거한다.**
+5. **RM_LOW_LIGHT의 저조도 특화 요소는 `2x2 binning-demosaic + 완화 BLC + gain 2.0x`다.** 이득 귀속(기대 vs 실측)은 `results/lowlight-module-techniques-2026-07-10.md` — 주효인은 완화 BLC, binning은 real-RAW에서 조건부, 별도 톤 LUT는 기각.
 6. DFX 실증 전에는 C-Sim/Python golden으로 산술 정합을 먼저 고정한다.
 
 ## Current status (2026-08-04)
@@ -68,7 +66,7 @@ Input real-RAW Bayer (PASCAL RAW 밝음 / LOD RAW 저조도; 초기엔 pseudo-RA
 
 - `README.md` — 프로젝트 한 페이지 요약 (이 문서)
 - `RESEARCH.md` — 연구 정본: 배경, 아키텍처, RM 명세, 실험/검증 계획
-- `SPEC.md` — 시스템 사양서: 입력 데이터셋 → checker → tone RM → baseline core → RGB32 출력 → 평가
+- `SPEC.md` — 시스템 사양서: 입력 데이터셋 → checker → mode-specific 전체 ISP pipeline RM → RGB32 출력 → 평가
 - `ROADMAP.md` — Stage 0~6 진행 상태 추적 (근거 문서 링크 포함)
 - `STRATEGY.md` — Vitis-first 리팩토링 전략 (2026-07-03, 다음 구현 방향)
 
@@ -98,7 +96,7 @@ make verify        # Python golden ↔ C-sim bit-exact + binning cross-check
 make report        # reports/latest.md 갱신
 ```
 
-`reports/latest.md` 기준: golden PASS, C-sim PASS, 아키텍처 gate 6종 PASS (shared baseline core / RM 2종 / 상호배타 / gain·gamma 중복없음 / 형상정책).
+`reports/latest.md` 기준: golden PASS, C-sim PASS, 아키텍처 gate 6종 PASS — 그중 "shared baseline core"는 **하드웨어 공유가 아니라 두 RM의 BLC/WB 소스 함수가 bit-exact로 일치하는지 보는 산술 회귀 게이트**다(실제 RP 경계는 `SPEC.md` §7 참고). 나머지: RM 2종 존재 / 상호배타 선택 / gain·gamma 중복없음 / 형상정책.
 
 ## Related locations
 
