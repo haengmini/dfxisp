@@ -1,0 +1,10 @@
+dataset,blc_offset,arm,mAP_50_95,mAP_50,model,n
+PASCAL-split-yolov8s-2026-08-03,16,normal,0.3110,0.7520,/home/user/dfxisp/model/detectors/yolo/yolov8s.pt,321
+PASCAL-split-yolov8s-2026-08-03,16,lowlight,0.3133,0.7639,/home/user/dfxisp/model/detectors/yolo/yolov8s.pt,321
+PASCAL-split-yolov8s-2026-08-03,16,adaptive,0.3130,0.7558,/home/user/dfxisp/model/detectors/yolo/yolov8s.pt,321
+PASCAL-split-yolov8s-2026-08-03,1,normal,0.4030,0.9256,/home/user/dfxisp/model/detectors/yolo/yolov8s.pt,321
+PASCAL-split-yolov8s-2026-08-03,1,lowlight,0.4059,0.9298,/home/user/dfxisp/model/detectors/yolo/yolov8s.pt,321
+PASCAL-split-yolov8s-2026-08-03,1,adaptive,0.4026,0.9252,/home/user/dfxisp/model/detectors/yolo/yolov8s.pt,321
+PASCAL-split-yolov8s-2026-08-03,2,normal,0.4006,0.9262,/home/user/dfxisp/model/detectors/yolo/yolov8s.pt,321
+PASCAL-split-yolov8s-2026-08-03,2,lowlight,0.4042,0.9243,/home/user/dfxisp/model/detectors/yolo/yolov8s.pt,321
+PASCAL-split-yolov8s-2026-08-03,2,adaptive,0.4006,0.9257,/home/user/dfxisp/model/detectors/yolo/yolov8s.pt,321
