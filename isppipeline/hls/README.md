@@ -197,9 +197,11 @@ C-sim에는 Vitis 전용 헤더가 필요 없다; HLS pragma만 존재하며 로
 5. **(시뮬레이션 완료 2026-08-06)** fabric 내부 모드 전환:
    `checker_hysteresis.v`가 신규 `hyst_flags` ap_vld wire를 소비해
    `pr_controller.trigger`를 request/ack로 구동 — end-to-end xsim PASS
-   (`checker_to_pr_tb.v`). 잔여 배선(재합성 후 실제 `hyst_flags` RTL 포트,
-   `drain_ready` ← RM `ap_idle`, ICAPE3)은 Stage 6 —
-   `results/pr_controller/checker_hysteresis.md` 참조.
+   (`checker_to_pr_tb.v`). **같은 날 production 경로로 AMD DFX Controller
+   IP(PG374)를 채택** — `dfxc_trigger_adapter.v`가 동일 req/ack 계약으로
+   IP에 연결(계약 모델 TB `checker_to_dfxc_tb.v` xsim PASS), 자체
+   pr_controller는 레이턴시 특성화 전용. 통합 체크리스트는
+   `results/pr_controller/dfxc_adapter.md` 참조.
 
 ## C-synthesis / Co-sim 실행 노트 (Vitis HLS 2024.1)
 

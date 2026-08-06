@@ -650,6 +650,16 @@ bit-exact 유지(`make verify` PASS), 단위·통합 TB xsim PASS
 정격 100MHz CDC) — `results/pr_controller/checker_hysteresis.md`. 같은
 내용이 인수인계 레포 JNU_DFXISP_FPGA에도 반영됨(원 구현처).
 
+**결정(2026-08-06, 같은 날): production 재구성 경로 = AMD DFX Controller
+IP(PG374) 채택** — 자체 `pr_controller.v`는 레이턴시 특성화(단계별
+trigger→done 측정) 전용 계측기로 역할 축소. `dfxc_trigger_adapter.v`가
+`checker_hysteresis`(무수정)를 IP 계약(RM별 one-hot HW trigger +
+`ap_idle` 기반 shutdown-ack shim)에 연결하고, PG374 계약 행위 모델 대상
+체인 시뮬 `checker_to_dfxc_tb.v` xsim PASS(드레인 강제·양방향 스왑).
+IP 생성 후 실제 포트명 확인 필요. Stage 6 통합 체크리스트(IP 구성 1 VS/
+2 RM/DDR 주소 테이블, DFX Decoupler, 스왑 후 ap_start 정책 미결)는
+`results/pr_controller/dfxc_adapter.md`.
+
 **Stage 6 착수 준비 (순서 유지, 실질적으로 유일하게 남은 큰 단계):**
 
 3. **Stage 6 착수 선결 과제** — 재합성된 `dfxisp_accel`의 `hyst_flags` 포트를

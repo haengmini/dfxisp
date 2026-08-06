@@ -357,7 +357,10 @@ RLAST    ________________________/‾\____   마지막 전송에서만 1
 > `pr_controller.trigger`를 request/ack로 구동하며, end-to-end 시뮬레이션
 > `checker_to_pr_tb.v`가 xsim PASS. C1 스펙의 Schmitt 히스테리시스를
 > "드라이버측 정책"으로 남겨뒀던 서술은 이로써 대체됨(SPEC.md v1.3 §3.1).
-> 잔여 통합 과제는 `checker_hysteresis.md` 참조.
+> 같은 날 **production 재구성 경로로 AMD DFX Controller IP(PG374)를 채택**
+> — `dfxc_trigger_adapter.v`(RM별 one-hot HW trigger + shutdown-ack shim)
+> 로 연결하며 자체 pr_controller는 특성화 전용(`dfxc_adapter.md`).
+> 잔여 통합 과제는 `checker_hysteresis.md`·`dfxc_adapter.md` 참조.
 
 ### 4.4 DFX 재구성 프로토콜 — 현재 상태: **설계에 없음**
 
