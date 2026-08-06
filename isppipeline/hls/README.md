@@ -87,6 +87,19 @@ legacy/ver0 코드 사이 경계가 문서화되어 있지 않아 혼동 위험�
 | `scheduler_sim.py` / `scheduler_sweep.py` | **정책 시뮬레이션** | hysteresis/temporal/min-dwell 스케줄러 트레이드오프 실험. synthetic luminance 시퀀스 사용 — checker 구현 자체의 검증이 아님 |
 | `internal_edge_smoke.py` | **회귀 테스트** | 1x1~8x8 극소/홀수 그리드 스모크 + demosaic 경계 clamp 회귀 테스트 (`make py-verify`). `baseline_isp_pipeline.py`/`checker.py` 양쪽의 독립 demosaic 사본을 각각 검사(2026-07-08 이전엔 `isp_pipeline_ver1.py` 대상) |
 
+## Ponytail 리뷰 기록 (2026-08-06)
+
+`/ponytail-review` 게이트를 세 arm 추가분에 적용한 결과(findings 11, 실행
+가능 −195줄) 중 **테스트 CSV 파서 3중복만 잘라냈다** — `tests/golden_csv.hpp`
+헤더 기반 로더 하나로 통합(−134줄). 나머지 둘은 **근거를 남기고 유지**한다:
+
+- **`src/`의 헬퍼·상수 중복**(`clamp_i`/`pack_rgb`/`bin_dim`/`CCM_Q8`/
+  `GAMMA2_LUT`, ~45줄): HLS는 arm마다 별도 translation unit으로 합성하므로
+  헤더로 빼도 **실리콘 결과가 동일**하다 — 이득 0인데 bit-exact golden 계약
+  3건을 건드리는 리팩터라, 사다리 1번("이 작업이 필요한가")에서 기각.
+- **Python golden 2종의 공통 상수/헬퍼**(~30줄): C++ 쪽은 중복인데 Python만
+  공유하면 **정본이 비대칭**이 되어 유지보수 혼동이 절감분보다 크다.
+
 ## 로컬 C-sim 실행
 
 ```bash

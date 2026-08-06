@@ -1,5 +1,5 @@
 CXX ?= g++
-CXXFLAGS ?= -std=c++17 -O2 -Wall -Wextra -Werror -Wno-unknown-pragmas -Iinclude
+CXXFLAGS ?= -std=c++17 -O2 -Wall -Wextra -Werror -Wno-unknown-pragmas -Iinclude -Itests
 PYTHON ?= python3
 VITIS_HLS ?= vitis_hls
 DFXISP_HLS_FLOW ?= csim
