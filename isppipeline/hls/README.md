@@ -131,7 +131,8 @@ extern "C" void dfxisp_accel(
     int* out_width,                // 선택된 RM의 출력 폭
     int* out_height,               // 선택된 RM의 출력 높이
     int* selected_mode,            // 해소된 mode (AUTO 해소값)
-    int* selected_rm);             // 선택된 tone RM
+    int* selected_rm,              // 선택된 tone RM
+    int* hyst_flags);              // Schmitt 밴드 플래그 (ap_vld fabric wire, 2026-08-06)
 ```
 메타데이터가 구조체 포인터 하나가 아니라 **4개의 개별 scalar 출력 포인터**인 이유: 구조체
 포인터를 `s_axilite`로 선언하는 방식은 검증된 바 없는(비표준) 패턴이라 adversarial review에서
@@ -144,8 +145,12 @@ extern "C" void dfxisp_accel(
 경계를 따라 분할되어 있다:
 
 - `checker_select_mode()` — static-region scene checker. `AUTO`에서 dark-pixel 비율로
-  NORMAL/LOW_LIGHT를 결정. 장면 단위 히스테리시스는 시퀀스 스케줄러(RESEARCH §5.2) 담당이며
-  단일 프레임 C-sim entry에는 없다.
+  NORMAL/LOW_LIGHT를 결정하고, (2026-08-06부터) 프레임당 Schmitt 밴드 비교 2개
+  (`hyst_flags`: enter 62% 초과 / exit 60% 미만)를 추가로 내보낸다. 장면 단위
+  히스테리시스 **상태**는 static-region RTL 모듈
+  `results/pr_controller/checker_hysteresis.v`가 소유하며 PR 컨트롤러 trigger를
+  직접 구동한다(request/ack, PS 무개입 — `checker_hysteresis.md` 참조). 단일
+  프레임 C-sim entry는 무상태 유지(golden 계약 불변).
 - `baseline_core12()`/`apply_blc_wb12()` — **shared static** baseline core (ver1).
   BLC + WB(Q8 채널 게인) + CCM(identity)을 **12-bit로 수행**(최종 >>4는 tone에서). **gain/gamma
   없음.** normal 경로는 `demosaic_rggb12()`(RGGB 3x3 Bayer 데모자이크) 결과를 받고, low-light
@@ -189,6 +194,12 @@ C-sim에는 Vitis 전용 헤더가 필요 없다; HLS pragma만 존재하며 로
 4. Arm 2(register-only)·Arm 3(DFX) 자원/전력/PR-latency 비교(§7). **Arm2 실측 완료**
    (unified top, C-synthesis) — `results/stage4-hw-synthesis-2026-07-02.md`. Arm1/Arm3와
    전력/PR-latency는 여전히 TODO(Vivado DFX 플로어플랜·구현 필요).
+5. **(시뮬레이션 완료 2026-08-06)** fabric 내부 모드 전환:
+   `checker_hysteresis.v`가 신규 `hyst_flags` ap_vld wire를 소비해
+   `pr_controller.trigger`를 request/ack로 구동 — end-to-end xsim PASS
+   (`checker_to_pr_tb.v`). 잔여 배선(재합성 후 실제 `hyst_flags` RTL 포트,
+   `drain_ready` ← RM `ap_idle`, ICAPE3)은 Stage 6 —
+   `results/pr_controller/checker_hysteresis.md` 참조.
 
 ## C-synthesis / Co-sim 실행 노트 (Vitis HLS 2024.1)
 

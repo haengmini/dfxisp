@@ -60,7 +60,7 @@ Input real-RAW Bayer (PASCAL RAW 밝음 / LOD RAW 저조도; 초기엔 pseudo-RA
 
 ## Next direction
 
-**즉시:** (1) YOLOv8s 교차 모델 검증 결과 회수·정리(노트북 RTX 5060에 인수인계, 진행 중), (2) SSDLite 교차검증(글루 코드 필요). 둘 다 이미 배포된 결정을 막지 않으며 논문 일반화 주장 보강용이다. 그 다음은 **Stage 6(보드) 착수** — 선결 과제는 PR 컨트롤러 통합(`drain_ready`를 실제 RM `ap_idle`에 연결, ICAPE3/STARTUPE3 인스턴스화)이며, 이것이 유일한 진짜 blocking item이다.
+**즉시:** (1) YOLOv8s 교차 모델 검증 결과 회수·정리(노트북 RTX 5060에 인수인계, 진행 중), (2) SSDLite 교차검증(글루 코드 필요). 둘 다 이미 배포된 결정을 막지 않으며 논문 일반화 주장 보강용이다. 그 다음은 **Stage 6(보드) 착수** — checker→PR 트리거 체인은 fabric RTL로 구현·시뮬 검증됐고(2026-08-06, `checker_hysteresis.v` + xsim end-to-end PASS), 남은 선결 과제는 실배선(`hyst_flags` 포트, `drain_ready`↔RM `ap_idle`)과 ICAPE3/STARTUPE3 인스턴스화다 — 이것이 유일한 진짜 blocking item이다.
 
 **보류 중인 리팩토링 방향:** `STRATEGY.md`가 제안한 **Vitis Vision Library 기준 baseline + DFXISP 확장 모듈** 구조(Vitis Base를 고정하고 Check/Dark/DFX Ctrl을 확장)는 2026-07-03에 제안됐으나 **아직 착수되지 않았다** — checker/BLC real-RAW 재보정 트랙이 우선됐다. 착수 여부·시점은 미결정.
 

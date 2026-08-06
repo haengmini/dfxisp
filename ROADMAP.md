@@ -638,10 +638,25 @@ low-light 모드 −50.8%**. §10.1의 csynth 기반 추정(상한 25.5%)은 과
    글루 코드 작성 후 별도 인수인계. YOLOv8s와 마찬가지로 이미 배포된 결정
    (BLC 2/2, C1)을 막고 있지 않음, 논문 일반화 주장 보강용.
 
+**완료(2026-08-06): checker 판단 + PR 트리거 fabric 내재화** — 2026-07-03
+채택 후 미구현으로 남아 있던 "Schmitt+dwell의 HW 이관"을 구현했다.
+`dfxisp_accel`이 프레임당 Schmitt 밴드 플래그(`hyst_flags`, ap_vld wire,
+enter 62%/exit 60%)를 내보내고, 신규 static-region 모듈
+`checker_hysteresis.v`(mode FF + min-dwell + request/ack)가
+`pr_controller.trigger`를 직접 구동한다 — 판단 경로에 PS 없음. golden
+bit-exact 유지(`make verify` PASS), 단위·통합 TB xsim PASS
+(`checker_to_pr_tb.v`: 재구성 2회 end-to-end). 소스 점검에서 pr_controller
+통합 이슈 3건도 기록(NWORDS가 구 bitstream 기준, word당 2사이클 전송, ICAP
+정격 100MHz CDC) — `results/pr_controller/checker_hysteresis.md`. 같은
+내용이 인수인계 레포 JNU_DFXISP_FPGA에도 반영됨(원 구현처).
+
 **Stage 6 착수 준비 (순서 유지, 실질적으로 유일하게 남은 큰 단계):**
 
-3. **Stage 6 착수 선결 과제** — PR 컨트롤러의 `drain_ready`를 실제 RM
-   `ap_idle`에 연결, BRAM 시뮬레이션 소스를 실제 SD/DDR 경로로 교체.
+3. **Stage 6 착수 선결 과제** — 재합성된 `dfxisp_accel`의 `hyst_flags` 포트를
+   `checker_hysteresis.v`에 실배선, PR 컨트롤러의 `drain_ready`를 실제 RM
+   `ap_idle`에 연결, ICAPE3/STARTUPE3 인스턴스화, BRAM 시뮬레이션 소스를
+   실제 SD/DDR 경로로 교체(+ NWORDS 신 bitstream 값 갱신·전송 파이프라인화·
+   ICAP 100MHz CDC — checker_hysteresis.md §"What Stage 6 still owes").
 4. **Stage 6 순서 1~2** — PS/DDR 통합(Block Design) → 신 pblock 기준
    clock/reset 핀 배정 + WNS 재검증.
 5. **(선택) Stage 5 open item** — partition pin 수 15→3 감소 원인 조사

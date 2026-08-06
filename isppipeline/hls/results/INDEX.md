@@ -84,6 +84,8 @@ superseded 중간 산출물은 `archive/`로 이동한다(맨 아래 "아카이�
 |---|---|
 | `dfxisp-microarchitecture-2026-07-02.svg` / `.drawio` | 마이크로아키텍처 다이어그램 (Arm2 vs Arm3) |
 | `pr_controller/pr_controller.v` + `_tb.v` | PR 컨트롤러 1차 RTL + testbench |
+| `pr_controller/checker_hysteresis.v` + `_tb.v` + `checker_to_pr_tb.v` | (08-06) Schmitt mode arbiter RTL — checker 밴드 플래그 소비, `pr_controller.trigger` request/ack 직접 구동(판단 경로 PS 무개입); 단위·통합 TB xsim PASS |
+| `pr_controller/checker_hysteresis.md` | (08-06) 위 모듈 설계 노트 — 플래그 인코딩/트리거 프로토콜/Stage 6 잔여 배선 + pr_controller 통합 이슈 3건(NWORDS 구 bitstream, word당 2사이클, ICAP 100MHz) |
 | `icap_sim/icap_pr_latency_tb.v` | ICAP PR latency 측정용 testbench |
 
 ## 5. mAP CSV 계보 (시간순 — 어느 숫자가 최신인지)
