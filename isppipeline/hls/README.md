@@ -85,6 +85,7 @@ legacy/ver0 코드 사이 경계가 문서화되어 있지 않아 혼동 위험�
 | `checker.py` | **SW eval proxy (canonical-matched)** | dark-ratio 기반 adaptive 모드 선택기, 두 파이프라인 파일과 독립(상호 import 없음) |
 | `newrm_pipeline.py` / `isp_pipeline_ver1.py` | **archived (2026-07-08)** | `tools/archive/`로 이동. gamma가 canonical과 달라(2.2/2.5/없음) 위 3개 파일로 대체됨 — 신규 작업에서 참조 금지, 과거 ablation 계보 참조용으로만 보존 |
 | `scheduler_sim.py` / `scheduler_sweep.py` | **정책 시뮬레이션** | hysteresis/temporal/min-dwell 스케줄러 트레이드오프 실험. synthetic luminance 시퀀스 사용 — checker 구현 자체의 검증이 아님 |
+| `calibrate_noise_model.py` | **측정 도구**(2026-08-06 신규) | 실 RAW 원본에서 Poisson-Gaussian 노이즈 모델(σ²=a·y+b) 추정 — `lowlight_isp.cpp`의 GAT 상수용. 단일영상 photon-transfer(블록 분산 저백분위 + χ² 편향 보정). **`raw_bin`은 쓸 수 없다**(shift8이라 12-bit 노이즈가 양자화로 소실) — rawpy로 원본 NEF/ARW를 읽어야 한다. 결과·한계: `src/lowlight_isp.md` §4.1 |
 | `internal_edge_smoke.py` | **회귀 테스트** | 1x1~8x8 극소/홀수 그리드 스모크 + demosaic 경계 clamp 회귀 테스트 (`make py-verify`). `baseline_isp_pipeline.py`/`checker.py` 양쪽의 독립 demosaic 사본을 각각 검사(2026-07-08 이전엔 `isp_pipeline_ver1.py` 대상) |
 
 ## Ponytail 리뷰 기록 (2026-08-06)
