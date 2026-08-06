@@ -363,24 +363,45 @@ Arm3(DFX가 tone RM slot 교체). ablation: post-RGB8 gain/lift, dfx_bin, dfx_fp
 CCM으로 수행하는 반면, default_ISP는 Vitis처럼 **Bayer 도메인 BLC/gain →
 demosaic → 적응 AWB → 실제 CCM** 순이다. csynth 실측 LUT 12,659/DSP 28/FF 8,794
 (RM_NORMAL_TONE 5,202/12/3,797 대비 LUT 2.43배, 타이밍 동일 3.650ns).
-**아직 배포 arm이 아니다** — mAP 미평가, post-route 미실측, `RM_NORMAL` 승격
-여부는 `STRATEGY.md` 열린 질문 #4와 함께 미결. 상세: `src/default_isp.md`.
+**아직 배포 arm이 아니다** — post-route 미실측, `RM_NORMAL` 승격 여부는
+`STRATEGY.md` 열린 질문 #4와 함께 미결. mAP는 2026-08-06 측정 완료: 주광
+PASCAL 100장에서 v1 `normal` 0.4197/0.9205 대 `default_isp` 0.4155/0.9232로
+**주 지표 −0.0042, 적응 AWB 기여 −0.0050**(모두 잡음대 안 = 차이 없음).
+Vitis Vision 순서 재구성 자체는 검출을 개선하지 않으며, 가치는 표준 대조군에
+있다. 상세: `src/default_isp.md`.
 
 **lowlight_ISP (2026-08-06 신설, 병존 arm):** 제안 저조도 arm v2
 (`src/lowlight_isp.cpp`, `rm_lowlight_isp_top` — 동일 6-인자 DFX 계약).
-default_ISP와 **보정 백본(① Bayer BLC, ② Bayer 게인, ④ CCM)을 공유**하고
-**{same-color 2×2 binning, 2.0× 노출게인, GAT/Anscombe VST 톤, VST 도메인
-edge-preserving denoise}** 만 다르다 — 두 arm 차이가 저조도 특화 연산으로만
-좁혀져 통제된 비교가 된다. GAT 톤은 원점에서 선형이라 read-noise floor
-증폭이 gamma 2.0 대비 절반이고(b=0이면 gamma로 정확히 퇴화), VST가 분산을
-안정화해 denoise 임계가 상수 하나로 성립한다(σ_VST≈2.1 LSB). binning은
-**진짜 same-color 2×2 평균**(R/B 4샘플 +6dB, G 8샘플 +9dB; 실측 +5.6~7.1dB)
-이며 **BLC보다 앞**에 둬 노이즈 정류 바이어스를 피한다. csynth 실측 LUT
-12,826/DSP 20/FF 7,555/BRAM 11, 타이밍 동일(3.650ns) — v1
-RM_LOW_LIGHT_TONE(4,204/9/3,243/8) 대비 3.05배. **주의: 저조도 arm이
-일반 arm(12,659)보다 커졌으므로 "저조도 RM이 더 작다"는 서술은 더 이상
-쓸 수 없다**(binning line-buffer 최적화 미실행 상태의 수치). **배포 arm
-아님** — mAP 미평가, post-route 미실측, 승격 미결. 상세: `src/lowlight_isp.md`.
+default_ISP와 **보정 백본(BLC, 게인, CCM)과 톤 커브(gamma 2.0)를 공유**하고
+**{same-color 2×2 binning, 2.0× 노출게인, H/2×W/2 출력}** 만 다르다 — 두 arm
+차이가 저조도 특화 연산으로만 좁혀져 통제된 비교가 된다.
+
+파이프라인(6단계, 전부 point-wise):
+① same-color 2×2 binning[RAW] → ② BLC[binned] → ③ 게인[binned] →
+④ CCM[RGB12] → ⑤ gamma 2.0 톤[12→8] → ⑥ pack RGB888, H/2×W/2.
+
+- **binning**은 **진짜 same-color 2×2 평균**(R/B 4샘플 +6dB, G 8샘플 +9dB;
+  실측 +5.6~7.1dB)이며 **BLC보다 앞**에 둬 노이즈 정류 바이어스를 피한다.
+  검출 기여 실측 **+0.0185 / +0.0360**(same-color vs subsample, 배포 커브 기준).
+- **톤 커브**는 `default_ISP`와 동일한 256-entry gamma 2.0 LUT다. 설계 초안은
+  이 자리에 GAT/Anscombe VST를 두었으나(분산 안정화로 상수 임계 denoise를
+  성립시키는 것이 목적), **denoise가 제거되면서 명분이 사라졌고 순수 톤 커브로
+  비교했을 때 gamma 2.0에 열세**여서 2026-08-06 교체했다. 두 검출기
+  (YOLOv8n·SSDLite MNv3) × 두 지표에서 순위가 모두 일치한다.
+  GAT는 Python 골든의 `lowlight_isp_gat` ablation arm으로만 남는다.
+- **denoise 없음.** σ-clip 3×3을 두었으나 임계 4배 스윕 전 구간에서 mAP@50이
+  denoise 없는 쪽보다 낮아 코드에서 삭제했다. 3행 라인 버퍼도 함께 사라져
+  파이프라인이 완전히 point-wise가 됐다.
+
+**csynth 실측** LUT 4,150 / DSP 10 / FF 2,089 / BRAM 1, 타이밍 3.650ns —
+v1 RM_LOW_LIGHT_TONE(4,204/9/3,243/8) 대비 **0.99배**로 사실상 동등하고
+BRAM은 1/8이며, default_ISP(12,659)보다 **67% 작다.** 즉 저조도 RM이 일반
+RM보다 작으면서 야간 mAP는 더 낫다(야간 100장 0.1876/0.3797, v1 대비 두 지표
+우위).
+
+**배포 arm 아님** — post-route 미실측, 주광 조건 미측정, 승격 미결.
+근거: `results/gat-tone-ablation-2026-08-06.md`, `results/denoise-k-sweep-2026-08-06.md`.
+상세: `src/lowlight_isp.md`.
 
 ---
 

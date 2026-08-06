@@ -107,10 +107,21 @@ Fmax는 희생되지 않는다.
 
 ## 7. 남은 일
 
-1. **mAP 평가 미실시** — default_ISP의 검출 성능은 아직 측정하지 않았다.
-   SW proxy(`tools/baseline_isp_pipeline.py`)는 여전히 RM_NORMAL_TONE을
-   미러링하므로, default_ISP를 평가하려면 대응하는 Python proxy(또는
-   `gen_default_isp_golden.py` 재사용)를 mAP 하네스에 연결해야 한다.
+1. ~~**mAP 평가 미실시**~~ — **완료(2026-08-06).** `tools/default_isp_pipeline.py`
+   (스칼라 골든에서 상수를 import하는 벡터화 프록시, `make verify-new-arms`로
+   bit-exact 검증)를 mAP 하네스에 연결해 주광 PASCAL 100장에서 측정했다:
+
+   | arm | mAP@[.5:.95] | mAP@50 |
+   |---|---:|---:|
+   | v1 `normal` | **0.4197** | 0.9205 |
+   | `default_isp` | 0.4155 | **0.9232** |
+   | `default_isp_noawb` | **0.4205** | 0.9230 |
+
+   **v1 대비 주 지표 −0.0042로 이득이 없고, 적응 AWB는 오히려 −0.0050으로
+   기여가 음수다**(두 지표 모두 잡음대 안이라 "차이 없음"이 정직한 해석).
+   즉 Vitis Vision 순서로 재구성한 것 자체는 검출 성능을 개선하지 않는다 —
+   가치는 표준 대조군을 갖는 데 있다.
+   근거: `results/v2-arm-ablation-2026-08-06.md`, `map_ablation_pascal100_2026-08-06.csv`
 2. **post-route 실측** — §6 주의 참조.
 3. **채택 여부 결정** — default_ISP를 `RM_NORMAL`로 승격할지는
    `STRATEGY.md` 열린 질문 #4(RP 경계 서사)와 함께 결정한다. 승격 시

@@ -684,6 +684,10 @@ WB → identity CCM). Vitis 순서를 따르는 `default_isp.cpp`를 **추가형
 CCM 곱셈. 남은 일: mAP 미평가·post-route 미실측·`RM_NORMAL` 승격 여부 미결.
 상세: `isppipeline/hls/src/default_isp.md`. 이것이 #7 Vitis-first 리팩터의 첫
 산출물이다.
+> **같은 날 갱신:** "mAP 미평가"는 해소됐다 — 주광 PASCAL 100장에서
+> v1 `normal` 0.4197/0.9205 대 `default_isp` 0.4155/0.9232로 **주 지표
+> −0.0042**, 적응 AWB 기여 **−0.0050**(둘 다 잡음대 안). Vitis Vision 순서
+> 재구성이 검출을 개선하지는 않으며 가치는 표준 대조군에 있다.
 
 **완료(2026-08-06): lowlight_ISP — 원리 기반 제안 저조도 arm v2 신설** —
 `lowlight-feature-principles-2026-07-05.md`의 원리와 실 RAW 캠페인의 측정된
@@ -706,6 +710,24 @@ gamma로 정확히 퇴화). VST가 분산을 안정화하므로 denoise 임계�
 표기 오류도 정정(4샘플 평균은 두 영역 모두 +6dB).
 검증 가능한 예측 제시: "GAT 도입 시 BLC의 5.7배 민감도가 평탄해져야 한다".
 mAP 미평가·post-route 미실측·승격 미결. 상세: `isppipeline/hls/src/lowlight_isp.md`.
+
+> **같은 날 추가 갱신 (2026-08-06, 위 기록은 그대로 보존):** 위 항목이 핵심으로
+> 내세운 두 요소가 모두 측정으로 무너져 배포 구성에서 내려갔다.
+> **(1) denoise 제거** — 임계를 k=1.0~4.0으로 4배 훑어도 mAP@50이 denoise 없는
+> 쪽보다 항상 낮았다(`denoise-k-sweep-2026-08-06.md`). 스위치 OFF가 아니라
+> 코드에서 삭제해 3행 라인 버퍼까지 회수했다.
+> **(2) GAT → gamma 2.0 교체** — VST의 존재 이유가 "상수 임계 denoise를
+> 성립시키는 것"이었으므로 denoise가 사라지자 순수 톤 커브로 경쟁하게 됐고,
+> 대체 대상이던 gamma 2.0에 **두 검출기(YOLOv8n·SSDLite) × 두 지표 전부에서
+> 졌다**(`gat-tone-ablation-2026-08-06.md`). GAT의 a·b는 평가 split 자체로
+> 캘리브레이션된 상태였다.
+> **결과:** csynth LUT 12,826 → **4,150**, BRAM 11 → **1**, 타이밍 불변.
+> v1(4,204) 대비 3.05배였던 것이 **0.99배**가 되어, 위 항목이 폐기했던
+> *"저조도 RM이 일반 RM보다 작다"* 는 서술을 배포 구성 기준으로 **되살릴 수
+> 있게 됐다**(default_ISP 12,659 대비 67% 작음). 야간 100장 mAP는
+> 0.1876/0.3797로 v1 대비 두 지표 우위.
+> 남은 저조도 고유 요소는 **binning + 2.0× 노출 게인 + H/2×W/2 출력**이며,
+> binning 기여는 배포 커브 기준 +0.0185/+0.0360으로 오히려 뚜렷해졌다.
 
 **완료(2026-08-06): v2 arm 첫 mAP 측정 + denoise 제거 결정** — 야간
 (split_nod 100장)·주광(pascal_split_100) YOLOv8n 측정. 판정: (1) denoise는
