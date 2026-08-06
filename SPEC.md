@@ -347,7 +347,7 @@ enter 62% 초과, bit 1 = exit 60% 미만).
 | 타깃 디바이스 | ZCU104, `xczu7ev-ffvc1156-2-e` |
 | 합성 도구 | Vitis HLS 2024.1 |
 | 클럭 타깃 | 5.0 ns (200 MHz) |
-| static region | AXI/control wrapper, checker/mode FSM, Schmitt mode arbiter(`checker_hysteresis.v`, 2026-08-06), 재구성 제어 = **AMD DFX Controller IP(PG374, 2026-08-06 채택**, `dfxc_trigger_adapter.v` 경유; 자체 `pr_controller.v`는 레이턴시 특성화 전용), output/metadata packer (**baseline ISP core는 static이 아니다** — 아래 RP 경계 항목 참조) |
+| static region | AXI/control wrapper, checker/mode FSM, Schmitt mode arbiter(`checker_hysteresis.v`, 2026-08-06), 재구성 제어 = **AMD DFX Controller IP(PG374, 2026-08-06 채택**, `dfxc_trigger_adapter.v` 경유 + 레이턴시 측정은 `pr_latency_probe.v`; 자체 `pr_controller.v`는 아카이브), output/metadata packer (**baseline ISP core는 static이 아니다** — 아래 RP 경계 항목 참조) |
 | RM slot(재구성) | RM_NORMAL_TONE / RM_LOW_LIGHT_TONE (상호배타, 동일 port 시그니처 = DFX 계약) |
 | **RP 경계 (실측, 중요)** | 합성된 RP(`rm_normal_tone_top`/`rm_low_light_tone_top`)는 **tone만이 아니라 demosaic→BLC→WB→tone 모드별 전체 파이프라인**을 감싼다. `apply_blc_wb12()`는 **소스 레벨에서만 공유**되고 실리콘에는 RM마다 중복 구현된다. partition pin 3개. 근거: `results/design-limitations-2026-07-03.md` §4.3, `deliverables/verilog/rm_*_tone_top/`, `results/dfx-reimplementation-2026-08-01.md`. 더 세밀한 분할(baseline core를 진짜 static 모듈로 분리)은 **시도되지 않았다** |
 | 전환 정책 | 장면 단위(프레임 단위 아님): fabric Schmitt δ=2%p + min-dwell(`checker_hysteresis.v`) → `pr_controller.trigger` request/ack; PS는 관측만(§3.1) |

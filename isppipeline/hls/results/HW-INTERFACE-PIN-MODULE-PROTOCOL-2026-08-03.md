@@ -359,7 +359,8 @@ RLAST    ________________________/‾\____   마지막 전송에서만 1
 > "드라이버측 정책"으로 남겨뒀던 서술은 이로써 대체됨(SPEC.md v1.3 §3.1).
 > 같은 날 **production 재구성 경로로 AMD DFX Controller IP(PG374)를 채택**
 > — `dfxc_trigger_adapter.v`(RM별 one-hot HW trigger + shutdown-ack shim)
-> 로 연결하며 자체 pr_controller는 특성화 전용(`dfxc_adapter.md`).
+> 로 연결. 레이턴시 측정은 `pr_latency_probe.v`(IP 핸드셰이크 경계 카운터)가
+> 담당하고 자체 pr_controller는 아카이브(`dfxc_adapter.md`).
 > 잔여 통합 과제는 `checker_hysteresis.md`·`dfxc_adapter.md` 참조.
 
 ### 4.4 DFX 재구성 프로토콜 — 현재 상태: **설계에 없음**

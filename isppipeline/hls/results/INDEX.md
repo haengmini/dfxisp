@@ -83,11 +83,12 @@ superseded 중간 산출물은 `archive/`로 이동한다(맨 아래 "아카이�
 | 파일 | 내용 |
 |---|---|
 | `dfxisp-microarchitecture-2026-07-02.svg` / `.drawio` | 마이크로아키텍처 다이어그램 (Arm2 vs Arm3) |
-| `pr_controller/pr_controller.v` + `_tb.v` | PR 컨트롤러 1차 RTL + testbench — (08-06) AMD DFX Controller IP 채택 후 **레이턴시 특성화 전용**으로 역할 축소 |
+| `archive/pr_controller/` | (08-06 아카이브) 자체 PR 컨트롤러 1차 RTL + TB — DFXC IP 채택 + `pr_latency_probe.v`로 측정 역할까지 대체돼 은퇴(경위는 그 안 README) |
 | `pr_controller/checker_hysteresis.v` + `_tb.v` + `checker_to_pr_tb.v` | (08-06) Schmitt mode arbiter RTL — checker 밴드 플래그 소비, `pr_controller.trigger` request/ack 직접 구동(판단 경로 PS 무개입); 단위·통합 TB xsim PASS |
 | `pr_controller/checker_hysteresis.md` | (08-06) 위 모듈 설계 노트 — 플래그 인코딩/트리거 프로토콜/Stage 6 잔여 배선 + pr_controller 통합 이슈 3건(NWORDS 구 bitstream, word당 2사이클, ICAP 100MHz) |
 | `pr_controller/dfxc_trigger_adapter.v` + `checker_to_dfxc_tb.v` | (08-06) **AMD DFX Controller IP(PG374) 채택** — checker_hysteresis를 IP 계약(HW trigger + shutdown ack shim)에 잇는 어댑터 + PG374 행위 모델 체인 TB(xsim PASS) |
 | `pr_controller/dfxc_adapter.md` | (08-06) IP 채택 결정 기록·근거 비교표·Stage 6 통합 체크리스트(포트명 IP 생성 후 확인 필요) |
+| `pr_controller/pr_latency_probe.v` | (08-06) 재구성 레이턴시 계측기 — IP엔 내장 타이머가 없어 핸드셰이크 경계(drain: shutdown req→ack, 전체: trigger→decouple 해제)를 카운트; `checker_to_dfxc_tb.v`에서 검증(계약 모델 기준 drain=4/swap=38 cycles) |
 | `icap_sim/icap_pr_latency_tb.v` | ICAP PR latency 측정용 testbench |
 
 ## 5. mAP CSV 계보 (시간순 — 어느 숫자가 최신인지)
