@@ -79,7 +79,9 @@ extern "C" void lowlight_isp(
 // DFX Reconfigurable Module candidate. Port list is IDENTICAL (type, order,
 // count) to rm_normal_tone_top / rm_low_light_tone_top / rm_default_isp_top,
 // so all of them are valid implementations of the same RP slot (SPEC.md §7).
-// Denoise and same-colour binning are enabled.
+// Same-colour binning enabled; denoise DISABLED -- the 2026-08-06 ablation
+// found it does not earn its area once real binning is in place
+// (results/v2-arm-ablation-2026-08-06.md §2.4).
 extern "C" void rm_lowlight_isp_top(
     const uint16_t* raw_bayer,
     uint32_t* rgb_out,
