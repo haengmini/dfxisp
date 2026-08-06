@@ -1,0 +1,7 @@
+dataset,blc_offset,wb_lowlight,arm,mAP_50_95,mAP_50,model,n
+NOD100-ablation-2026-08-06,2,shared,normal,0.1568,0.3252,yolov8n.pt,100
+NOD100-ablation-2026-08-06,2,shared,lowlight,0.1700,0.3468,yolov8n.pt,100
+NOD100-ablation-2026-08-06,2,shared,lowlight_isp,0.1819,0.3688,yolov8n.pt,100
+NOD100-ablation-2026-08-06,2,shared,lowlight_isp_nodenoise,0.1775,0.3710,yolov8n.pt,100
+NOD100-ablation-2026-08-06,2,shared,lowlight_isp_subsample,0.1841,0.3603,yolov8n.pt,100
+NOD100-ablation-2026-08-06,2,shared,lowlight_isp_nodenoise_subsample,0.1735,0.3429,yolov8n.pt,100

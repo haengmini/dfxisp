@@ -2,9 +2,17 @@
 type: spec
 title: "DFXISP 시스템 사양서 (입력 데이터셋 → 출력)"
 project: DFXISP
-version: 1.2
+version: 1.3
 created: 2026-07-02
-updated: 2026-08-04 — (a) WB 모드별 분리 기각(§4, §11.11): 배포 공유 WB가 저조도에
+updated: 2026-08-06 — Schmitt 히스테리시스를 fabric으로 이관: `dfxisp_accel`이
+  프레임당 밴드 플래그(`hyst_flags`, ap_vld wire, 11번째 인자; 중심 62% ±2%p =
+  enter 64%/exit 60%)를 내보내고, 신규 static-region 모듈
+  `results/pr_controller/checker_hysteresis.v`가 모드 상태를 소유하며
+  `pr_controller.trigger`를 직접 구동한다(request/ack, 판단 경로에 PS 없음) —
+  2026-07-03 채택 후 미구현으로 남아 있던 항목의 구현. 기존 "드라이버측
+  정책" 서술(§3.1, §7)은 그 미구현 중간 상태의 기록으로 대체됨. 트리거 체인
+  end-to-end는 xsim으로 검증(`checker_to_pr_tb.v` PASS). golden 계약 불변
+  (`make verify` bit-exact PASS). 이전 갱신(2026-08-04): (a) WB 모드별 분리 기각(§4, §11.11): 배포 공유 WB가 저조도에
   잘못 맞춰져 있다는 진단은 실측 확인됐으나 mAP 무반응이라 분리하지 않는다
   (`results/lowlight-wb-mode-split-2026-08-03.md`). (b) RP 경계 서술을 실제 구현에
   맞게 정정(§7, §11.12): 합성된 RP는 "tone만"이 아니라 모드별 전체 파이프라인을
@@ -161,10 +169,15 @@ AUTO       -> dark_ratio = count(dark) / (W*H)
   강하지만(J 0.847) "이 프레임에서 lowlight가 실제로 검출을 돕는가"에는 약함(오라클
   기준 J 0.008)에도, C1 임계의 **비용-중립점 성질(C_miss≈C_FA)은 오라클 기준에서도
   유지**되어 **재조정 불필요**로 결론. 상세: `results/checker-oracle-label-gate2-2026-07-20.md`.
-- **히스테리시스(시퀀스 레벨):** 단일 프레임 entry에는 없음. 장면 단위 안정화(N 안정프레임,
-  히스테리시스 밴드, min-dwell)는 스케줄러(`tools/scheduler_sim.py`/`scheduler_sweep.py`)가
-  담당. 권장 파라미터(실측): narrow 밴드 + temporal_N=3 (mismatch 0.015, thrashing 0).
-  C1 스펙의 Schmitt δ=2%p 히스테리시스는 드라이버측 정책(레포 밖, mode FF 1개).
+- **히스테리시스(장면 레벨) — 2026-08-06부터 fabric 구현:** 단일 프레임 entry는
+  무상태를 유지하되, 프레임당 Schmitt 밴드 비교 2개(`hyst_flags`: enter 64%
+  초과 / exit 60% 미만 — 중심 62% ±2%p, checker-principles 원리5)를 ap_vld wire로 내보내고, static-region 모듈
+  `results/pr_controller/checker_hysteresis.v`가 mode FF·min-dwell
+  (`DWELL_FRAMES`, 기본 1)·PR 컨트롤러 `pr_trigger` request/ack를 소유한다 —
+  판단 경로에 PS 없음(PS는 AXI4-Lite로 `selected_mode` 관측만). 2026-07-03
+  채택안의 구현이며, 기존 "드라이버측 정책" 서술은 미구현 중간 상태의 기록.
+  이력: 스케줄러 시뮬레이션(`tools/scheduler_sim.py`) 실측은 narrow 밴드 +
+  temporal_N=3 → mismatch 0.015, thrashing 0.
 
 ### 3.2 ② Baseline ISP core (shared code path, mode-specific BLC) — ver1
 **gain/gamma 없음.** 보정을 **12-bit RAW 도메인에서 수행**하고 최종 `>>4`는 tone에서 한다
@@ -311,10 +324,14 @@ extern "C" void dfxisp_accel(
     int*            out_width,     // 출력 메타데이터 (개별 scalar 포인터)
     int*            out_height,
     int*            selected_mode,
-    int*            selected_rm);
+    int*            selected_rm,
+    int*            hyst_flags);   // Schmitt 밴드 플래그 (ap_vld wire, 2026-08-06)
 ```
 AXI: `raw_bayer`/`rgb_out` = `m_axi`(gmem0/gmem1); 나머지 스칼라 인자·메타데이터 출력 4종·
-`return` = `s_axilite`(control).
+`return` = `s_axilite`(control). 예외로 `hyst_flags`는 `ap_vld` fabric wire 쌍
+(`hyst_flags[31:0]` + `hyst_flags_ap_vld`, 프레임 완료당 1펄스)으로
+`checker_hysteresis.v`에 직결된다 — s_axilite 레지스터가 아님(§3.1; bit 0 =
+enter 64% 초과, bit 1 = exit 60% 미만 — 중심 62%).
 
 ### 6.2 Golden vector CSV 포맷 (검증 계약)
 헤더: `case,in_w,in_h,mode,threshold,out_w,out_h,sel_mode,sel_rm,kind,idx,val`
@@ -330,14 +347,61 @@ AXI: `raw_bayer`/`rgb_out` = `m_axi`(gmem0/gmem1); 나머지 스칼라 인자·�
 | 타깃 디바이스 | ZCU104, `xczu7ev-ffvc1156-2-e` |
 | 합성 도구 | Vitis HLS 2024.1 |
 | 클럭 타깃 | 5.0 ns (200 MHz) |
-| static region | AXI/control wrapper, checker/mode FSM, DFX/PR controller, output/metadata packer (**baseline ISP core는 static이 아니다** — 아래 RP 경계 항목 참조) |
+| static region | AXI/control wrapper, checker/mode FSM, Schmitt mode arbiter(`checker_hysteresis.v`, 2026-08-06), 재구성 제어 = **AMD DFX Controller IP(PG374, 2026-08-06 채택**, `dfxc_trigger_adapter.v` 경유; 부수(선택) 계측기 `pr_latency_probe.v`는 측정 시에만 부착; 자체 `pr_controller.v`는 아카이브), output/metadata packer (**baseline ISP core는 static이 아니다** — 아래 RP 경계 항목 참조) |
 | RM slot(재구성) | RM_NORMAL_TONE / RM_LOW_LIGHT_TONE (상호배타, 동일 port 시그니처 = DFX 계약) |
 | **RP 경계 (실측, 중요)** | 합성된 RP(`rm_normal_tone_top`/`rm_low_light_tone_top`)는 **tone만이 아니라 demosaic→BLC→WB→tone 모드별 전체 파이프라인**을 감싼다. `apply_blc_wb12()`는 **소스 레벨에서만 공유**되고 실리콘에는 RM마다 중복 구현된다. partition pin 3개. 근거: `results/design-limitations-2026-07-03.md` §4.3, `deliverables/verilog/rm_*_tone_top/`, `results/dfx-reimplementation-2026-08-01.md`. 더 세밀한 분할(baseline core를 진짜 static 모듈로 분리)은 **시도되지 않았다** |
-| 전환 정책 | 장면 단위(프레임 단위 아님), 히스테리시스 checker |
+| 전환 정책 | 장면 단위(프레임 단위 아님): fabric Schmitt δ=2%p + min-dwell(`checker_hysteresis.v`) → `pr_controller.trigger` request/ack; PS는 관측만(§3.1) |
 | 재구성 지연 | drain+ICAP+warm-up 이론적 분해: **peak 1.72 ms / 전형 6.87 ms**(스펙 유도, 보드 미실측). 상세 `results/pr-latency-breakdown-2026-07-02.md`. 드라이버/FSM 오버헤드는 TODO(보드) |
 
 **실험 arm:** Arm1(static baseline+normal tone) / Arm2(register-only 적응, DFX 없음) /
 Arm3(DFX가 tone RM slot 교체). ablation: post-RGB8 gain/lift, dfx_bin, dfx_fp(`dfxisp_rm.*`).
+
+**default_ISP (2026-08-06 신설, 병존 arm):** AMD Vitis Vision L3 `isppipeline`의
+스테이지 순서·도메인을 따르는 표준 ISP 구현(`src/default_isp.cpp`,
+`rm_default_isp_top` — 동일 6-인자 DFX 계약이라 같은 RP 슬롯에 꽂을 수 있다).
+기존 `RM_NORMAL_TONE`은 보정을 demosaic **후** RGB 도메인에서 고정 WB·identity
+CCM으로 수행하는 반면, default_ISP는 Vitis처럼 **Bayer 도메인 BLC/gain →
+demosaic → 적응 AWB → 실제 CCM** 순이다. csynth 실측 LUT 12,659/DSP 28/FF 8,794
+(RM_NORMAL_TONE 5,202/12/3,797 대비 LUT 2.43배, 타이밍 동일 3.650ns).
+**아직 배포 arm이 아니다** — post-route 미실측, `RM_NORMAL` 승격 여부는
+`STRATEGY.md` 열린 질문 #4와 함께 미결. mAP는 2026-08-06 측정 완료: 주광
+PASCAL 100장에서 v1 `normal` 0.4197/0.9205 대 `default_isp` 0.4155/0.9232로
+**주 지표 −0.0042, 적응 AWB 기여 −0.0050**(모두 잡음대 안 = 차이 없음).
+Vitis Vision 순서 재구성 자체는 검출을 개선하지 않으며, 가치는 표준 대조군에
+있다. 상세: `src/default_isp.md`.
+
+**lowlight_ISP (2026-08-06 신설, 병존 arm):** 제안 저조도 arm v2
+(`src/lowlight_isp.cpp`, `rm_lowlight_isp_top` — 동일 6-인자 DFX 계약).
+default_ISP와 **보정 백본(BLC, 게인, CCM)과 톤 커브(gamma 2.0)를 공유**하고
+**{same-color 2×2 binning, 2.0× 노출게인, H/2×W/2 출력}** 만 다르다 — 두 arm
+차이가 저조도 특화 연산으로만 좁혀져 통제된 비교가 된다.
+
+파이프라인(6단계, 전부 point-wise):
+① same-color 2×2 binning[RAW] → ② BLC[binned] → ③ 게인[binned] →
+④ CCM[RGB12] → ⑤ gamma 2.0 톤[12→8] → ⑥ pack RGB888, H/2×W/2.
+
+- **binning**은 **진짜 same-color 2×2 평균**(R/B 4샘플 +6dB, G 8샘플 +9dB;
+  실측 +5.6~7.1dB)이며 **BLC보다 앞**에 둬 노이즈 정류 바이어스를 피한다.
+  검출 기여 실측 **+0.0185 / +0.0360**(same-color vs subsample, 배포 커브 기준).
+- **톤 커브**는 `default_ISP`와 동일한 256-entry gamma 2.0 LUT다. 설계 초안은
+  이 자리에 GAT/Anscombe VST를 두었으나(분산 안정화로 상수 임계 denoise를
+  성립시키는 것이 목적), **denoise가 제거되면서 명분이 사라졌고 순수 톤 커브로
+  비교했을 때 gamma 2.0에 열세**여서 2026-08-06 교체했다. 두 검출기
+  (YOLOv8n·SSDLite MNv3) × 두 지표에서 순위가 모두 일치한다.
+  GAT는 Python 골든의 `lowlight_isp_gat` ablation arm으로만 남는다.
+- **denoise 없음.** σ-clip 3×3을 두었으나 임계 4배 스윕 전 구간에서 mAP@50이
+  denoise 없는 쪽보다 낮아 코드에서 삭제했다. 3행 라인 버퍼도 함께 사라져
+  파이프라인이 완전히 point-wise가 됐다.
+
+**csynth 실측** LUT 4,150 / DSP 10 / FF 2,089 / BRAM 1, 타이밍 3.650ns —
+v1 RM_LOW_LIGHT_TONE(4,204/9/3,243/8) 대비 **0.99배**로 사실상 동등하고
+BRAM은 1/8이며, default_ISP(12,659)보다 **67% 작다.** 즉 저조도 RM이 일반
+RM보다 작으면서 야간 mAP는 더 낫다(야간 100장 0.1876/0.3797, v1 대비 두 지표
+우위).
+
+**배포 arm 아님** — post-route 미실측, 주광 조건 미측정, 승격 미결.
+근거: `results/gat-tone-ablation-2026-08-06.md`, `results/denoise-k-sweep-2026-08-06.md`.
+상세: `src/lowlight_isp.md`.
 
 ---
 

@@ -43,6 +43,21 @@ C-sim이 증명하는 불변식(RESEARCH.md §8.2):
 - `tools/gen_verification_report.py` — stdlib-only Markdown 검증/리포트 생성기
 - `scripts/vitis_hls.tcl` — `dfxisp_accel`용 Vitis HLS 프로젝트 스캐폴드
 - `Makefile` — g++ 로컬 C-sim, golden 생성, verify/report, Vitis HLS dry-run 리포트
+- `include/default_isp.hpp` · `src/default_isp.cpp` — **default_ISP**(2026-08-06 신규):
+  AMD Vitis Vision L3 `isppipeline`의 스테이지 순서·도메인을 따르는 표준 ISP arm
+  (Bayer 도메인 BLC/gain → demosaic → 적응 AWB → 실제 CCM → gamma). `RM_NORMAL_TONE`과
+  **병존**하며 기존 golden 계약을 건드리지 않는다. 상세: `src/default_isp.md`
+- `tools/gen_default_isp_golden.py` · `tests/test_default_isp_csim.cpp` — 위 arm의
+  canonical golden + C-sim (`make default-isp-verify`)
+- `include/lowlight_isp.hpp` · `src/lowlight_isp.cpp` — **lowlight_ISP**(2026-08-06 신규):
+  제안 저조도 arm v2. default_ISP와 보정 백본·톤 커브를 공유하고
+  **{binning, 2.0× 상류 게인, H/2×W/2 출력}** 만 다르다 → 통제된 arm 비교가 가능하다.
+  denoise(한계효용 0)와 GAT/VST 톤(gamma 2.0에 열세, 두 검출기 교차검증)은
+  2026-08-06 측정으로 각각 제거·교체됐고, csynth LUT 12,826 → 4,150으로 줄어
+  **v1 저조도 arm과 사실상 동등**해졌다.
+  배포 arm(RM_LOW_LIGHT_TONE)은 무변경. 상세: `src/lowlight_isp.md`
+- `tools/gen_lowlight_isp_golden.py` · `tests/test_lowlight_isp_csim.cpp` — 위 arm의
+  canonical golden + C-sim (`make lowlight-isp-verify`)
 
 > 실험 arm(§7)·ablation(§12 Task 5)은 `src/dfxisp_rm.cpp`·`tools/rm_model.py`
 > (static / reg_only / dfx_bin / dfx_fp)에 별도로 있다. 현재 스캐폴드의 과거
@@ -73,7 +88,33 @@ legacy/ver0 코드 사이 경계가 문서화되어 있지 않아 혼동 위험�
 | `checker.py` | **SW eval proxy (canonical-matched)** | dark-ratio 기반 adaptive 모드 선택기, 두 파이프라인 파일과 독립(상호 import 없음) |
 | `newrm_pipeline.py` / `isp_pipeline_ver1.py` | **archived (2026-07-08)** | `tools/archive/`로 이동. gamma가 canonical과 달라(2.2/2.5/없음) 위 3개 파일로 대체됨 — 신규 작업에서 참조 금지, 과거 ablation 계보 참조용으로만 보존 |
 | `scheduler_sim.py` / `scheduler_sweep.py` | **정책 시뮬레이션** | hysteresis/temporal/min-dwell 스케줄러 트레이드오프 실험. synthetic luminance 시퀀스 사용 — checker 구현 자체의 검증이 아님 |
-| `internal_edge_smoke.py` | **회귀 테스트** | 1x1~8x8 극소/홀수 그리드 스모크 + demosaic 경계 clamp 회귀 테스트 (`make py-verify`). `baseline_isp_pipeline.py`/`checker.py` 양쪽의 독립 demosaic 사본을 각각 검사(2026-07-08 이전엔 `isp_pipeline_ver1.py` 대상) |
+| `calibrate_noise_model.py` | **측정 도구**(08-06) | 실 RAW 원본에서 Poisson-Gaussian 노이즈 모델(σ²=a·y+b) 추정 — GAT 상수용. **GAT는 2026-08-06에 배포에서 내려갔고**(gamma 2.0으로 교체) 이 상수는 `lowlight_isp_gat` ablation arm 전용이다. 단일영상 photon-transfer(블록 분산 저백분위 + χ² 편향 보정). **`raw_bin`은 쓸 수 없다**(shift8이라 12-bit 노이즈가 양자화로 소실) — rawpy로 원본 NEF/ARW를 읽어야 한다. 결과·한계: `src/lowlight_isp.md` §4.1 |
+| `default_isp_pipeline.py` · `lowlight_isp_pipeline.py` | **SW eval proxy (canonical-matched)**(08-06 신규) | v2 arm(default_ISP / lowlight_ISP)의 **벡터화** 렌더러 — 스칼라 golden 생성기는 픽셀 루프라 20MP 프레임을 못 돌린다. 모든 상수를 golden에서 **import**해 드리프트를 원천 차단. `eval_map_isp.py`가 이 둘로 디스패치 |
+| `verify_new_arm_pipelines.py` | **검증 gate**(08-06 신규) | 위 벡터화 프록시가 스칼라 golden과 **bit-exact**인지 퍼징(`make verify-new-arms`). 2026-07-02 chroma-collapse와 같은 부류의 위험(두 번째 구현이 조용히 어긋남)을 막는다 |
+| `calibrate_noise_model.py` | **측정 도구**(2026-08-06 신규) | 1x1~8x8 극소/홀수 그리드 스모크 + demosaic 경계 clamp 회귀 테스트 (`make py-verify`). `baseline_isp_pipeline.py`/`checker.py` 양쪽의 독립 demosaic 사본을 각각 검사(2026-07-08 이전엔 `isp_pipeline_ver1.py` 대상) |
+
+## Ponytail 리뷰 기록 (2026-08-06)
+
+**2차(모듈 범위: checker / default_ISP / lowlight_ISP), findings 4 — 전부 절단:**
+default_ISP의 AWB 녹색 게인(기준 채널이라 항상 256 = 항등 연산),
+checker의 `dark*100` 3회 반복, `sigma_clip`의 인자 재조립,
+`checker_hysteresis`의 16-bit dwell 카운터(파라미터 기반 폭으로).
+재합성 결과 default_ISP **FF 8,803 → 8,794**, LUT/DSP/타이밍 불변 —
+합성기가 ×256>>8을 이미 접고 있어 절감은 파이프라인 레지스터였다.
+golden 4종 + xsim 2종 전부 재통과(수치 무변화).
+
+**1차(전체 diff 범위) 기록:**
+
+`/ponytail-review` 게이트를 세 arm 추가분에 적용한 결과(findings 11, 실행
+가능 −195줄) 중 **테스트 CSV 파서 3중복만 잘라냈다** — `tests/golden_csv.hpp`
+헤더 기반 로더 하나로 통합(−134줄). 나머지 둘은 **근거를 남기고 유지**한다:
+
+- **`src/`의 헬퍼·상수 중복**(`clamp_i`/`pack_rgb`/`bin_dim`/`CCM_Q8`/
+  `GAMMA2_LUT`, ~45줄): HLS는 arm마다 별도 translation unit으로 합성하므로
+  헤더로 빼도 **실리콘 결과가 동일**하다 — 이득 0인데 bit-exact golden 계약
+  3건을 건드리는 리팩터라, 사다리 1번("이 작업이 필요한가")에서 기각.
+- **Python golden 2종의 공통 상수/헬퍼**(~30줄): C++ 쪽은 중복인데 Python만
+  공유하면 **정본이 비대칭**이 되어 유지보수 혼동이 절감분보다 크다.
 
 ## 로컬 C-sim 실행
 
@@ -82,6 +123,8 @@ cd isppipeline/hls
 make csim      # smoke 테스트
 make verify    # golden 재생성 + packed RGB888 bit 단위 비교
 make report    # reports/latest.md 갱신 (아키텍처 gate 표 포함)
+make default-isp-verify   # default_ISP(Vitis Vision 정렬 arm) golden + C-sim
+make lowlight-isp-verify  # lowlight_ISP(제안 저조도 arm v2) golden + C-sim
 ```
 
 `make verify` 예상 출력:
@@ -131,7 +174,8 @@ extern "C" void dfxisp_accel(
     int* out_width,                // 선택된 RM의 출력 폭
     int* out_height,               // 선택된 RM의 출력 높이
     int* selected_mode,            // 해소된 mode (AUTO 해소값)
-    int* selected_rm);             // 선택된 tone RM
+    int* selected_rm,              // 선택된 tone RM
+    int* hyst_flags);              // Schmitt 밴드 플래그 (ap_vld fabric wire, 2026-08-06)
 ```
 메타데이터가 구조체 포인터 하나가 아니라 **4개의 개별 scalar 출력 포인터**인 이유: 구조체
 포인터를 `s_axilite`로 선언하는 방식은 검증된 바 없는(비표준) 패턴이라 adversarial review에서
@@ -144,8 +188,12 @@ extern "C" void dfxisp_accel(
 경계를 따라 분할되어 있다:
 
 - `checker_select_mode()` — static-region scene checker. `AUTO`에서 dark-pixel 비율로
-  NORMAL/LOW_LIGHT를 결정. 장면 단위 히스테리시스는 시퀀스 스케줄러(RESEARCH §5.2) 담당이며
-  단일 프레임 C-sim entry에는 없다.
+  NORMAL/LOW_LIGHT를 결정하고, (2026-08-06부터) 프레임당 Schmitt 밴드 비교 2개
+  (`hyst_flags`: enter 64% 초과 / exit 60% 미만 — 중심 62% ±2%p)를 추가로 내보낸다. 장면 단위
+  히스테리시스 **상태**는 static-region RTL 모듈
+  `results/pr_controller/checker_hysteresis.v`가 소유하며 PR 컨트롤러 trigger를
+  직접 구동한다(request/ack, PS 무개입 — `checker_hysteresis.md` 참조). 단일
+  프레임 C-sim entry는 무상태 유지(golden 계약 불변).
 - `baseline_core12()`/`apply_blc_wb12()` — **shared static** baseline core (ver1).
   BLC + WB(Q8 채널 게인) + CCM(identity)을 **12-bit로 수행**(최종 >>4는 tone에서). **gain/gamma
   없음.** normal 경로는 `demosaic_rggb12()`(RGGB 3x3 Bayer 데모자이크) 결과를 받고, low-light
@@ -189,6 +237,14 @@ C-sim에는 Vitis 전용 헤더가 필요 없다; HLS pragma만 존재하며 로
 4. Arm 2(register-only)·Arm 3(DFX) 자원/전력/PR-latency 비교(§7). **Arm2 실측 완료**
    (unified top, C-synthesis) — `results/stage4-hw-synthesis-2026-07-02.md`. Arm1/Arm3와
    전력/PR-latency는 여전히 TODO(Vivado DFX 플로어플랜·구현 필요).
+5. **(시뮬레이션 완료 2026-08-06)** fabric 내부 모드 전환:
+   `checker_hysteresis.v`가 신규 `hyst_flags` ap_vld wire를 소비해
+   `pr_controller.trigger`를 request/ack로 구동 — end-to-end xsim PASS
+   (`checker_to_pr_tb.v`). **같은 날 production 경로로 AMD DFX Controller
+   IP(PG374)를 채택** — `dfxc_trigger_adapter.v`가 동일 req/ack 계약으로
+   IP에 연결(계약 모델 TB `checker_to_dfxc_tb.v` xsim PASS), 자체
+   pr_controller는 레이턴시 특성화 전용. 통합 체크리스트는
+   `results/pr_controller/dfxc_adapter.md` 참조.
 
 ## C-synthesis / Co-sim 실행 노트 (Vitis HLS 2024.1)
 

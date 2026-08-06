@@ -642,19 +642,129 @@ low-light 모드 −50.8%**. §10.1의 csynth 기반 추정(상한 25.5%)은 과
    글루 코드 작성 후 별도 인수인계. YOLOv8s와 마찬가지로 이미 배포된 결정
    (BLC 2/2, C1)을 막고 있지 않음, 논문 일반화 주장 보강용.
 
+**완료(2026-08-06): checker 판단 + PR 트리거 fabric 내재화** — 2026-07-03
+채택 후 미구현으로 남아 있던 "Schmitt+dwell의 HW 이관"을 구현했다.
+`dfxisp_accel`이 프레임당 Schmitt 밴드 플래그(`hyst_flags`, ap_vld wire,
+중심 62% ±2%p = enter 64%/exit 60%)를 내보내고, 신규 static-region 모듈
+`checker_hysteresis.v`(mode FF + min-dwell + request/ack)가
+`pr_controller.trigger`를 직접 구동한다 — 판단 경로에 PS 없음. golden
+bit-exact 유지(`make verify` PASS), 단위·통합 TB xsim PASS
+(`checker_to_pr_tb.v`: 재구성 2회 end-to-end). 소스 점검에서 pr_controller
+통합 이슈 3건도 기록(NWORDS가 구 bitstream 기준, word당 2사이클 전송, ICAP
+정격 100MHz CDC) — `results/pr_controller/checker_hysteresis.md`. 같은
+내용이 인수인계 레포 JNU_DFXISP_FPGA에도 반영됨(원 구현처).
+
+**결정(2026-08-06, 같은 날): production 재구성 경로 = AMD DFX Controller
+IP(PG374) 채택** — 자체 `pr_controller.v`는 레이턴시 특성화(단계별
+trigger→done 측정) 전용 계측기로 역할 축소. `dfxc_trigger_adapter.v`가
+`checker_hysteresis`(무수정)를 IP 계약(RM별 one-hot HW trigger +
+`ap_idle` 기반 shutdown-ack shim)에 연결하고, PG374 계약 행위 모델 대상
+체인 시뮬 `checker_to_dfxc_tb.v` xsim PASS(드레인 강제·양방향 스왑).
+IP 생성 후 실제 포트명 확인 필요. Stage 6 통합 체크리스트(IP 구성 1 VS/
+2 RM/DDR 주소 테이블, DFX Decoupler, 스왑 후 ap_start 정책 미결)는
+`results/pr_controller/dfxc_adapter.md`. **후속(같은 날): 자체
+pr_controller 아카이브** — IP에 내장 레이턴시 타이머는 없지만 핸드셰이크
+신호가 단계 경계를 전부 노출하므로 `pr_latency_probe.v`(drain·전체 스왑
+카운터, 계약 모델 TB에서 검증 — **부수(선택) 계측기**로 분류, 스왑 체인
+동작엔 불필요)가 측정 역할을 대체, 자체 FSM은
+`results/archive/pr_controller/`로 이동(무수정, 은퇴 기록 동봉).
+**후속 2(같은 날): IP 실제 생성으로 포트 계약 실측 확인** — Vivado 2024.1에서
+dfx_controller v1.0을 HW 트리거 2개로 생성(`scripts/dfx/gen_dfx_controller.tcl`,
+문서화된 dotted-path Tcl API 사용; ALL_PARAMS 직접 설정은 2024.1 batch 버그).
+`vsm_VS_0_hw_triggers[1:0]`(트리거당 1비트 = 어댑터 one-hot 설계와 일치)·
+shutdown req/ack·decouple·rm_reset 확인, **ICAP 클럭 도메인 CDC는 IP 내장
+(icap_clk 별도 입력)으로 미결 항목 해소**. 잔여: RM 레벨 설정(SHUTDOWN_REQUIRED
+hw 등)은 batch API로 안 돼 Stage 6에서 GUI/BD로 — `dfxc_adapter.md` 프로브 절.
+
+**완료(2026-08-06): default_ISP — Vitis Vision 정렬 표준 ISP arm 신설** —
+실제 오픈소스(`Xilinx/Vitis_Libraries` vision/L3 `isppipeline`)와 대조한 결과
+기존 `RM_NORMAL_TONE`은 **스테이지 순서·도메인이 다르다**(Vitis: Bayer 도메인
+BLC/gain → demosaic → 적응 AWB → 실제 CCM; 기존: demosaic → RGB 도메인 BLC/고정
+WB → identity CCM). Vitis 순서를 따르는 `default_isp.cpp`를 **추가형**으로 신설
+(기존 arm·golden·배포 결정 무변경). Python canonical golden bit-exact 일치
+(528px, 10케이스), 구조 불변식 5종 통과, DFX 계약(6-인자) 준수.
+**실측(csynth)**: LUT 12,659 / DSP 28 / FF 8,794 — RM_NORMAL_TONE(5,202/12/3,797)
+대비 LUT 2.43배지만 **타이밍은 동일**(3.650ns). 증가분은 AWB 통계 패스 + 실제
+CCM 곱셈. 남은 일: mAP 미평가·post-route 미실측·`RM_NORMAL` 승격 여부 미결.
+상세: `isppipeline/hls/src/default_isp.md`. 이것이 #7 Vitis-first 리팩터의 첫
+산출물이다.
+> **같은 날 갱신:** "mAP 미평가"는 해소됐다 — 주광 PASCAL 100장에서
+> v1 `normal` 0.4197/0.9205 대 `default_isp` 0.4155/0.9232로 **주 지표
+> −0.0042**, 적응 AWB 기여 **−0.0050**(둘 다 잡음대 안). Vitis Vision 순서
+> 재구성이 검출을 개선하지는 않으며 가치는 표준 대조군에 있다.
+
+**완료(2026-08-06): lowlight_ISP — 원리 기반 제안 저조도 arm v2 신설** —
+`lowlight-feature-principles-2026-07-05.md`의 원리와 실 RAW 캠페인의 측정된
+레버를 설계로 옮겼다. default_ISP와 보정 백본을 공유하고 **{2×2 binning,
+2.0× 상류 게인, GAT/Anscombe VST 톤, VST 도메인 edge-preserving denoise}**
+만 다르게 해 **통제된 arm 비교**가 가능하게 했다. 배포 arm 무변경(추가형).
+핵심은 **GAT 톤** — 순수 sqrt의 원점 무한기울기 대신 오프셋 항으로 원점에서
+선형이 되어 read-noise floor 증폭을 **gamma 대비 절반**으로 억제한다(8-bit
+입력 1→7 vs 15, 2→12 vs 22; 중간톤 이상은 0.94~1.00로 수렴, b=0이면 기존
+gamma로 정확히 퇴화). VST가 분산을 안정화하므로 denoise 임계가 **상수 하나로
+성립**(유도값 σ_VST≈2.1 LSB). golden bit-exact(163px/12케이스) + 불변식 8종
+통과. **실측 csynth: LUT 10,848/DSP 17/FF 6,447/BRAM 11, 타이밍 동일(3.650ns)
+— v1(4,204) 대비 2.58배로, 제안 시 추정치(+10~20%)가 크게 빗나갔음을 기록**
+(denoise의 픽셀당 27회 비교가 지배). **부수 발견 → 같은 날 수정: binning이 same-color 합산이 아니어서 원리
+문서의 +6dB가 실현된 적이 없었다**(R/B 0dB, G만 +3dB). **진짜 same-color
+2×2 binning으로 교체하고 BLC 앞으로 이동**(노이즈 정류 바이어스 회피) —
+실측 +5.6~7.1dB 확보, 구 동작은 ablation 스위치로 보존. 대가로 LUT가
+12,826으로 늘어 **저조도 arm이 일반 arm보다 커졌다**(“저조도 RM이 더 싸다”
+서술 폐기; line-buffer 최적화 미실행 상태). 원리 문서의 "shot-limited +3dB"
+표기 오류도 정정(4샘플 평균은 두 영역 모두 +6dB).
+검증 가능한 예측 제시: "GAT 도입 시 BLC의 5.7배 민감도가 평탄해져야 한다".
+mAP 미평가·post-route 미실측·승격 미결. 상세: `isppipeline/hls/src/lowlight_isp.md`.
+
+> **같은 날 추가 갱신 (2026-08-06, 위 기록은 그대로 보존):** 위 항목이 핵심으로
+> 내세운 두 요소가 모두 측정으로 무너져 배포 구성에서 내려갔다.
+> **(1) denoise 제거** — 임계를 k=1.0~4.0으로 4배 훑어도 mAP@50이 denoise 없는
+> 쪽보다 항상 낮았다(`denoise-k-sweep-2026-08-06.md`). 스위치 OFF가 아니라
+> 코드에서 삭제해 3행 라인 버퍼까지 회수했다.
+> **(2) GAT → gamma 2.0 교체** — VST의 존재 이유가 "상수 임계 denoise를
+> 성립시키는 것"이었으므로 denoise가 사라지자 순수 톤 커브로 경쟁하게 됐고,
+> 대체 대상이던 gamma 2.0에 **두 검출기(YOLOv8n·SSDLite) × 두 지표 전부에서
+> 졌다**(`gat-tone-ablation-2026-08-06.md`). GAT의 a·b는 평가 split 자체로
+> 캘리브레이션된 상태였다.
+> **결과:** csynth LUT 12,826 → **4,150**, BRAM 11 → **1**, 타이밍 불변.
+> v1(4,204) 대비 3.05배였던 것이 **0.99배**가 되어, 위 항목이 폐기했던
+> *"저조도 RM이 일반 RM보다 작다"* 는 서술을 배포 구성 기준으로 **되살릴 수
+> 있게 됐다**(default_ISP 12,659 대비 67% 작음). 야간 100장 mAP는
+> 0.1876/0.3797로 v1 대비 두 지표 우위.
+> 남은 저조도 고유 요소는 **binning + 2.0× 노출 게인 + H/2×W/2 출력**이며,
+> binning 기여는 배포 커브 기준 +0.0185/+0.0360으로 오히려 뚜렷해졌다.
+
+**완료(2026-08-06): v2 arm 첫 mAP 측정 + denoise 제거 결정** — 야간
+(split_nod 100장)·주광(pascal_split_100) YOLOv8n 측정. 판정: (1) denoise는
+same-color binning 조건에서 +0.0044/−0.0022로 두 지표 부호가 갈려 자원 지배
+비용(픽셀당 27회 비교/선택)을 정당화하지 못함 → **배포 RM에서 제외**,
+(2) binning의 검출 기여는 −0.0022/+0.0085로 불확실(합성 프레임 SNR +5.6~7.1dB가
+mAP 이득으로 이어지지 않음), (3) 야간 v2가 v1 대비 +0.0119/+0.0220 우위이나
+주광 default_ISP는 −0.0042/+0.0027로 엇갈림. **2×2 요인 배치**에서 denoise와
+binning이 같은 일을 중복함이 드러났고(약한 binning에선 denoise +0.0106/+0.0174,
+진짜 binning에선 무너짐), 이는 lowlight_isp.md §2.5의 사전 예측과 일치한다.
+denoise 제거 후 재합성: **LUT 12,826 → 8,115(−36.7%)**, FF −27.4%, 타이밍
+불변 → v1 대비 3.05배에서 **1.93배**로, 그리고 **일반 arm보다 36% 작아져**
+폐기했던 "저조도 RM이 더 작다"는 주장을 배포 구성 기준으로 회복했다.
+검출도 v1 대비 두 지표 우위(+0.0075/+0.0242, mAP@50은 측정 6개 arm 중 최고).
+한계: 조건당 100장 단일 YOLOv8n, 0.002~0.005 수준 차이는 일반화 불가.
+상세: `results/v2-arm-ablation-2026-08-06.md`.
+
 **Stage 6 착수 준비 (순서 유지, 실질적으로 유일하게 남은 큰 단계):**
 
-3. **Stage 6 착수 선결 과제** — PR 컨트롤러의 `drain_ready`를 실제 RM
-   `ap_idle`에 연결, BRAM 시뮬레이션 소스를 실제 SD/DDR 경로로 교체.
+3. **Stage 6 착수 선결 과제** — 재합성된 `dfxisp_accel`의 `hyst_flags` 포트를
+   `checker_hysteresis.v`에 실배선, PR 컨트롤러의 `drain_ready`를 실제 RM
+   `ap_idle`에 연결, ICAPE3/STARTUPE3 인스턴스화, BRAM 시뮬레이션 소스를
+   실제 SD/DDR 경로로 교체(+ NWORDS 신 bitstream 값 갱신·전송 파이프라인화·
+   ICAP 100MHz CDC — checker_hysteresis.md §"What Stage 6 still owes").
 4. **Stage 6 순서 1~2** — PS/DDR 통합(Block Design) → 신 pblock 기준
    clock/reset 핀 배정 + WNS 재검증.
 5. **(선택) Stage 5 open item** — partition pin 수 15→3 감소 원인 조사
    (SPEC.md §10에 미조사로 기록됨).
 6. **(선택) Stage 4 cosim 완주** — WSL2+XSIM 하네스 SIGSEGV 원인(struct-pointer
    인터페이스 추정) 해소.
-7. **(선택, 우선순위 미정) STRATEGY.md Vitis-first 리팩터** — 2026-07-03에
-   제안됐으나 착수되지 않았다(`src/`에 `base_vitis.cpp` 등 Task 1~18 산출물
-   없음) — checker/BLC real-RAW 재보정 트랙이 대신 우선됐다. Stage 6 착수
+7. **(부분 착수 2026-08-06) STRATEGY.md Vitis-first 리팩터** — 첫 산출물
+   `src/default_isp.cpp`(Vitis Vision 스테이지 순서 정렬 arm) 완료. 나머지
+   (default_ISP의 `RM_NORMAL` 승격, RP 경계 재정의)는 여전히 미결이다 — checker/BLC real-RAW 재보정 트랙이 대신 우선됐다. Stage 6 착수
    전에 할지, 논문 마감(2026-10) 압박을 고려해 보류할지 결정 필요. **이 항목은
    `SPEC.md` §11.12(RP 경계)와 연동된다** — Vitis-first가 선호하는 "RP=Tone만"과
    현재 구현인 "RP=모드별 전체 파이프라인"은 양립 불가라, 어느 논문 서사를

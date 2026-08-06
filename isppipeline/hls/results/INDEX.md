@@ -77,13 +77,25 @@ superseded 중간 산출물은 `archive/`로 이동한다(맨 아래 "아카이�
 | `dfx-reimplementation-2026-08-01.md` | 08-01 | 최신 BLC/C1 상수 반영 Vivado DFX fabric-only 재구현 — BRAM/DSP/timing/pr_verify/bitstream 전부 07-03 기준과 일치, CLB LUT만 34~37% 감소했으나 08-03 후속 조사로 근본 원인 확정(BLC 상수 유도 리터럴 6개뿐 차이 — 상수 기반 Vivado technology mapping의 정상 거동) |
 | `HW-INTERFACE-PIN-MODULE-PROTOCOL-2026-08-03.md` | 08-03 | 핀 매핑(csynth 실측 RTL 포트)·모듈/RM 관계·통신 프로토콜(AXI4/AXI4-Lite/DFX 재구성) 브리핑 문서, ASCII 다이어그램 포함 — 다른 세션에 HW 인터페이스 인수인계용 |
 | `lowlight-wb-mode-split-2026-08-03.md` | 08-03 | **정본(negative result)** 저조도 WB 모드별 분리 최종 판정 — 배포 WB가 저조도 B를 절반만 보정하는 것은 실측 확인됐으나(gray-world 대비 0.50×) mAP는 무반응(전 범위 spread 0.0020 = BLC 레버의 1/44), 채널 분리 실험이 효과 반증 → **분리하지 않음**. WB 검증 3회 수렴, 재실험 불필요 |
+| `v2-arm-ablation-2026-08-06.md` | 08-06 | **v2 arm 첫 mAP + ablation** — NOD/PASCAL 각 100장, YOLOv8n/BLC=2. 야간 v2 lowlight는 v1 대비 +0.0119/+0.0220이나 denoise 비용은 정당화 실패(제거 권고), same-color binning은 지표 혼합으로 불확실. 주광 default v2는 v1 대비 주 지표 −0.0042, AWB 기여 없음. 근거 CSV `map_ablation_{nod100,pascal100}_2026-08-06.csv` |
+| `denoise-k-sweep-2026-08-06.md` | 08-06 | **lowlight_ISP denoise 임계 정정 + NOD100 k sweep** — binning 후 채널별 k=2.4 임계 SAMECOLOR R/B=11, G=8 및 SUBSAMPLE R/B=21, G=15로 재유도. 주 지표는 탐색 범위 내 k=4.0이 최고(OFF 대비 +0.0049)이나 mAP@50 −0.0027·경계점·단일 100장 한계로 조건부 권고, 배포는 OFF 유지. 근거 CSV `map_denoise_k_sweep_nod100_2026-08-06.csv` |
+| `gat-tone-ablation-2026-08-06.md` | 08-06 | **lowlight_ISP stage ⑤ 톤 커브 단독 ablation** — NOD100/YOLOv8n/BLC=2/shared WB에서 gamma 2.0(0.1876/0.3797) > GAT(0.1775/0.3710) > linear(0.1294/0.2651). **SSDLite MobileNetV3 교차검증에서 순위·효과크기 재현**(gamma−GAT: YOLO +0.0101, SSD +0.0105). GAT 중심 주장은 반증 확정 → **배포 커브를 gamma 2.0으로 교체**(재측정 0.1876/0.3797 일치 확인, csynth LUT 6,939→4,150·BRAM 5→1). 근거 CSV `map_gat_ablation_nod100_2026-08-06.csv`, `map_gat_ablation_nod100_ssdlite_2026-08-06.csv` |
 
 ## 4. 다이어그램 / RTL 부속물
 
 | 파일 | 내용 |
 |---|---|
 | `dfxisp-microarchitecture-2026-07-02.svg` / `.drawio` | 마이크로아키텍처 다이어그램 (Arm2 vs Arm3) |
-| `pr_controller/pr_controller.v` + `_tb.v` | PR 컨트롤러 1차 RTL + testbench |
+| `archive/pr_controller/` | (08-06 아카이브) 자체 PR 컨트롤러 1차 RTL + TB — DFXC IP 채택 + `pr_latency_probe.v`로 측정 역할까지 대체돼 은퇴(경위는 그 안 README) |
+| `pr_controller/checker_hysteresis.v` + `_tb.v` + `checker_to_pr_tb.v` | (08-06) Schmitt mode arbiter RTL — checker 밴드 플래그 소비, `pr_controller.trigger` request/ack 직접 구동(판단 경로 PS 무개입); 단위·통합 TB xsim PASS |
+| `pr_controller/checker_hysteresis.md` | (08-06) 위 모듈 설계 노트 — 플래그 인코딩/트리거 프로토콜/Stage 6 잔여 배선 + pr_controller 통합 이슈 3건(NWORDS 구 bitstream, word당 2사이클, ICAP 100MHz) |
+| `pr_controller/dfxc_trigger_adapter.v` + `checker_to_dfxc_tb.v` | (08-06) **AMD DFX Controller IP(PG374) 채택** — checker_hysteresis를 IP 계약(HW trigger + shutdown ack shim)에 잇는 어댑터 + PG374 행위 모델 체인 TB(xsim PASS) |
+| (소스 노트) `../src/default_isp.md` | (08-06) **default_ISP** — Vitis Vision `isppipeline` 스테이지 순서로 재구성한 표준 ISP arm. Vitis 대조표·의도적 편차 3건·실측(csynth LUT 12,659 vs RM_NORMAL 5,202, 타이밍 동일)·mAP 측정 완료(주광 100장: v1 normal 0.4197/0.9205 대 default_isp 0.4155/0.9232 = **주 지표 −0.0042**, 적응 AWB 기여 −0.0050, 둘 다 잡음대 안)·남은 일(post-route 미실측, 채택 미결) |
+| (소스 노트) `../src/lowlight_isp.md` | (08-06) **lowlight_ISP v2** — 최종 구성은 **same-color 2×2 binning(+5.6~7.1dB) + 2.0× 상류 게인 + gamma 2.0 톤 + H/2×W/2 출력**, denoise 없음. 같은 날 두 번의 제거(denoise 삭제, GAT→gamma 교체)로 csynth **1 BRAM/10 DSP/2,089 FF/4,150 LUT**(v1 4,204의 0.99배, default_ISP의 33%)에 도달했고 타이밍은 3.650ns 불변. 야간 100장 0.1876/0.3797. GAT·구 subsample은 Python 골든의 ablation arm으로 보존 |
+| `sonynod_convert_meta_archived-2026-08-06.json` | (08-06) 삭제된 `data/sonynod_test/`의 변환 파라미터 기록 — 카메라(RX100 VII)·Bayer(RGGB)·crop·black 800/white 16380·shift8 스케일. **LOD 재준비 시 이 값들로 동일 변환을 재현할 것**. 원본 ARW는 Drive `Sony-ARW/`(100장) |
+| `pascal_split_100_2026-08-06.csv` | (08-06) **PASCAL 100장 축소 split** — 실험 반복 속도용. `build_matched_splits.py --n 100`(ISO 층화 유지: [0,400) 9 / [400,800) 90 / [800,1600) 1)로 4,259장에서 추출. 07-15의 321장 매니페스트는 배포 이력이라 **그대로 보존**하고 별도 파일로 추가. LOD/shuffle split은 이번에 제외(LOD 원본 재준비 예정) |
+| `pr_controller/dfxc_adapter.md` | (08-06) IP 채택 결정 기록·근거 비교표·Stage 6 통합 체크리스트(포트명 IP 생성 후 확인 필요) |
+| `pr_controller/pr_latency_probe.v` | (08-06) **부수(선택) 계측기** — 스왑 체인 동작에 불필요, 측정(보드 L5 수치)·디버그 시에만 부착. 재구성 레이턴시 계측 — IP엔 내장 타이머가 없어 핸드셰이크 경계(drain: shutdown req→ack, 전체: trigger→decouple 해제)를 카운트; `checker_to_dfxc_tb.v`에서 검증(계약 모델 기준 drain=4/swap=38 cycles) |
 | `icap_sim/icap_pr_latency_tb.v` | ICAP PR latency 측정용 testbench |
 
 ## 5. mAP CSV 계보 (시간순 — 어느 숫자가 최신인지)

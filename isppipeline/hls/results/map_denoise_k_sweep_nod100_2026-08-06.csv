@@ -1,0 +1,7 @@
+dataset,blc_offset,wb_lowlight,arm,mAP_50_95,mAP_50,model,n
+NOD100-denoise-k-sweep-2026-08-06,2,shared,lowlight,0.1700,0.3468,yolov8n.pt,100
+NOD100-denoise-k-sweep-2026-08-06,2,shared,lowlight_isp_nodenoise,0.1775,0.3710,yolov8n.pt,100
+NOD100-denoise-k-sweep-2026-08-06,2,shared,lowlight_isp_k10,0.1783,0.3688,yolov8n.pt,100
+NOD100-denoise-k-sweep-2026-08-06,2,shared,lowlight_isp_k15,0.1790,0.3641,yolov8n.pt,100
+NOD100-denoise-k-sweep-2026-08-06,2,shared,lowlight_isp_k24,0.1784,0.3653,yolov8n.pt,100
+NOD100-denoise-k-sweep-2026-08-06,2,shared,lowlight_isp_k40,0.1824,0.3683,yolov8n.pt,100
