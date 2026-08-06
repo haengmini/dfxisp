@@ -20,14 +20,22 @@ default_ISP와 **보정 백본을 공유**한다(①②④). 두 arm의 차이�
 
 ```
 RAW Bayer 12-bit
- ① blackLevelCorrection [Bayer]   감산 + 레인지 복원(Q8 258)      ┐ default_ISP와
- ② gain [Bayer, 양자화 이전]      노출 2.0× × 사이트별 WB, 융합   │ 공유 백본
- ③ 2×2 binning-demosaic [융합]    R=TL, G=(TR+BL)/2, B=BR         │ ← 저조도 고유
+ ① binning [RAW]                  same-color 2×2 평균              ← 저조도 고유(SNR)
+                                  R/B 4샘플 +6dB, G 8샘플 +9dB
+                                  **BLC보다 앞** (§2.5)
+ ② blackLevelCorrection [binned]  감산 + 레인지 복원(Q8 258)      ┐ default_ISP와
+ ③ gain [binned, 양자화 이전]     노출 2.0× × 채널별 WB, 융합     │ 상수 공유
  ④ colorcorrectionmatrix [RGB12]  default_ISP와 동일 행렬          ┘
  ⑤ GAT/Anscombe VST 톤 [12→8]     gamma 2.0 대체                   ← 저조도 고유(핵심)
  ⑥ edge-preserving denoise [VST]  σ-clip 3×3, 상수 임계             ← 저조도 고유
  ⑦ pack RGB888 → H/2 × W/2 (Policy A)
 ```
+
+> **2026-08-06 개정:** 최초 구현은 ③에서 2×2 셀당 픽셀 하나를 뽑는
+> subsampling이었고(§3), 그래서 binning의 SNR 이득이 실현되지 않았다.
+> **진짜 same-color binning으로 교체**하고 BLC 앞으로 옮겼다. 구
+> 동작은 `LOWLIGHT_ISP_BIN_SUBSAMPLE` 스위치로 남겨 ablation 기준선으로
+> 쓴다.
 
 ## 2. 핵심 설계 결정
 
@@ -74,12 +82,13 @@ VST가 분산을 안정화했으므로 노이즈 σ가 신호준위와 무관해
 **VST 출력이 곧 최종 톤**이다. LUT 하나가 분산안정화·톤매핑·플로어억제를
 동시에 한다.
 
-### 2.3 게인을 raw 상류로 (②)
+### 2.3 게인을 상류로 (③)
 
 게인은 SNR을 바꾸지 못하지만(신호·노이즈 동배율), 저조도+고게인에서
 양자화 분산이 게인 배수로 벌어지므로 **비트폭이 넓은 Bayer 도메인에서,
 `>>4` 이전에** 적용한다(원리 P3 §4.3). 노출 게인(2.0×)과 사이트별 WB를
-**하나의 곱셈으로 융합**했다.
+**하나의 곱셈으로 융합**했다. ①이 이미 채널을 분리했으므로 default_ISP의
+사이트별 게인과 달리 채널별 게인 하나면 된다.
 
 ### 2.4 적응 AWB를 넣지 않았다 (의도적)
 
@@ -90,22 +99,48 @@ WB는 3회 독립 검증에서 **레버가 아님**이 확정됐다(전 범위 m
 추가 read)를 절약**했다. default_ISP는 일반 arm이라 적응 AWB를 유지하되
 `AWB_OFF` 스위치가 있으므로, 통제 비교 시 양쪽을 맞출 수 있다.
 
-## 3. 발견: 우리 binning은 +6dB가 아니다 (문서 정정)
+## 2.5 binning을 진짜로 만들고 BLC 앞에 두었다 (2026-08-06 개정)
 
-`lowlight-feature-principles` §4.1은 "2×2 same-color 합산 → SNR +6dB"라고
-적고 있으나, **현재 구현(v1·v2 공통)은 same-color 합산이 아니다.** RGGB
-2×2 셀에는 R이 1개, G가 2개, B가 1개뿐이라:
+**발견:** v1과 v2 최초 구현은 2×2 셀에서 R=p00, B=p11을 그냥 뽑고 G만
+2샘플 평균했다 — RGGB 셀에는 R·B가 1개씩뿐이라 **R/B는 0 dB, G만 +3 dB**
+였다. 즉 binning이라 부르면서 binning을 하지 않았고, 설계 근거였던 +6 dB가
+실현된 적이 없었다.
 
-| 채널 | 실제 연산 | SNR 이득 |
-|---|---|---|
-| R, B | 단일 샘플 추출 | **0 dB** |
-| G | 2샘플 평균 | +3 dB |
+**수정:** 색평면 단위 2×2 평균(중첩 창)으로 교체했다. 출력 인접 픽셀이
+샘플을 공유하므로 **출력 크기는 H/2×W/2 그대로**이면서 전 채널이 이득을
+얻는다.
 
-진짜 same-color 2×2 binning은 4×4 raw 영역이 필요하고 출력이 H/4×W/4가
-된다(해상도 손실 4배). **v2는 현행 semantics를 유지**하고 R/B의 노이즈
-저감을 ⑥ edge-aware denoise에 맡겼다 — 맹목적 평균보다 나은 선택이고,
-binning과 denoise의 역할이 깔끔히 분리된다. 다만 **원리 문서의 +6dB 주장은
-현 구현에 적용되지 않으므로** 인용 시 주의할 것.
+| 채널 | 샘플 수 | SNR 이득(이론) |
+|---|---:|---|
+| R, B | 4 | **+6 dB** |
+| G | 8 | **+9 dB** |
+
+**실측(합성 Poisson-Gaussian 프레임, denoise OFF로 binning만 분리):**
+
+| 신호준위 | σ(subsample) | σ(samecolor) | 개선 |
+|---:|---:|---:|---:|
+| 100 | 3.19 | 1.59 | **+6.1 dB** |
+| 400 | 2.72 | 1.21 | **+7.1 dB** |
+| 1600 | 2.59 | 1.36 | **+5.6 dB** |
+
+이론값과 일치한다(G가 8샘플이라 평균이 +6dB를 조금 웃돈다).
+
+**BLC보다 앞에 둔 이유 — 노이즈 정류 바이어스:** 개별 샘플에 클리핑을 먼저
+걸면 `Σ max(0, xᵢ−p)`가 되어 음의 노이즈가 0으로 접히면서 **양의 바이어스**가
+생긴다. 먼저 평균하고 pedestal을 한 번 빼면 불편(unbiased)이고, 개별
+샘플이 pedestal 아래여도 **평균이 살아나는 신호를 보존**한다. "저조도 픽셀
+52~73%가 0으로 클리핑된다"는 기존 관찰의 일부는 이 순서 탓일 수 있다.
+
+**⑥ denoise와 중복 아닌가?** 아니다. binning은 **무조건적**이라 신호와
+무관하게 보장된 √4 저감을 주고, σ-clip denoise는 **조건부**라 임계 밖
+이웃을 제외한다(노이즈가 클수록 평균 대상이 줄어드는 역설이 있다). 다만
+binning이 무조건적 저감을 하고 난 뒤 denoise의 한계효용은 줄어들 수 있으므로
+**denoise ablation의 우선순위가 올라갔다**(§6).
+
+> **원리 문서 정정 2건:** (a) `lowlight-feature-principles` §4.1의 +6 dB는
+> **진짜 same-color 합산에만** 적용된다 — 개정 전 우리 구현엔 해당되지
+> 않았다. (b) 같은 절의 "shot-limited에서는 +3 dB"도 틀렸다: 4샘플 평균은
+> read-limited·shot-limited **둘 다 +6 dB**다(SNR은 스케일 불변).
 
 ## 4. 파라미터
 
@@ -129,25 +164,36 @@ binning과 denoise의 역할이 깔끔히 분리된다. 다만 **원리 문서�
 
 | top | BRAM_18K | DSP | FF | LUT | Est. period |
 |---|---:|---:|---:|---:|---:|
-| **`rm_lowlight_isp_top`** (v2 저조도) | **11** | **17** | **6,447** | **10,848** | 3.650 ns |
+| **`rm_lowlight_isp_top`** (v2 저조도, **진짜 binning**) | **11** | **20** | **7,555** | **12,826** | 3.650 ns |
+| (참고) 같은 arm, subsample 시절 | 11 | 17 | 6,447 | 10,848 | 3.650 ns |
 | `rm_default_isp_top` (v2 일반) | 4 | 28 | 8,803 | 12,659 | 3.650 ns |
 | `rm_low_light_tone_top` (v1 저조도) | 8 | 9 | 3,243 | 4,204 | 3.650 ns |
 | `rm_normal_tone_top` (v1 일반) | 4 | 12 | 3,797 | 5,202 | 3.650 ns |
 
 **예측 실패를 기록한다:** 설계 제안 시 "현행 대비 +10~20%"로 추정했으나
-실측은 **v1 대비 2.58배(4,204 → 10,848 LUT)** 였다. 원인 분해:
+실측은 **v1 대비 3.05배(4,204 → 12,826 LUT)** 였다. 원인 분해:
 - **denoise(⑥)가 지배적** — 출력 픽셀당 3채널 × 9이웃 = 27회 비교/선택
-- CCM 도입(identity → 실제 3×3): DSP 9 → 17
+- **진짜 binning(①)이 +1,978 LUT(+18%)** — 출력 픽셀당 raw 읽기가 4회에서
+  **16회**로 늘고(겹치는 2×2 창) 주소 연산이 따라 늘었다
+- CCM 도입(identity → 실제 3×3): DSP 9 → 20
 - GAT LUT 4096 엔트리(기존 gamma LUT 256): BRAM 8 → 11
-- BLC 레인지 복원 + 게인 융합 곱셈이 binned 픽셀당 4회(2×2 샘플마다)
 
-**타이밍은 네 arm 모두 동일**(3.650 ns = 273.97 MHz)이라 원리적 구조를
-택해도 Fmax는 희생되지 않는다.
+**타이밍은 전 arm 동일**(3.650 ns = 273.97 MHz).
 
-**DFX 서사는 유지된다:** v2 축에서도 저조도(10,848)가 일반(12,659)보다
-14% 작다(H/2×W/2만 처리하므로). 두 RM이 모두 상주하는 Arm2 대비 DFX 절감
-비율은 v1과 유사한 수준으로 예상되나, **post-route 실측은 미실시**다
-(§10.3의 arm 비교표는 post-route flat 축이므로 위 csynth 수치와 **섞지 말 것**).
+> **⚠️ DFX 서사의 하위 주장 하나가 무너졌다.** subsample 시절엔 저조도
+> arm(10,848)이 일반 arm(12,659)보다 14% 작아 "저조도 모드가 더 싸다"고
+> 말할 수 있었지만, 진짜 binning 도입 후 **12,826으로 일반 arm보다 1.3%
+> 크다**. DFX가 Arm2(양쪽 상주) 대비 절감한다는 주장 자체는 유지되지만,
+> **"저조도 RM이 더 작다"는 부수 주장은 이제 성립하지 않는다** —
+> 논문에서 이 표현을 쓰지 말 것.
+>
+> **구현 최적화 여지(미실행):** 겹치는 창을 raw 직접 읽기로 처리해 출력
+> 픽셀당 16회 읽는 것이 원인이다. 4-row line buffer로 재사용하면 읽기가
+> 픽셀당 1회로 줄어 자원·대역폭 모두 개선된다. 위 수치는 **최적화 전**
+> 값이므로, 이 항목을 먼저 처리하면 저조도 arm이 다시 작아질 가능성이 있다.
+
+**post-route 실측은 미실시**다(§10.3의 arm 비교표는 post-route flat 축이므로
+위 csynth 수치와 **섞지 말 것**).
 
 ## 6. 남은 일 (실험 순서 제안)
 
@@ -156,8 +202,10 @@ binning과 denoise의 역할이 깔끔히 분리된다. 다만 **원리 문서�
 2. **denoise ablation** — 이득을 입증하지 못하면 **빼는 것이 맞다**(문헌
    경고 + 자원 지배 요인이므로 비용 대비 효과가 명확해야 한다).
 3. **게인 상류 이동 ablation**.
-4. **size별 AP 분해(small/med/large)** — binning 손익분기 실측(§3의 발견을
-   감안해 재해석 필요).
+4. **size별 AP 분해(small/med/large)** — binning 손익분기 실측. 이제
+   `LOWLIGHT_ISP_BIN_SUBSAMPLE`/`SAMECOLOR` 스위치로 **binning 기여를 직접
+   분리 측정**할 수 있다(§2.5).
+4b. **binning line-buffer 최적화** — §5의 16회 읽기 문제 해소(자원·대역폭).
 5. **a, b 캘리브레이션** — EMVA1288 또는 데이터 기반 추정 + 민감도 보고.
 6. mAP 평가 하네스 연결(현재 SW proxy는 v1 arm만 미러링), post-route 실측,
    `RM_LOW_LIGHT` 승격 여부 결정.
@@ -166,8 +214,9 @@ binning과 denoise의 역할이 깔끔히 분리된다. 다만 **원리 문서�
 
 | 게이트 | 상태 |
 |---|---|
-| Python golden ↔ C++ bit-exact (`make lowlight-isp-verify`) | ✅ 131 px, 10 케이스 |
-| BLC 선행 (pedestal 이하 → 순흑, 2.0× 게인·톤이 되살리지 못함) | ✅ |
+| Python golden ↔ C++ bit-exact (`make lowlight-isp-verify`) | ✅ 163 px, 12 케이스(두 binning 모드 포함) |
+| **binning SNR 이득** (같은 잡음 프레임에서 samecolor spread < subsample, denoise OFF) | ✅ **실측 +5.6~7.1 dB** |
+| BLC (pedestal 이하 → 순흑; 평균 후 감산이라 되살아나지 않음) | ✅ |
 | GAT 플로어 억제 (near-floor 출력 < 40, 중간톤 > 150) | ✅ |
 | denoise 잡음 감소 (noisy 패치 spread 감소) | ✅ |
 | denoise 에지 보존 (step 대비 유지, 허용 −2 이내) | ✅ |

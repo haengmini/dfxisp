@@ -5,10 +5,14 @@ Canonical status: **canonical golden** for src/lowlight_isp.cpp -- a bit-exact
 mirror, the same role gen_golden_vectors.py plays for dfxisp_accel.cpp.
 
 Pipeline (see src/lowlight_isp.md for the derivation of every stage):
-  (1) blackLevelCorrection  [Bayer]  subtract pedestal + restore range
-  (2) gain                  [Bayer]  exposure gain x per-site WB, folded, applied
+  (1) binning               [RAW]    same-colour 2x2 average -> +6 dB (R/B, 4
+                                     samples) and +9 dB (G, 8 samples). Placed
+                                     BEFORE black level so the pedestal is
+                                     subtracted once from the average instead of
+                                     rectifying each noisy sample at zero.
+  (2) blackLevelCorrection  [binned] subtract pedestal + restore range
+  (3) gain                  [binned] exposure gain x per-channel WB, folded,
                                      upstream of quantisation (principle P3 4.3)
-  (3) 2x2 binning-demosaic  [fused]  R=TL, G=(TR+BL)/2, B=BR -> H/2 x W/2
   (4) CCM                   [RGB12]  same matrix as default_isp (shared backbone)
   (5) GAT/Anscombe VST tone [12->8]  variance-stabilising LUT, replaces gamma2.0
   (6) edge-preserving denoise[VST]   sigma-clipped 3x3, constant threshold
@@ -28,12 +32,14 @@ from pathlib import Path
 
 RAW12_MAX = 4095
 
-# --- (1) black level ---------------------------------------------------------
+# --- (2) black level ---------------------------------------------------------
 BLC_LEVEL12 = 2 << 4        # 32; deployed real-RAW recalibration (2026-07-20)
 BLC_MUL_Q8 = 258            # round(256 * 4095 / (4095 - 32))
 
-# --- (2) Bayer-domain gain ---------------------------------------------------
+# --- (3) gain (binned domain) ---------------------------------------------------
 EXPOSURE_GAIN_Q8 = 512      # 2.0x low-light exposure gain
+# Binning already separated the channels, so WB is a plain per-channel gain
+# here rather than the per-Bayer-site variant default_isp uses.
 WB_R_Q8, WB_G_Q8, WB_B_Q8 = 286, 256, 307   # fixed WB (measured: not a lever)
 
 # --- (4) CCM (shared with default_isp) ---------------------------------------
@@ -70,6 +76,10 @@ B_DN2 = 16                  # b = 16 DN^2 (sigma_read = 4 DN), ESTIMATE
 # features detectors rely on.
 DENOISE_SIGMA = 5
 
+# Binning modes (stage 1)
+BIN_SUBSAMPLE = 0   # legacy: one sample per cell for R/B (0 dB), 2 for G (+3 dB)
+BIN_SAMECOLOR = 1   # true same-colour 2x2 binning: +6 dB (R/B), +9 dB (G)
+
 
 def clamp(v: int, lo: int, hi: int) -> int:
     return lo if v < lo else (hi if v > hi else v)
@@ -96,37 +106,61 @@ def bin_dim(d: int) -> int:
     return max(1, d // 2)
 
 
-def bayer_wb_q8(x: int, y: int) -> int:
-    even_y = (y & 1) == 0
-    even_x = (x & 1) == 0
-    if even_y and even_x:
-        return WB_R_Q8      # R site
-    if not even_y and not even_x:
-        return WB_B_Q8      # B site
-    return WB_G_Q8          # G sites
+def cell_sites(raw, width: int, height: int, cx: int, cy: int):
+    """The four Bayer sites of cell (cx, cy): (R, G_topright, G_bottomleft, B)."""
+    x0 = 2 * cx
+    x1 = 2 * cx + 1 if 2 * cx + 1 < width else width - 1
+    y0 = 2 * cy
+    y1 = 2 * cy + 1 if 2 * cy + 1 < height else height - 1
+    return (raw[y0 * width + x0], raw[y0 * width + x1],
+            raw[y1 * width + x0], raw[y1 * width + x1])
 
 
-def corrected_bayer(raw, width: int, height: int, x: int, y: int) -> int:
-    """Stages (1) black level and (2) gain, both in the Bayer domain."""
-    v = raw[y * width + x]
+def binned_raw(raw, width, height, bw, bh, bx, by, bin_mode):
+    """Stage (1), RAW domain, no correction applied yet.
+
+    SAMECOLOR: true same-colour 2x2 binning -- averages the R sites of a 2x2
+    neighbourhood of Bayer cells (4 samples -> sigma/2 -> +6 dB), the B sites
+    likewise, and all 8 G sites (+9 dB). Output stays H/2 x W/2 because the
+    windows overlap; adjacent outputs are therefore correlated.
+    SUBSAMPLE: the legacy path -- one R and one B sample from the cell itself
+    (0 dB) and the cell's 2 G samples (+3 dB). Kept as the ablation baseline
+    so binning's SNR contribution can be measured directly.
+    """
+    if bin_mode == BIN_SUBSAMPLE:
+        r, g0, g1, b = cell_sites(raw, width, height, bx, by)
+        return r, (g0 + g1) // 2, b
+    sum_r = sum_g = sum_b = 0
+    for dy in (0, 1):
+        cy = clamp(by + dy, 0, bh - 1)
+        for dx in (0, 1):
+            cx = clamp(bx + dx, 0, bw - 1)
+            r, g0, g1, b = cell_sites(raw, width, height, cx, cy)
+            sum_r += r
+            sum_g += g0 + g1
+            sum_b += b
+    return sum_r // 4, sum_g // 8, sum_b // 4
+
+
+def correct_channel(v: int, wb_q8: int) -> int:
+    """Stages (2) black level and (3) gain, applied ONCE to the binned value.
+
+    Subtracting the pedestal after averaging is the unbiased order: clipping
+    each noisy sample at zero first would rectify the noise and add a positive
+    bias -- exactly the "noise floor lifted into visible grey" failure mode.
+    """
     v = v - BLC_LEVEL12 if v > BLC_LEVEL12 else 0
     v = clamp((v * BLC_MUL_Q8) >> 8, 0, RAW12_MAX)
-    gain_q8 = (EXPOSURE_GAIN_Q8 * bayer_wb_q8(x, y)) >> 8   # folded into one multiply
-    v = clamp((v * gain_q8) >> 8, 0, RAW12_MAX)
-    return v
+    gain_q8 = (EXPOSURE_GAIN_Q8 * wb_q8) >> 8      # folded into one multiply
+    return clamp((v * gain_q8) >> 8, 0, RAW12_MAX)
 
 
-def binned_rgb(raw, width: int, height: int, bx: int, by: int):
-    """Stage (3): fused 2x2 binning-demosaic on the corrected Bayer plane."""
-    y0 = 2 * by
-    y1 = 2 * by + 1 if 2 * by + 1 < height else height - 1
-    x0 = 2 * bx
-    x1 = 2 * bx + 1 if 2 * bx + 1 < width else width - 1
-    p00 = corrected_bayer(raw, width, height, x0, y0)   # R (top-left)
-    p01 = corrected_bayer(raw, width, height, x1, y0)   # G (top-right)
-    p10 = corrected_bayer(raw, width, height, x0, y1)   # G (bottom-left)
-    p11 = corrected_bayer(raw, width, height, x1, y1)   # B (bottom-right)
-    return p00, (p01 + p10) // 2, p11
+def binned_rgb(raw, width, height, bw, bh, bx, by, bin_mode):
+    """Stages (1)-(3)."""
+    r, g, b = binned_raw(raw, width, height, bw, bh, bx, by, bin_mode)
+    return (correct_channel(r, WB_R_Q8),
+            correct_channel(g, WB_G_Q8),
+            correct_channel(b, WB_B_Q8))
 
 
 def ccm_channel(row: int, r12: int, g12: int, b12: int) -> int:
@@ -154,7 +188,8 @@ def sigma_clip(planes, bw: int, bh: int, x: int, y: int) -> int:
     return total // count
 
 
-def lowlight_isp(raw, width: int, height: int, denoise_on: int = 1):
+def lowlight_isp(raw, width: int, height: int, denoise_on: int = 1,
+                 bin_mode: int = BIN_SAMECOLOR):
     bw, bh = bin_dim(width), bin_dim(height)
     # stages (1)-(5): build the VST-domain planes
     pr = [[0] * bw for _ in range(bh)]
@@ -162,7 +197,7 @@ def lowlight_isp(raw, width: int, height: int, denoise_on: int = 1):
     pb = [[0] * bw for _ in range(bh)]
     for by in range(bh):
         for bx in range(bw):
-            r12, g12, b12 = binned_rgb(raw, width, height, bx, by)
+            r12, g12, b12 = binned_rgb(raw, width, height, bw, bh, bx, by, bin_mode)
             rc = ccm_channel(0, r12, g12, b12)
             gc = ccm_channel(1, r12, g12, b12)
             bc = ccm_channel(2, r12, g12, b12)
@@ -185,17 +220,18 @@ def lowlight_isp(raw, width: int, height: int, denoise_on: int = 1):
 
 def make_cases():
     """Coverage: flat levels incl. the noise floor, gradient, a noisy dark
-    patch (exercises denoise), a hard edge (denoise must preserve it),
-    saturation, odd dimensions and the 1x1 degenerate case."""
+    patch (both binning modes -- the SNR ablation), a hard edge (denoise must
+    preserve it), saturation, odd dimensions and the 1x1 degenerate case."""
     cases = []
     w = h = 8
 
-    cases.append(("flat_mid", w, h, 1, [1600] * (w * h)))
-    cases.append(("flat_dark", w, h, 1, [200] * (w * h)))
-    cases.append(("flat_near_floor", w, h, 1, [40] * (w * h)))
+    cases.append(("flat_mid", w, h, 1, BIN_SAMECOLOR, [1600] * (w * h)))
+    cases.append(("flat_dark", w, h, 1, BIN_SAMECOLOR, [200] * (w * h)))
+    cases.append(("flat_near_floor", w, h, 1, BIN_SAMECOLOR, [40] * (w * h)))
 
     grad = [((x + y) * 4095) // (w + h - 2) for y in range(h) for x in range(w)]
-    cases.append(("gradient", w, h, 1, grad))
+    cases.append(("gradient", w, h, 1, BIN_SAMECOLOR, grad))
+    cases.append(("gradient_subsample", w, h, 1, BIN_SUBSAMPLE, grad))
 
     # Deterministic pseudo-noise on a dark background: denoise must smooth it.
     noisy = []
@@ -203,20 +239,22 @@ def make_cases():
     for i in range(w * h):
         seed = (1103515245 * seed + 12345) & 0x7FFFFFFF
         noisy.append(300 + (seed % 120))
-    cases.append(("noisy_dark_denoise_on", w, h, 1, noisy))
-    cases.append(("noisy_dark_denoise_off", w, h, 0, noisy))
+    cases.append(("noisy_dark_denoise_on", w, h, 1, BIN_SAMECOLOR, noisy))
+    cases.append(("noisy_dark_denoise_off", w, h, 0, BIN_SAMECOLOR, noisy))
+    # Same frame through the legacy path: the SNR ablation pair.
+    cases.append(("noisy_dark_subsample_dn_off", w, h, 0, BIN_SUBSAMPLE, noisy))
 
     # Hard vertical edge: dark left half, bright right half.
     edge = [(200 if x < w // 2 else 2600) for y in range(h) for x in range(w)]
-    cases.append(("hard_edge", w, h, 1, edge))
+    cases.append(("hard_edge", w, h, 1, BIN_SAMECOLOR, edge))
 
-    cases.append(("saturated", w, h, 1, [4095] * (w * h)))
+    cases.append(("saturated", w, h, 1, BIN_SAMECOLOR, [4095] * (w * h)))
 
     ow, oh = 5, 3
     odd = [((x * 7 + y * 13) * 97) % 4096 for y in range(oh) for x in range(ow)]
-    cases.append(("odd_dims", ow, oh, 1, odd))
+    cases.append(("odd_dims", ow, oh, 1, BIN_SAMECOLOR, odd))
 
-    cases.append(("one_pixel", 1, 1, 1, [900]))
+    cases.append(("one_pixel", 1, 1, 1, BIN_SAMECOLOR, [900]))
 
     return cases
 
@@ -240,14 +278,14 @@ def main() -> int:
         print(emit_c_lut())
         return 0
 
-    rows = ["case,in_w,in_h,denoise,out_w,out_h,kind,idx,val"]
+    rows = ["case,in_w,in_h,denoise,bin_mode,out_w,out_h,kind,idx,val"]
     ncases = 0
-    for name, w, h, dn, raw in make_cases():
-        expected, bw, bh = lowlight_isp(raw, w, h, dn)
+    for name, w, h, dn, bm, raw in make_cases():
+        expected, bw, bh = lowlight_isp(raw, w, h, dn, bm)
         for i, v in enumerate(raw):
-            rows.append(f"{name},{w},{h},{dn},{bw},{bh},raw,{i},{v}")
+            rows.append(f"{name},{w},{h},{dn},{bm},{bw},{bh},raw,{i},{v}")
         for i, v in enumerate(expected):
-            rows.append(f"{name},{w},{h},{dn},{bw},{bh},rgb,{i},0x{v:06X}")
+            rows.append(f"{name},{w},{h},{dn},{bm},{bw},{bh},rgb,{i},0x{v:06X}")
         ncases += 1
 
     out = Path(args.out)

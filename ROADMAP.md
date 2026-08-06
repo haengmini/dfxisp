@@ -694,11 +694,16 @@ CCM 곱셈. 남은 일: mAP 미평가·post-route 미실측·`RM_NORMAL` 승격 
 선형이 되어 read-noise floor 증폭을 **gamma 대비 절반**으로 억제한다(8-bit
 입력 1→7 vs 15, 2→12 vs 22; 중간톤 이상은 0.94~1.00로 수렴, b=0이면 기존
 gamma로 정확히 퇴화). VST가 분산을 안정화하므로 denoise 임계가 **상수 하나로
-성립**(유도값 σ_VST≈2.1 LSB). golden bit-exact(131px/10케이스) + 불변식 7종
+성립**(유도값 σ_VST≈2.1 LSB). golden bit-exact(163px/12케이스) + 불변식 8종
 통과. **실측 csynth: LUT 10,848/DSP 17/FF 6,447/BRAM 11, 타이밍 동일(3.650ns)
 — v1(4,204) 대비 2.58배로, 제안 시 추정치(+10~20%)가 크게 빗나갔음을 기록**
-(denoise의 픽셀당 27회 비교가 지배). **부수 발견: 현재 binning은 same-color
-합산이 아니어서 원리 문서의 +6dB가 적용되지 않는다**(R/B 0dB, G만 +3dB).
+(denoise의 픽셀당 27회 비교가 지배). **부수 발견 → 같은 날 수정: binning이 same-color 합산이 아니어서 원리
+문서의 +6dB가 실현된 적이 없었다**(R/B 0dB, G만 +3dB). **진짜 same-color
+2×2 binning으로 교체하고 BLC 앞으로 이동**(노이즈 정류 바이어스 회피) —
+실측 +5.6~7.1dB 확보, 구 동작은 ablation 스위치로 보존. 대가로 LUT가
+12,826으로 늘어 **저조도 arm이 일반 arm보다 커졌다**(“저조도 RM이 더 싸다”
+서술 폐기; line-buffer 최적화 미실행 상태). 원리 문서의 "shot-limited +3dB"
+표기 오류도 정정(4샘플 평균은 두 영역 모두 +6dB).
 검증 가능한 예측 제시: "GAT 도입 시 BLC의 5.7배 민감도가 평탄해져야 한다".
 mAP 미평가·post-route 미실측·승격 미결. 상세: `isppipeline/hls/src/lowlight_isp.md`.
 
