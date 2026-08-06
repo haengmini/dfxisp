@@ -89,6 +89,16 @@ legacy/ver0 코드 사이 경계가 문서화되어 있지 않아 혼동 위험�
 
 ## Ponytail 리뷰 기록 (2026-08-06)
 
+**2차(모듈 범위: checker / default_ISP / lowlight_ISP), findings 4 — 전부 절단:**
+default_ISP의 AWB 녹색 게인(기준 채널이라 항상 256 = 항등 연산),
+checker의 `dark*100` 3회 반복, `sigma_clip`의 인자 재조립,
+`checker_hysteresis`의 16-bit dwell 카운터(파라미터 기반 폭으로).
+재합성 결과 default_ISP **FF 8,803 → 8,794**, LUT/DSP/타이밍 불변 —
+합성기가 ×256>>8을 이미 접고 있어 절감은 파이프라인 레지스터였다.
+golden 4종 + xsim 2종 전부 재통과(수치 무변화).
+
+**1차(전체 diff 범위) 기록:**
+
 `/ponytail-review` 게이트를 세 arm 추가분에 적용한 결과(findings 11, 실행
 가능 −195줄) 중 **테스트 CSV 파서 3중복만 잘라냈다** — `tests/golden_csv.hpp`
 헤더 기반 로더 하나로 통합(−134줄). 나머지 둘은 **근거를 남기고 유지**한다:

@@ -361,7 +361,7 @@ Arm3(DFX가 tone RM slot 교체). ablation: post-RGB8 gain/lift, dfx_bin, dfx_fp
 `rm_default_isp_top` — 동일 6-인자 DFX 계약이라 같은 RP 슬롯에 꽂을 수 있다).
 기존 `RM_NORMAL_TONE`은 보정을 demosaic **후** RGB 도메인에서 고정 WB·identity
 CCM으로 수행하는 반면, default_ISP는 Vitis처럼 **Bayer 도메인 BLC/gain →
-demosaic → 적응 AWB → 실제 CCM** 순이다. csynth 실측 LUT 12,659/DSP 28/FF 8,803
+demosaic → 적응 AWB → 실제 CCM** 순이다. csynth 실측 LUT 12,659/DSP 28/FF 8,794
 (RM_NORMAL_TONE 5,202/12/3,797 대비 LUT 2.43배, 타이밍 동일 3.650ns).
 **아직 배포 arm이 아니다** — mAP 미평가, post-route 미실측, `RM_NORMAL` 승격
 여부는 `STRATEGY.md` 열린 질문 #4와 함께 미결. 상세: `src/default_isp.md`.

@@ -86,8 +86,14 @@ BLC/checker 결정은 손대지 않았다. default_ISP를 normal 모드 RM으로
 
 | top | BRAM_18K | DSP | FF | LUT | Est. period |
 |---|---:|---:|---:|---:|---:|
-| **`rm_default_isp_top`** (default_ISP) | 4 | **28** | **8,803** | **12,659** | 3.650 ns |
+| **`rm_default_isp_top`** (default_ISP) | 4 | **28** | **8,794** | **12,659** | 3.650 ns |
 | `rm_normal_tone_top` (RM_NORMAL_TONE) | 4 | 12 | 3,797 | 5,202 | 3.650 ns |
+
+> **2026-08-06 ponytail 리뷰 후 갱신:** AWB의 녹색 게인은 구조상 항상 256
+> (기준 채널)이라 out-param·곱셈·클램프가 전부 항등이었다 — 제거 후 재합성
+> 결과 **FF 8,803 → 8,794(−9)**, LUT·DSP·타이밍은 불변. 합성기가 ×256>>8을
+> 이미 시프트로 접고 있었으므로 절감은 곱셈기가 아니라 파이프라인 레지스터
+> 9개였다. 소스 정리가 반드시 실리콘 이득으로 이어지지는 않는다는 사례.
 
 **해석:** default_ISP는 기존 normal arm 대비 **LUT 2.43배, DSP 2.33배**다.
 증가분의 출처는 구조 그 자체다 — (a) AWB 통계 패스(전수 스캔 + 64-bit

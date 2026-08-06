@@ -679,7 +679,7 @@ BLC/gain → demosaic → 적응 AWB → 실제 CCM; 기존: demosaic → RGB �
 WB → identity CCM). Vitis 순서를 따르는 `default_isp.cpp`를 **추가형**으로 신설
 (기존 arm·golden·배포 결정 무변경). Python canonical golden bit-exact 일치
 (528px, 10케이스), 구조 불변식 5종 통과, DFX 계약(6-인자) 준수.
-**실측(csynth)**: LUT 12,659 / DSP 28 / FF 8,803 — RM_NORMAL_TONE(5,202/12/3,797)
+**실측(csynth)**: LUT 12,659 / DSP 28 / FF 8,794 — RM_NORMAL_TONE(5,202/12/3,797)
 대비 LUT 2.43배지만 **타이밍은 동일**(3.650ns). 증가분은 AWB 통계 패스 + 실제
 CCM 곱셈. 남은 일: mAP 미평가·post-route 미실측·`RM_NORMAL` 승격 여부 미결.
 상세: `isppipeline/hls/src/default_isp.md`. 이것이 #7 Vitis-first 리팩터의 첫

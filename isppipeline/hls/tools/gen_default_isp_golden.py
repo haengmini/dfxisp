@@ -94,7 +94,10 @@ def demosaic_rggb12(raw, width: int, height: int, x: int, y: int):
 
 
 def awb_gains_q8(raw, width: int, height: int):
-    """Stage (4) statistics: gray-world means over corrected Bayer sites."""
+    """Stage (4) statistics: gray-world means over corrected Bayer sites.
+
+    Green is the reference channel, so only the R and B gains are returned --
+    a green gain would be 256 (identity) by construction."""
     sum_r = sum_g = sum_b = 0
     cnt_r = cnt_g = cnt_b = 0
     for y in range(height):
@@ -118,7 +121,7 @@ def awb_gains_q8(raw, width: int, height: int):
         if (mean_r > 0 and mean_g > 0) else 256
     gain_b = clamp((mean_g * 256) // mean_b, AWB_GAIN_MIN_Q8, AWB_GAIN_MAX_Q8) \
         if (mean_b > 0 and mean_g > 0) else 256
-    return gain_r, 256, gain_b
+    return gain_r, gain_b
 
 
 def ccm_channel(row: int, r12: int, g12: int, b12: int) -> int:
@@ -135,16 +138,15 @@ def quantize_gamma(v12: int) -> int:
 
 
 def default_isp(raw, width: int, height: int, awb_mode: int):
-    awb_r, awb_g, awb_b = (256, 256, 256)
+    awb_r, awb_b = (256, 256)
     if awb_mode == AWB_ON:
-        awb_r, awb_g, awb_b = awb_gains_q8(raw, width, height)
+        awb_r, awb_b = awb_gains_q8(raw, width, height)
     out = []
     for y in range(height):
         for x in range(width):
             r12, g12, b12 = demosaic_rggb12(raw, width, height, x, y)
             r12 = clamp((r12 * awb_r) >> 8, 0, RAW12_MAX)
-            g12 = clamp((g12 * awb_g) >> 8, 0, RAW12_MAX)
-            b12 = clamp((b12 * awb_b) >> 8, 0, RAW12_MAX)
+            b12 = clamp((b12 * awb_b) >> 8, 0, RAW12_MAX)   # g12: reference channel
             rc = quantize_gamma(ccm_channel(0, r12, g12, b12))
             gc = quantize_gamma(ccm_channel(1, r12, g12, b12))
             bc = quantize_gamma(ccm_channel(2, r12, g12, b12))

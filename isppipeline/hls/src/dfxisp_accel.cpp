@@ -185,14 +185,15 @@ static int checker_select_mode(const uint16_t* raw, int width, int height, int m
 #pragma HLS LOOP_TRIPCOUNT min=16 max=2073600
         if (raw[i] < dark_pixel_threshold) ++dark;
     }
-    const bool above_enter = dark * 100 > HYST_ENTER_PCT * n;
-    const bool below_exit = dark * 100 < HYST_EXIT_PCT * n;
+    const int dark_pct100 = dark * 100;
+    const bool above_enter = dark_pct100 > HYST_ENTER_PCT * n;
+    const bool below_exit = dark_pct100 < HYST_EXIT_PCT * n;
     hyst_flags = (above_enter ? DFXISP_HYST_ABOVE_ENTER : 0) |
                  (below_exit ? DFXISP_HYST_BELOW_EXIT : 0);
     // The single-frame verdict (Arm2 runtime branch / golden contract) keeps
     // the deployed C1 threshold (62), independent of the Schmitt band edges;
     // the Schmitt state machine consumes the flags outside this core.
-    return (dark * 100 > DARK_RATIO_PCT * n) ? DFXISP_MODE_LOW_LIGHT : DFXISP_MODE_NORMAL;
+    return (dark_pct100 > DARK_RATIO_PCT * n) ? DFXISP_MODE_LOW_LIGHT : DFXISP_MODE_NORMAL;
 }
 
 // ---------------------------------------------------------------------------
