@@ -49,6 +49,12 @@ C-sim이 증명하는 불변식(RESEARCH.md §8.2):
   **병존**하며 기존 golden 계약을 건드리지 않는다. 상세: `src/default_isp.md`
 - `tools/gen_default_isp_golden.py` · `tests/test_default_isp_csim.cpp` — 위 arm의
   canonical golden + C-sim (`make default-isp-verify`)
+- `include/lowlight_isp.hpp` · `src/lowlight_isp.cpp` — **lowlight_ISP**(2026-08-06 신규):
+  제안 저조도 arm v2. default_ISP와 보정 백본을 공유하고 **{binning, 2.0× 상류 게인,
+  GAT/VST 톤, edge-preserving denoise}** 만 다르다 → 통제된 arm 비교가 가능하다.
+  배포 arm(RM_LOW_LIGHT_TONE)은 무변경. 상세: `src/lowlight_isp.md`
+- `tools/gen_lowlight_isp_golden.py` · `tests/test_lowlight_isp_csim.cpp` — 위 arm의
+  canonical golden + C-sim (`make lowlight-isp-verify`)
 
 > 실험 arm(§7)·ablation(§12 Task 5)은 `src/dfxisp_rm.cpp`·`tools/rm_model.py`
 > (static / reg_only / dfx_bin / dfx_fp)에 별도로 있다. 현재 스캐폴드의 과거
@@ -89,6 +95,7 @@ make csim      # smoke 테스트
 make verify    # golden 재생성 + packed RGB888 bit 단위 비교
 make report    # reports/latest.md 갱신 (아키텍처 gate 표 포함)
 make default-isp-verify   # default_ISP(Vitis Vision 정렬 arm) golden + C-sim
+make lowlight-isp-verify  # lowlight_ISP(제안 저조도 arm v2) golden + C-sim
 ```
 
 `make verify` 예상 출력:

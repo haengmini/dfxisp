@@ -685,6 +685,23 @@ CCM 곱셈. 남은 일: mAP 미평가·post-route 미실측·`RM_NORMAL` 승격 
 상세: `isppipeline/hls/src/default_isp.md`. 이것이 #7 Vitis-first 리팩터의 첫
 산출물이다.
 
+**완료(2026-08-06): lowlight_ISP — 원리 기반 제안 저조도 arm v2 신설** —
+`lowlight-feature-principles-2026-07-05.md`의 원리와 실 RAW 캠페인의 측정된
+레버를 설계로 옮겼다. default_ISP와 보정 백본을 공유하고 **{2×2 binning,
+2.0× 상류 게인, GAT/Anscombe VST 톤, VST 도메인 edge-preserving denoise}**
+만 다르게 해 **통제된 arm 비교**가 가능하게 했다. 배포 arm 무변경(추가형).
+핵심은 **GAT 톤** — 순수 sqrt의 원점 무한기울기 대신 오프셋 항으로 원점에서
+선형이 되어 read-noise floor 증폭을 **gamma 대비 절반**으로 억제한다(8-bit
+입력 1→7 vs 15, 2→12 vs 22; 중간톤 이상은 0.94~1.00로 수렴, b=0이면 기존
+gamma로 정확히 퇴화). VST가 분산을 안정화하므로 denoise 임계가 **상수 하나로
+성립**(유도값 σ_VST≈2.1 LSB). golden bit-exact(131px/10케이스) + 불변식 7종
+통과. **실측 csynth: LUT 10,848/DSP 17/FF 6,447/BRAM 11, 타이밍 동일(3.650ns)
+— v1(4,204) 대비 2.58배로, 제안 시 추정치(+10~20%)가 크게 빗나갔음을 기록**
+(denoise의 픽셀당 27회 비교가 지배). **부수 발견: 현재 binning은 same-color
+합산이 아니어서 원리 문서의 +6dB가 적용되지 않는다**(R/B 0dB, G만 +3dB).
+검증 가능한 예측 제시: "GAT 도입 시 BLC의 5.7배 민감도가 평탄해져야 한다".
+mAP 미평가·post-route 미실측·승격 미결. 상세: `isppipeline/hls/src/lowlight_isp.md`.
+
 **Stage 6 착수 준비 (순서 유지, 실질적으로 유일하게 남은 큰 단계):**
 
 3. **Stage 6 착수 선결 과제** — 재합성된 `dfxisp_accel`의 `hyst_flags` 포트를

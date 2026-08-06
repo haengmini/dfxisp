@@ -1,0 +1,265 @@
+#!/usr/bin/env python3
+"""Deterministic golden vectors for lowlight_ISP (proposal low-light arm, v2).
+
+Canonical status: **canonical golden** for src/lowlight_isp.cpp -- a bit-exact
+mirror, the same role gen_golden_vectors.py plays for dfxisp_accel.cpp.
+
+Pipeline (see src/lowlight_isp.md for the derivation of every stage):
+  (1) blackLevelCorrection  [Bayer]  subtract pedestal + restore range
+  (2) gain                  [Bayer]  exposure gain x per-site WB, folded, applied
+                                     upstream of quantisation (principle P3 4.3)
+  (3) 2x2 binning-demosaic  [fused]  R=TL, G=(TR+BL)/2, B=BR -> H/2 x W/2
+  (4) CCM                   [RGB12]  same matrix as default_isp (shared backbone)
+  (5) GAT/Anscombe VST tone [12->8]  variance-stabilising LUT, replaces gamma2.0
+  (6) edge-preserving denoise[VST]   sigma-clipped 3x3, constant threshold
+  (7) pack RGB888
+
+stdlib only, integer only; every division/shift operates on non-negative values
+so Python floor division and C++ truncating division agree bit-for-bit.
+
+Use --emit-lut to print the GAT table as a C array (the table committed in
+src/lowlight_isp.cpp is produced by exactly this code path).
+"""
+from __future__ import annotations
+
+import argparse
+from math import isqrt
+from pathlib import Path
+
+RAW12_MAX = 4095
+
+# --- (1) black level ---------------------------------------------------------
+BLC_LEVEL12 = 2 << 4        # 32; deployed real-RAW recalibration (2026-07-20)
+BLC_MUL_Q8 = 258            # round(256 * 4095 / (4095 - 32))
+
+# --- (2) Bayer-domain gain ---------------------------------------------------
+EXPOSURE_GAIN_Q8 = 512      # 2.0x low-light exposure gain
+WB_R_Q8, WB_G_Q8, WB_B_Q8 = 286, 256, 307   # fixed WB (measured: not a lever)
+
+# --- (4) CCM (shared with default_isp) ---------------------------------------
+CCM_Q8 = (
+    (288, -24, -8),
+    (-24, 296, -16),
+    (-16, -32, 304),
+)
+
+# --- (5) GAT / Anscombe VST --------------------------------------------------
+# Generalised Anscombe Transform f(z) = (2/a) * sqrt(a*z + 3a^2/8 + b) for the
+# Poisson-Gaussian sensor model sigma^2 = a*y + b. Normalised to [0,255] with
+# f(0) subtracted, so the curve is LINEAR at the origin instead of sqrt's
+# infinite slope -- that is the whole point: the read-noise floor is no longer
+# over-amplified. With b = 0 the curve degenerates to the repo's existing
+# gamma-2.0 (= exact Poisson VST), so this is a strict generalisation.
+#
+# a, b are ESTIMATES -- no EMVA1288 calibration has been performed for the
+# SonyNOD / PASCALRAW sensors. Both must be swept/calibrated before any claim
+# rests on them (src/lowlight_isp.md §"parameters").
+A_Q8 = 256                  # a = 1.0 DN  (shot-noise slope), ESTIMATE
+B_DN2 = 16                  # b = 16 DN^2 (sigma_read = 4 DN), ESTIMATE
+
+# Soft-knee highlight roll-off is deliberately NOT implemented: the measured
+# saturation rate is at most 2.13%, so no evidence justifies the extra shaping
+# yet. It would be a change to this table only (src/lowlight_isp.md).
+
+# --- (6) denoise -------------------------------------------------------------
+# In the VST domain the noise std-dev is signal-independent by construction:
+#   sigma_out = sigma_z * |d(out8)/dz| = 255*A_Q8 / (16 * 2 * DENOM) ~= 2.1 LSB
+# so a single constant threshold is valid everywhere (that is what variance
+# stabilisation buys). 5 ~= 2.4 sigma -- deliberately conservative, because the
+# literature is consistent that over-denoising removes the high-frequency
+# features detectors rely on.
+DENOISE_SIGMA = 5
+
+
+def clamp(v: int, lo: int, hi: int) -> int:
+    return lo if v < lo else (hi if v > hi else v)
+
+
+def n256(z: int) -> int:
+    """Scaled GAT argument: 256 * (a*z + 3a^2/8 + b), all integer."""
+    return A_Q8 * z + (3 * A_Q8 * A_Q8) // (8 * 256) + B_DN2 * 256
+
+
+GAT_N0 = isqrt(n256(0))
+GAT_DENOM = isqrt(n256(RAW12_MAX)) - GAT_N0
+
+
+def gat_lut() -> list[int]:
+    return [clamp((255 * (isqrt(n256(z)) - GAT_N0)) // GAT_DENOM, 0, 255)
+            for z in range(RAW12_MAX + 1)]
+
+
+GAT_LUT = gat_lut()
+
+
+def bin_dim(d: int) -> int:
+    return max(1, d // 2)
+
+
+def bayer_wb_q8(x: int, y: int) -> int:
+    even_y = (y & 1) == 0
+    even_x = (x & 1) == 0
+    if even_y and even_x:
+        return WB_R_Q8      # R site
+    if not even_y and not even_x:
+        return WB_B_Q8      # B site
+    return WB_G_Q8          # G sites
+
+
+def corrected_bayer(raw, width: int, height: int, x: int, y: int) -> int:
+    """Stages (1) black level and (2) gain, both in the Bayer domain."""
+    v = raw[y * width + x]
+    v = v - BLC_LEVEL12 if v > BLC_LEVEL12 else 0
+    v = clamp((v * BLC_MUL_Q8) >> 8, 0, RAW12_MAX)
+    gain_q8 = (EXPOSURE_GAIN_Q8 * bayer_wb_q8(x, y)) >> 8   # folded into one multiply
+    v = clamp((v * gain_q8) >> 8, 0, RAW12_MAX)
+    return v
+
+
+def binned_rgb(raw, width: int, height: int, bx: int, by: int):
+    """Stage (3): fused 2x2 binning-demosaic on the corrected Bayer plane."""
+    y0 = 2 * by
+    y1 = 2 * by + 1 if 2 * by + 1 < height else height - 1
+    x0 = 2 * bx
+    x1 = 2 * bx + 1 if 2 * bx + 1 < width else width - 1
+    p00 = corrected_bayer(raw, width, height, x0, y0)   # R (top-left)
+    p01 = corrected_bayer(raw, width, height, x1, y0)   # G (top-right)
+    p10 = corrected_bayer(raw, width, height, x0, y1)   # G (bottom-left)
+    p11 = corrected_bayer(raw, width, height, x1, y1)   # B (bottom-right)
+    return p00, (p01 + p10) // 2, p11
+
+
+def ccm_channel(row: int, r12: int, g12: int, b12: int) -> int:
+    """Stage (4); accumulator floored before the shift for bit-exactness."""
+    acc = CCM_Q8[row][0] * r12 + CCM_Q8[row][1] * g12 + CCM_Q8[row][2] * b12
+    if acc < 0:
+        acc = 0
+    return clamp(acc >> 8, 0, RAW12_MAX)
+
+
+def sigma_clip(planes, bw: int, bh: int, x: int, y: int) -> int:
+    """Stage (6): 3x3 sigma-clipped mean -- neighbours further than
+    DENOISE_SIGMA from the centre are excluded, so edges survive."""
+    center = planes[y][x]
+    total = 0
+    count = 0
+    for dy in (-1, 0, 1):
+        yy = clamp(y + dy, 0, bh - 1)
+        for dx in (-1, 0, 1):
+            xx = clamp(x + dx, 0, bw - 1)
+            v = planes[yy][xx]
+            if abs(v - center) <= DENOISE_SIGMA:
+                total += v
+                count += 1
+    return total // count
+
+
+def lowlight_isp(raw, width: int, height: int, denoise_on: int = 1):
+    bw, bh = bin_dim(width), bin_dim(height)
+    # stages (1)-(5): build the VST-domain planes
+    pr = [[0] * bw for _ in range(bh)]
+    pg = [[0] * bw for _ in range(bh)]
+    pb = [[0] * bw for _ in range(bh)]
+    for by in range(bh):
+        for bx in range(bw):
+            r12, g12, b12 = binned_rgb(raw, width, height, bx, by)
+            rc = ccm_channel(0, r12, g12, b12)
+            gc = ccm_channel(1, r12, g12, b12)
+            bc = ccm_channel(2, r12, g12, b12)
+            pr[by][bx] = GAT_LUT[rc]
+            pg[by][bx] = GAT_LUT[gc]
+            pb[by][bx] = GAT_LUT[bc]
+    # stages (6)-(7)
+    out = []
+    for by in range(bh):
+        for bx in range(bw):
+            if denoise_on:
+                r = sigma_clip(pr, bw, bh, bx, by)
+                g = sigma_clip(pg, bw, bh, bx, by)
+                b = sigma_clip(pb, bw, bh, bx, by)
+            else:
+                r, g, b = pr[by][bx], pg[by][bx], pb[by][bx]
+            out.append((r << 16) | (g << 8) | b)
+    return out, bw, bh
+
+
+def make_cases():
+    """Coverage: flat levels incl. the noise floor, gradient, a noisy dark
+    patch (exercises denoise), a hard edge (denoise must preserve it),
+    saturation, odd dimensions and the 1x1 degenerate case."""
+    cases = []
+    w = h = 8
+
+    cases.append(("flat_mid", w, h, 1, [1600] * (w * h)))
+    cases.append(("flat_dark", w, h, 1, [200] * (w * h)))
+    cases.append(("flat_near_floor", w, h, 1, [40] * (w * h)))
+
+    grad = [((x + y) * 4095) // (w + h - 2) for y in range(h) for x in range(w)]
+    cases.append(("gradient", w, h, 1, grad))
+
+    # Deterministic pseudo-noise on a dark background: denoise must smooth it.
+    noisy = []
+    seed = 12345
+    for i in range(w * h):
+        seed = (1103515245 * seed + 12345) & 0x7FFFFFFF
+        noisy.append(300 + (seed % 120))
+    cases.append(("noisy_dark_denoise_on", w, h, 1, noisy))
+    cases.append(("noisy_dark_denoise_off", w, h, 0, noisy))
+
+    # Hard vertical edge: dark left half, bright right half.
+    edge = [(200 if x < w // 2 else 2600) for y in range(h) for x in range(w)]
+    cases.append(("hard_edge", w, h, 1, edge))
+
+    cases.append(("saturated", w, h, 1, [4095] * (w * h)))
+
+    ow, oh = 5, 3
+    odd = [((x * 7 + y * 13) * 97) % 4096 for y in range(oh) for x in range(ow)]
+    cases.append(("odd_dims", ow, oh, 1, odd))
+
+    cases.append(("one_pixel", 1, 1, 1, [900]))
+
+    return cases
+
+
+def emit_c_lut() -> str:
+    lines = []
+    for i in range(0, len(GAT_LUT), 16):
+        chunk = ",".join(f"{v:3d}" for v in GAT_LUT[i:i + 16])
+        lines.append("    " + chunk + ",")
+    return "\n".join(lines)
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--out", default="tests/lowlight_isp_golden_vectors.csv")
+    ap.add_argument("--emit-lut", action="store_true",
+                    help="print the GAT table as a C array body and exit")
+    args = ap.parse_args()
+
+    if args.emit_lut:
+        print(emit_c_lut())
+        return 0
+
+    rows = ["case,in_w,in_h,denoise,out_w,out_h,kind,idx,val"]
+    ncases = 0
+    for name, w, h, dn, raw in make_cases():
+        expected, bw, bh = lowlight_isp(raw, w, h, dn)
+        for i, v in enumerate(raw):
+            rows.append(f"{name},{w},{h},{dn},{bw},{bh},raw,{i},{v}")
+        for i, v in enumerate(expected):
+            rows.append(f"{name},{w},{h},{dn},{bw},{bh},rgb,{i},0x{v:06X}")
+        ncases += 1
+
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(rows) + "\n")
+    print(f"wrote {out} ({len(rows)} rows including header; "
+          f"{len(rows) - 1} data rows; {ncases} cases)")
+    print(f"GAT: n0={GAT_N0} denom={GAT_DENOM} "
+          f"lut[0]={GAT_LUT[0]} lut[16]={GAT_LUT[16]} lut[32]={GAT_LUT[32]} "
+          f"lut[4095]={GAT_LUT[4095]}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -366,6 +366,18 @@ demosaic → 적응 AWB → 실제 CCM** 순이다. csynth 실측 LUT 12,659/DSP
 **아직 배포 arm이 아니다** — mAP 미평가, post-route 미실측, `RM_NORMAL` 승격
 여부는 `STRATEGY.md` 열린 질문 #4와 함께 미결. 상세: `src/default_isp.md`.
 
+**lowlight_ISP (2026-08-06 신설, 병존 arm):** 제안 저조도 arm v2
+(`src/lowlight_isp.cpp`, `rm_lowlight_isp_top` — 동일 6-인자 DFX 계약).
+default_ISP와 **보정 백본(① Bayer BLC, ② Bayer 게인, ④ CCM)을 공유**하고
+**{2×2 binning, 2.0× 노출게인, GAT/Anscombe VST 톤, VST 도메인
+edge-preserving denoise}** 만 다르다 — 두 arm 차이가 저조도 특화 연산으로만
+좁혀져 통제된 비교가 된다. GAT 톤은 원점에서 선형이라 read-noise floor
+증폭이 gamma 2.0 대비 절반이고(b=0이면 gamma로 정확히 퇴화), VST가 분산을
+안정화해 denoise 임계가 상수 하나로 성립한다(σ_VST≈2.1 LSB). csynth 실측
+LUT 10,848/DSP 17/FF 6,447/BRAM 11, 타이밍 동일(3.650ns) — v1
+RM_LOW_LIGHT_TONE(4,204/9/3,243/8) 대비 2.58배. **배포 arm 아님** — mAP
+미평가, post-route 미실측, 승격 미결. 상세: `src/lowlight_isp.md`.
+
 ---
 
 ## 8. 검증 사양 (bit-exact 전파 체인)
