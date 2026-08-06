@@ -296,9 +296,14 @@ b ≤ 3.97. 두 센서의 a가 **66배**(0.9 vs 60.6, 14-bit) 차이나는 것�
    비교/선택)에 상응하는 이득이 없으므로 제거가 맞다.
    상세: `results/v2-arm-ablation-2026-08-06.md` §2.1·§2.4.
 3. **post-route 실측 및 pblock 적합성 확인**.
-4. **YOLOv8s/SSDLite 교차검증**.
-5. **주광(PASCAL) 조건에서 GAT 재확인**.
-6. **배포 커브를 gamma 2.0으로 교체할지 결정** — 현재 배포 RM은 GAT 유지.
+4. ~~**SSDLite 교차검증**~~ — **완료(2026-08-06).** 같은 렌더를 torchvision
+   `ssdlite320_mobilenet_v3_large`로 재채점한 결과 순위
+   `gamma > GAT > subsample > linear`가 **2 검출기 × 2 지표 전부에서 동일**하고
+   효과 크기도 재현됐다(gamma−GAT: +0.0101 YOLO / +0.0105 SSD).
+   `results/gat-tone-ablation-2026-08-06.md` §6
+5. **주광(PASCAL) 조건에서 톤 커브 재확인** — 남은 유일한 미측정 축.
+6. **배포 커브를 gamma 2.0으로 교체할지 결정** — 근거는 확정됐고 결정만 남았다.
+   현재 배포 RM은 GAT 유지.
 
 ## 7. 검증 현황
 
