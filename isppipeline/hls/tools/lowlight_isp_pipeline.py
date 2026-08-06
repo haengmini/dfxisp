@@ -25,8 +25,9 @@ import gen_lowlight_isp_golden as G
 
 RAW12_MAX = G.RAW12_MAX
 # One 4096-entry uint8 table per stage-(5) curve, built from the scalar golden's
-# derivation so the proxy cannot drift. GAT is the deployed curve; GAMMA and
+# derivation so the proxy cannot drift. GAMMA is the deployed curve; GAT and
 # LINEAR exist only for the tone-curve ablation (see the golden for why).
+# GAMMA is the deployed curve since 2026-08-06.
 TONE_LUTS = {mode: np.asarray(G.tone_lut(mode), dtype=np.uint8)
              for mode in (G.TONE_GAT, G.TONE_GAMMA, G.TONE_LINEAR)}
 # int32 throughout: the widest intermediate is the CCM accumulator
@@ -89,7 +90,7 @@ def _ccm_channel(row: int, r12, g12, b12):
 
 def run_lowlight_isp(bayer16, w: int, h: int,
                      bin_mode: int = BIN_SAMECOLOR,
-                     tone_mode: int = G.TONE_GAT) -> np.ndarray:
+                     tone_mode: int = G.TONE_GAMMA) -> np.ndarray:
     """lowlight_ISP over a full frame -> (H/2) x (W/2) x 3 uint8 (Policy A)."""
     raw12 = (np.asarray(bayer16).reshape(h, w).astype(np.int32)) >> 4
     bw, bh = max(1, w // 2), max(1, h // 2)
@@ -111,12 +112,12 @@ def run_lowlight_isp(bayer16, w: int, h: int,
 def run_arm(bayer16, w: int, h: int, arm: str) -> np.ndarray:
     """eval_map_isp.py dispatch entry. Arm names encode the ablation axes."""
     table = {
-        # deployed arm
-        "lowlight_isp": (BIN_SAMECOLOR, G.TONE_GAT),
-        # binning ablation
-        "lowlight_isp_subsample": (BIN_SUBSAMPLE, G.TONE_GAT),
+        # deployed arm (gamma 2.0 since 2026-08-06)
+        "lowlight_isp": (BIN_SAMECOLOR, G.TONE_GAMMA),
+        # binning ablation, paired with the deployed curve
+        "lowlight_isp_subsample": (BIN_SUBSAMPLE, G.TONE_GAMMA),
         # tone-curve ablation: same binning, stage (5) is the only difference
-        "lowlight_isp_gamma": (BIN_SAMECOLOR, G.TONE_GAMMA),
+        "lowlight_isp_gat": (BIN_SAMECOLOR, G.TONE_GAT),
         "lowlight_isp_linear": (BIN_SAMECOLOR, G.TONE_LINEAR),
     }
     if arm not in table:

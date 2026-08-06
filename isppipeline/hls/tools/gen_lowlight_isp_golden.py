@@ -173,17 +173,15 @@ def ccm_channel(row: int, r12: int, g12: int, b12: int) -> int:
 
 
 # --- (5) tone-curve variants: the GAT isolation experiment (2026-08-06) ------
-# GAT is the deployed curve; these alternatives exist so its contribution can be
-# isolated in SW evaluation. They are deliberately NOT a runtime switch in the
-# HLS RM: if one of them wins, the LUT constant gets swapped, not selected at
-# run time, so the fabric carries no ablation logic.
+# gamma 2.0 is the DEPLOYED curve (2026-08-06); GAT and linear remain here as
+# ablation arms only. There is no runtime switch in the HLS RM -- the winning
+# LUT is compiled in, so the fabric carries no ablation logic.
 #
-# Why these two controls: removing the denoise stage removed GAT's original
-# justification (a VST exists to make a CONSTANT-threshold denoise valid). What
-# is left is a tone curve, so the honest question is whether the noise-model
-# derived shape beats the ordinary one -- hence gamma 2.0 as the real control,
-# imported from default_ISP's golden so the two cannot drift, and plain
-# truncation as the floor.
+# History: GAT held this slot until the denoise stage was deleted. The VST
+# existed to make a CONSTANT-threshold denoise valid, so with no consumer it had
+# to compete as a plain tone curve -- and gamma 2.0 beat it on both metrics with
+# both detectors. GAT stays measurable so that result can be reproduced.
+# Evidence: results/gat-tone-ablation-2026-08-06.md
 TONE_GAT = 0
 TONE_GAMMA = 1
 TONE_LINEAR = 2
@@ -202,7 +200,7 @@ def tone_lut(tone_mode: int) -> list[int]:
 
 
 def lowlight_isp(raw, width: int, height: int, bin_mode: int = BIN_SAMECOLOR,
-                 tone_mode: int = TONE_GAT):
+                 tone_mode: int = TONE_GAMMA):
     bw, bh = bin_dim(width), bin_dim(height)
     lut = tone_lut(tone_mode)
     out = []

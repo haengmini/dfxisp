@@ -60,11 +60,11 @@ int main(int argc, char** argv) {
         for (int i = 0; i < ow * oh; ++i) assert(out[i] == 0u);
     }
 
-    // Stage (5) is the design's core claim: the GAT/VST tone must lift the
-    // read-noise floor LESS than the plain gamma-2.0 curve it replaces, while
-    // agreeing with it in the midtones. Probe the curve through the pipeline
-    // with flat frames: a near-floor frame must come out markedly darker than
-    // the old sqrt tone would have produced, and a mid frame must not.
+    // Stage (5) must be a real tone curve, not a linear truncation: probe it
+    // through the pipeline with flat frames. A near-floor frame stays dark
+    // while a mid frame maps high, and the gap between them is far wider than
+    // >>4 truncation would give (which is what makes the stage worth its ROM --
+    // dropping it cost 0.106 mAP@50, results/gat-tone-ablation-2026-08-06.md).
     {
         auto mean_of_flat = [&](uint16_t level) {
             uint16_t f[W * H];
@@ -78,10 +78,12 @@ int main(int argc, char** argv) {
         };
         const long near_floor = mean_of_flat(40);    // just above the pedestal
         const long mid = mean_of_flat(1600);
-        // Floor stays deeply suppressed; midtones still map high.
+        // Floor stays suppressed; midtones map high.
         assert(near_floor < 40);
         assert(mid > 150);
-        assert(near_floor < mid);
+        // Non-linear: gamma lifts the midtone far above the linear ratio that
+        // plain truncation would produce for the same input ratio.
+        assert(mid > near_floor * 4);
     }
 
     uint16_t noisy[W * H];

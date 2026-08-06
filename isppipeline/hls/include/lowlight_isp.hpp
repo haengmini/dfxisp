@@ -14,7 +14,8 @@
 //   * lowlight_isp.cpp = THIS -- shares default_isp's correction backbone
 //     (Bayer-domain black level + gain, CCM) so that the two arms differ ONLY
 //     in the low-light specialisation: 2x2 binning, the 2.0x exposure gain
-//     and the variance-stabilising tone curve.
+//     and the H/2 x W/2 output shape. Since 2026-08-06 both arms share the
+//     SAME gamma 2.0 tone curve, so the tone axis is no longer a difference.
 //     That is what makes the paper's "specialised beats general in its own
 //     condition" comparison controlled.
 //   * RM_LOW_LIGHT_TONE in dfxisp_accel.cpp (v1) is untouched and still the
@@ -32,9 +33,13 @@
 //     -> (3) gain                   [binned] exposure 2.0x x per-channel WB,
 //                                            folded, upstream of quantisation
 //     -> (4) colorcorrectionmatrix  [RGB12]  same matrix as default_isp
-//     -> (5) GAT/Anscombe VST tone  [12->8]  replaces gamma 2.0; linear at the
-//                                            origin so the read-noise floor is
-//                                            not over-amplified
+//     -> (5) gamma 2.0 tone         [12->8]  same curve as default_ISP. A
+//                                            GAT/Anscombe VST sat here until
+//                                            2026-08-06 and was measured to be
+//                                            worse on both metrics with both
+//                                            detectors; it survives only as an
+//                                            ablation arm in the Python golden.
+//                                            results/gat-tone-ablation-2026-08-06.md
 //     -> packed RGB888 0x00RRGGBB, H/2 x W/2 (Policy A)
 //
 // All arithmetic is integer and bit-exact against

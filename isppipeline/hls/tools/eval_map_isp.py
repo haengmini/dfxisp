@@ -56,9 +56,9 @@ ARMS_V2 = [
     "lowlight_isp",
     # binning ablation (stage 1)
     "lowlight_isp_subsample",
-    # tone-curve ablation (stage 5): GAT vs the ordinary gamma it replaces, and
-    # plain truncation as the floor. Only stage (5) differs between these.
-    "lowlight_isp_gamma", "lowlight_isp_linear",
+    # tone-curve ablation (stage 5): the deployed gamma 2.0 vs the GAT it
+    # replaced, and plain truncation as the floor. Only stage (5) differs.
+    "lowlight_isp_gat", "lowlight_isp_linear",
 ]
 
 
