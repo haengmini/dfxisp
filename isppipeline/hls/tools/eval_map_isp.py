@@ -26,8 +26,11 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import shutil
 import struct
+from functools import partial
+from multiprocessing import Pool
 from pathlib import Path
 
 import numpy as np
@@ -114,8 +117,39 @@ def render_arm(bayer, w, h, arm, blc_offset, stem=None, adaptive_verdicts=None,
     raise ValueError(f"unsupported arm for BLC ablation: {arm}")
 
 
+def _render_one(stem, raw_dir: Path, lab_dir: Path, img_dir: Path, work: Path,
+                arms, blc_offset, adaptive_verdicts, wb_lowlight) -> int:
+    """Render every arm for one frame. Self-contained so it can run in a
+    worker process: each frame reads its own raw and writes its own outputs,
+    with no shared state."""
+    w, h = jpg_dims(img_dir / f"{stem}.jpg")
+    bayer = np.fromfile(raw_dir / f"{stem}.bin", dtype="<u2")
+    if bayer.size != w * h:
+        return 0
+    bayer = bayer.reshape(h, w)
+    for a in arms:
+        out = render_arm(bayer, w, h, a, blc_offset, stem=stem,
+                         adaptive_verdicts=adaptive_verdicts, wb_lowlight=wb_lowlight)
+        Image.fromarray(out).save(work / a / "images" / f"{stem}.jpg", quality=95)
+        shutil.copy(lab_dir / f"{stem}.txt", work / a / "labels" / f"{stem}.txt")
+    return 1
+
+
+def default_jobs() -> int:
+    """Workers that fit in RAM. A 20 MP frame peaks around 1 GB of int32
+    intermediates per worker, so cap by memory as well as by cores; rendering
+    is pure CPU numpy (no GPU involvement at any point)."""
+    cores = os.cpu_count() or 1
+    try:
+        gb = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES") / (1 << 30)
+        by_mem = max(1, int(gb // 2))
+    except (ValueError, OSError):
+        by_mem = cores
+    return max(1, min(cores, by_mem, 8))
+
+
 def build_arm_images(root: Path, work: Path, arms, limit: int, blc_offset: int,
-                      adaptive_verdicts=None, wb_lowlight=None) -> int:
+                      adaptive_verdicts=None, wb_lowlight=None, jobs=None) -> int:
     raw_dir = root / "raw_bin"; lab_dir = root / "labels"; img_dir = root / "images"
     stems = sorted(p.stem for p in raw_dir.glob("*.bin")
                    if (img_dir / f"{p.stem}.jpg").exists() and (lab_dir / f"{p.stem}.txt").exists())
@@ -124,20 +158,15 @@ def build_arm_images(root: Path, work: Path, arms, limit: int, blc_offset: int,
     for a in arms:
         (work / a / "images").mkdir(parents=True, exist_ok=True)
         (work / a / "labels").mkdir(parents=True, exist_ok=True)
-    built = 0
-    for stem in stems:
-        w, h = jpg_dims(img_dir / f"{stem}.jpg")
-        bayer = np.fromfile(raw_dir / f"{stem}.bin", dtype="<u2")
-        if bayer.size != w * h:
-            continue
-        bayer = bayer.reshape(h, w)
-        for a in arms:
-            out = render_arm(bayer, w, h, a, blc_offset, stem=stem,
-                             adaptive_verdicts=adaptive_verdicts, wb_lowlight=wb_lowlight)
-            Image.fromarray(out).save(work / a / "images" / f"{stem}.jpg", quality=95)
-            shutil.copy(lab_dir / f"{stem}.txt", work / a / "labels" / f"{stem}.txt")
-        built += 1
-    return built
+
+    jobs = default_jobs() if jobs is None else max(1, int(jobs))
+    fn = partial(_render_one, raw_dir=raw_dir, lab_dir=lab_dir, img_dir=img_dir,
+                 work=work, arms=arms, blc_offset=blc_offset,
+                 adaptive_verdicts=adaptive_verdicts, wb_lowlight=wb_lowlight)
+    if jobs == 1 or len(stems) <= 1:
+        return sum(fn(s) for s in stems)
+    with Pool(processes=jobs) as pool:
+        return sum(pool.imap_unordered(fn, stems, chunksize=1))
 
 
 def main() -> int:
@@ -149,6 +178,10 @@ def main() -> int:
     ap.add_argument("--model", default="yolov8n.pt")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--arms", default=",".join(ARMS))
+    ap.add_argument("--jobs", type=int, default=None,
+                    help="parallel render workers (default: cores capped by RAM). "
+                         "Rendering is CPU numpy and dominates runtime; detection "
+                         "inference is a rounding error next to it.")
     ap.add_argument("--out", default="results/map_isp_sonynod_blcfix_yolov8n.csv")
     ap.add_argument("--manifest", type=Path, default=None,
                      help="build_matched_splits.py manifest CSV (lod/pascal/shuffle_split_*.csv) "
@@ -191,7 +224,7 @@ def main() -> int:
     n = None
     for blc in blc_offsets:
         work = Path(args.work) / f"{args.tag.lower()}_blc{blc}_wb{wb_label.replace(':', '_')}"
-        n = build_arm_images(root, work, arms, args.limit, blc,
+        n = build_arm_images(root, work, arms, args.limit, blc, jobs=args.jobs,
                              adaptive_verdicts=adaptive_verdicts, wb_lowlight=wb_lowlight)
         print(f"[{args.tag}] blc_offset={blc} wb_lowlight={wb_label}: built arm images for {n} frames: {arms}")
         for a in arms:

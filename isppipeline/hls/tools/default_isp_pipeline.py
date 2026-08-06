@@ -33,7 +33,11 @@ GAIN_R_Q8 = G.GAIN_R_Q8
 GAIN_B_Q8 = G.GAIN_B_Q8
 AWB_GAIN_MIN_Q8 = G.AWB_GAIN_MIN_Q8
 AWB_GAIN_MAX_Q8 = G.AWB_GAIN_MAX_Q8
-CCM_Q8 = np.asarray(G.CCM_Q8, dtype=np.int64)
+# int32 throughout: the widest intermediate is the CCM accumulator
+# (288 * 4095 * 3 ~ 3.5e6) and the BLC range-restore (4095 * 258 ~ 1.06e6),
+# both far inside int32. Halves peak memory per 20MP frame, which is what
+# limits how many render workers fit in RAM.
+CCM_Q8 = np.asarray(G.CCM_Q8, dtype=np.int32)
 AWB_OFF = G.AWB_OFF
 AWB_ON = G.AWB_ON
 GAMMA2_LUT = np.asarray(G.GAMMA2_LUT, dtype=np.uint8)
@@ -41,7 +45,7 @@ GAMMA2_LUT = np.asarray(G.GAMMA2_LUT, dtype=np.uint8)
 
 def _bayer_gain_plane(h: int, w: int) -> np.ndarray:
     """Per-site gaincontrol factor, RGGB: (0,0)=R (0,1)=G (1,0)=G (1,1)=B."""
-    g = np.full((h, w), 256, dtype=np.int64)
+    g = np.full((h, w), 256, dtype=np.int32)
     g[0::2, 0::2] = GAIN_R_Q8
     g[1::2, 1::2] = GAIN_B_Q8
     return g
@@ -50,7 +54,7 @@ def _bayer_gain_plane(h: int, w: int) -> np.ndarray:
 def _corrected_bayer(raw12: np.ndarray) -> np.ndarray:
     """Stages (1) blackLevelCorrection + (2) gaincontrol, Bayer domain."""
     h, w = raw12.shape
-    v = raw12.astype(np.int64)
+    v = raw12.astype(np.int32)
     v = np.where(v > BLC_LEVEL12, v - BLC_LEVEL12, 0)
     v = np.clip((v * BLC_MUL_Q8) >> 8, 0, RAW12_MAX)
     v = np.clip((v * _bayer_gain_plane(h, w)) >> 8, 0, RAW12_MAX)
@@ -113,7 +117,7 @@ def _ccm_channel(row: int, r12, g12, b12):
 
 def run_default_isp(bayer16, w: int, h: int, awb_mode: int = AWB_ON) -> np.ndarray:
     """default_ISP over a full frame -> H x W x 3 uint8."""
-    raw12 = (np.asarray(bayer16).reshape(h, w).astype(np.int64)) >> 4
+    raw12 = (np.asarray(bayer16).reshape(h, w).astype(np.int32)) >> 4
     corr = _corrected_bayer(raw12)
     r12, g12, b12 = _demosaic(corr)
 

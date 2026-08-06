@@ -25,7 +25,11 @@ import gen_lowlight_isp_golden as G
 
 RAW12_MAX = G.RAW12_MAX
 GAT_LUT = np.asarray(G.GAT_LUT, dtype=np.uint8)
-CCM_Q8 = np.asarray(G.CCM_Q8, dtype=np.int64)
+# int32 throughout: the widest intermediate is the CCM accumulator
+# (288 * 4095 * 3 ~ 3.5e6) and the BLC range-restore (4095 * 258 ~ 1.06e6),
+# both far inside int32. Halves peak memory per 20MP frame, which is what
+# limits how many render workers fit in RAM.
+CCM_Q8 = np.asarray(G.CCM_Q8, dtype=np.int32)
 
 BIN_SUBSAMPLE = G.BIN_SUBSAMPLE
 BIN_SAMECOLOR = G.BIN_SAMECOLOR
@@ -84,8 +88,8 @@ def _ccm_channel(row: int, r12, g12, b12):
 def _sigma_clip(plane: np.ndarray) -> np.ndarray:
     """Stage (6): 3x3 sigma-clipped mean, clamp-to-edge, constant threshold."""
     bh, bw = plane.shape
-    p = np.pad(plane.astype(np.int64), 1, mode="edge")
-    center = plane.astype(np.int64)
+    p = np.pad(plane.astype(np.int32), 1, mode="edge")
+    center = plane.astype(np.int32)
     total = np.zeros_like(center)
     count = np.zeros_like(center)
     for dy in range(3):
@@ -101,7 +105,7 @@ def run_lowlight_isp(bayer16, w: int, h: int,
                      denoise_mode: int = DENOISE_ON,
                      bin_mode: int = BIN_SAMECOLOR) -> np.ndarray:
     """lowlight_ISP over a full frame -> (H/2) x (W/2) x 3 uint8 (Policy A)."""
-    raw12 = (np.asarray(bayer16).reshape(h, w).astype(np.int64)) >> 4
+    raw12 = (np.asarray(bayer16).reshape(h, w).astype(np.int32)) >> 4
     bw, bh = max(1, w // 2), max(1, h // 2)
 
     r12, g12, b12 = _binned_raw(raw12, bw, bh, bin_mode)
