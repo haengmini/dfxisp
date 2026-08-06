@@ -672,6 +672,19 @@ shutdown req/ack·decouple·rm_reset 확인, **ICAP 클럭 도메인 CDC는 IP �
 (icap_clk 별도 입력)으로 미결 항목 해소**. 잔여: RM 레벨 설정(SHUTDOWN_REQUIRED
 hw 등)은 batch API로 안 돼 Stage 6에서 GUI/BD로 — `dfxc_adapter.md` 프로브 절.
 
+**완료(2026-08-06): default_ISP — Vitis Vision 정렬 표준 ISP arm 신설** —
+실제 오픈소스(`Xilinx/Vitis_Libraries` vision/L3 `isppipeline`)와 대조한 결과
+기존 `RM_NORMAL_TONE`은 **스테이지 순서·도메인이 다르다**(Vitis: Bayer 도메인
+BLC/gain → demosaic → 적응 AWB → 실제 CCM; 기존: demosaic → RGB 도메인 BLC/고정
+WB → identity CCM). Vitis 순서를 따르는 `default_isp.cpp`를 **추가형**으로 신설
+(기존 arm·golden·배포 결정 무변경). Python canonical golden bit-exact 일치
+(528px, 10케이스), 구조 불변식 5종 통과, DFX 계약(6-인자) 준수.
+**실측(csynth)**: LUT 12,659 / DSP 28 / FF 8,803 — RM_NORMAL_TONE(5,202/12/3,797)
+대비 LUT 2.43배지만 **타이밍은 동일**(3.650ns). 증가분은 AWB 통계 패스 + 실제
+CCM 곱셈. 남은 일: mAP 미평가·post-route 미실측·`RM_NORMAL` 승격 여부 미결.
+상세: `isppipeline/hls/src/default_isp.md`. 이것이 #7 Vitis-first 리팩터의 첫
+산출물이다.
+
 **Stage 6 착수 준비 (순서 유지, 실질적으로 유일하게 남은 큰 단계):**
 
 3. **Stage 6 착수 선결 과제** — 재합성된 `dfxisp_accel`의 `hyst_flags` 포트를
@@ -685,9 +698,9 @@ hw 등)은 batch API로 안 돼 Stage 6에서 GUI/BD로 — `dfxc_adapter.md` �
    (SPEC.md §10에 미조사로 기록됨).
 6. **(선택) Stage 4 cosim 완주** — WSL2+XSIM 하네스 SIGSEGV 원인(struct-pointer
    인터페이스 추정) 해소.
-7. **(선택, 우선순위 미정) STRATEGY.md Vitis-first 리팩터** — 2026-07-03에
-   제안됐으나 착수되지 않았다(`src/`에 `base_vitis.cpp` 등 Task 1~18 산출물
-   없음) — checker/BLC real-RAW 재보정 트랙이 대신 우선됐다. Stage 6 착수
+7. **(부분 착수 2026-08-06) STRATEGY.md Vitis-first 리팩터** — 첫 산출물
+   `src/default_isp.cpp`(Vitis Vision 스테이지 순서 정렬 arm) 완료. 나머지
+   (default_ISP의 `RM_NORMAL` 승격, RP 경계 재정의)는 여전히 미결이다 — checker/BLC real-RAW 재보정 트랙이 대신 우선됐다. Stage 6 착수
    전에 할지, 논문 마감(2026-10) 압박을 고려해 보류할지 결정 필요. **이 항목은
    `SPEC.md` §11.12(RP 경계)와 연동된다** — Vitis-first가 선호하는 "RP=Tone만"과
    현재 구현인 "RP=모드별 전체 파이프라인"은 양립 불가라, 어느 논문 서사를

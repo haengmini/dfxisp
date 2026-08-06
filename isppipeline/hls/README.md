@@ -43,6 +43,12 @@ C-sim이 증명하는 불변식(RESEARCH.md §8.2):
 - `tools/gen_verification_report.py` — stdlib-only Markdown 검증/리포트 생성기
 - `scripts/vitis_hls.tcl` — `dfxisp_accel`용 Vitis HLS 프로젝트 스캐폴드
 - `Makefile` — g++ 로컬 C-sim, golden 생성, verify/report, Vitis HLS dry-run 리포트
+- `include/default_isp.hpp` · `src/default_isp.cpp` — **default_ISP**(2026-08-06 신규):
+  AMD Vitis Vision L3 `isppipeline`의 스테이지 순서·도메인을 따르는 표준 ISP arm
+  (Bayer 도메인 BLC/gain → demosaic → 적응 AWB → 실제 CCM → gamma). `RM_NORMAL_TONE`과
+  **병존**하며 기존 golden 계약을 건드리지 않는다. 상세: `src/default_isp.md`
+- `tools/gen_default_isp_golden.py` · `tests/test_default_isp_csim.cpp` — 위 arm의
+  canonical golden + C-sim (`make default-isp-verify`)
 
 > 실험 arm(§7)·ablation(§12 Task 5)은 `src/dfxisp_rm.cpp`·`tools/rm_model.py`
 > (static / reg_only / dfx_bin / dfx_fp)에 별도로 있다. 현재 스캐폴드의 과거
@@ -82,6 +88,7 @@ cd isppipeline/hls
 make csim      # smoke 테스트
 make verify    # golden 재생성 + packed RGB888 bit 단위 비교
 make report    # reports/latest.md 갱신 (아키텍처 gate 표 포함)
+make default-isp-verify   # default_ISP(Vitis Vision 정렬 arm) golden + C-sim
 ```
 
 `make verify` 예상 출력:

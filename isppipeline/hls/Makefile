@@ -14,11 +14,13 @@ HLS_TCL := scripts/vitis_hls.tcl
 GOLDEN_CSV := tests/golden_vectors.csv
 RM_GOLDEN_CSV := tests/rm_golden_vectors.csv
 RM_CSIM_BIN := $(BUILD_DIR)/dfxisp_rm_csim
+DEFAULT_ISP_GOLDEN_CSV := tests/default_isp_golden_vectors.csv
+DEFAULT_ISP_CSIM_BIN := $(BUILD_DIR)/default_isp_csim
 REPORT_MD := reports/latest.md
 HLS_SRC := src/dfxisp_accel.cpp include/dfxisp_accel.hpp
 HLS_TB := tests/test_dfxisp_csim.cpp $(GOLDEN_CSV)
 
-.PHONY: all csim golden verify cross-check report hls-report hls rm-golden rm-csim rm-verify scheduler analysis sw-stage py-verify clean
+.PHONY: all csim golden verify cross-check report hls-report hls rm-golden rm-csim rm-verify default-isp-golden default-isp-csim default-isp-verify scheduler analysis sw-stage py-verify clean
 
 all: csim
 
@@ -85,6 +87,20 @@ rm-csim: $(RM_CSIM_BIN)
 	./$(RM_CSIM_BIN) $(RM_GOLDEN_CSV)
 
 rm-verify: rm-golden rm-csim
+
+# default_ISP: standard ISP arm following the Vitis Vision isppipeline stage
+# order (Bayer-domain BLC/gain -> demosaic -> adaptive AWB -> CCM -> gamma).
+# Additive arm; does not touch dfxisp_accel's golden contract.
+default-isp-golden:
+	$(PYTHON) tools/gen_default_isp_golden.py --out $(DEFAULT_ISP_GOLDEN_CSV)
+
+$(DEFAULT_ISP_CSIM_BIN): src/default_isp.cpp tests/test_default_isp_csim.cpp include/default_isp.hpp | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) src/default_isp.cpp tests/test_default_isp_csim.cpp -o $(DEFAULT_ISP_CSIM_BIN)
+
+default-isp-csim: $(DEFAULT_ISP_CSIM_BIN)
+	./$(DEFAULT_ISP_CSIM_BIN) $(DEFAULT_ISP_GOLDEN_CSV)
+
+default-isp-verify: default-isp-golden default-isp-csim
 
 scheduler: | $(BUILD_DIR)
 	$(PYTHON) tools/scheduler_sim.py --out results/scheduler.csv
