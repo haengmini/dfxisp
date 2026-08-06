@@ -160,6 +160,10 @@ binning이 무조건적 저감을 하고 난 뒤 denoise의 한계효용은 줄�
 적용했다(8×8 블록 → 밝기 구간별 분산 2% 백분위 → χ² 편향 보정 → 선형 적합).
 
 **최종: Sony RX100 VII 원본 ARW 16장(RAW-NOD, ISO 6400, 1/100s, 야간)** —
+*(재현: Drive `Sony-ARW/` 폴더 id `1SH3Pb4BidscXwDRqbkQX2gNDhJ-aaZcq`, 100장.
+`curl -sL "https://drive.google.com/uc?export=download&id=<fileId>"` 로 받아
+`tools/calibrate_noise_model.py --raw-glob '<dir>/*.ARW' --limit 16 --block 8
+--pct 2 --max-mean 2000` 실행. 로컬 사본은 측정 후 삭제했다.)*
 표적 센서를 표적 조건에서 측정했다. 14-bit 도메인(pedestal 800 차감) 적합
 결과 **a = 17.92 DN, b = 734 DN², R² = 0.94**(사이트별 R² 0.91~0.96).
 shift8 스케일 s = 4080/15580로 우리 12-bit 도메인에 환산:

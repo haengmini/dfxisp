@@ -27,6 +27,11 @@ fields are not available for these sensors):
      only place where b (the read-noise floor) is observable rather than
      extrapolated -- and it is exactly the region the GAT offset term shapes.
 
+Sources used 2026-08-06: Sony RX100 VII night ARWs from the Drive folder
+`Sony-ARW` (id 1SH3Pb4BidscXwDRqbkQX2gNDhJ-aaZcq, 100 frames, ISO 6400) and
+PASCALRAW original NEFs. Local copies were removed after measuring; re-download
+from Drive to reproduce.
+
 Requires rawpy for the 12-bit originals. The repo's `raw_bin` conversions are
 NOT usable here: they are shift8 (8-bit values scaled up), so every sample is a
 multiple of 256 and the read-noise scale we are trying to measure has been
