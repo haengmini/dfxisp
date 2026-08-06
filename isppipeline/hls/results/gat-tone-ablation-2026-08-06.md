@@ -3,7 +3,8 @@ File   : isppipeline/hls/results/gat-tone-ablation-2026-08-06.md
 Added  : 2026-08-06
 Function: lowlight_ISP stage (5)의 톤 커브를 단독으로 분리해 GAT/VST의 기여를
           측정한다. denoise 영구 제거 후의 자원 재측정도 함께 기록한다.
-Sources: results/map_gat_ablation_nod100_2026-08-06.csv
+Sources: results/map_gat_ablation_nod100_2026-08-06.csv (YOLOv8n)
+         results/map_gat_ablation_nod100_ssdlite_2026-08-06.csv (SSDLite MNv3)
          (csynth) 본문 §3, flat-tempdir 워크어라운드로 재측정
 -->
 
@@ -15,9 +16,11 @@ Sources: results/map_gat_ablation_nod100_2026-08-06.csv
    `−0.0481 / −0.1059`로 무너진다. 비선형 톤 매핑이 필요하다는 설계
    전제는 강하게 지지된다.
 2. **그러나 GAT는 그 자리에서 최선이 아니다.** GAT가 대체하려던 평범한
-   gamma 2.0이 **두 지표 모두에서 GAT를 이긴다**(`+0.0101 / +0.0087`).
+   gamma 2.0이 **두 지표 모두에서 GAT를 이긴다**(YOLOv8n `+0.0101 / +0.0087`).
    주 지표 차이는 이 프로젝트의 ~0.005 잡음대의 2배이고, 두 지표의 부호가
    **일치**한다 — denoise 스윕에서 부호가 엇갈렸던 것과 대조적이다.
+   **구조가 다른 검출기(SSDLite MobileNetV3)로 교차검증한 결과 순위와
+   효과 크기가 그대로 재현됐다**(`+0.0105 / +0.0113`, §6).
 3. 따라서 `src/lowlight_isp.md` §2.1이 "이 설계의 중심"이라고 적은 GAT는
    **측정으로 지지되지 않는다.** 본 문서는 측정 결과만 확정하고, 배포 커브
    교체는 별도 결정으로 남긴다(§5).
@@ -59,7 +62,7 @@ stage (5)의 4096-entry LUT **하나만** 바꾼다. binning·BLC·게인·CCM·
 ## 3. 조건
 
 - 데이터: `data/split_nod` 야간 100장, ISO 6400, Sony RX100 VII
-- 검출기: YOLOv8n (Ultralytics 8.4.82), CPU
+- 검출기: YOLOv8n (Ultralytics 8.4.82), CPU — 교차검증 SSDLite MobileNetV3 §6
 - 고정: BLC offset 2, shared WB, same-color binning(subsample arm 제외)
 - 하니스: `tools/eval_map_isp.py`, 렌더 병렬 6워커
 - 프록시 정합: `make verify-new-arms` PASS — 40 trials / 15,966 channel
@@ -83,12 +86,13 @@ stage (5)의 4096-entry LUT **하나만** 바꾼다. binning·BLC·게인·CCM·
 - 그림자 리프트가 강한 커브일수록 좋다는 단조 경향으로 읽힌다
   (linear < GAT < gamma, 입력 16에서 각각 1 / 4 / 15로 리프트).
   검출기는 어두운 영역의 대비를 원하고, GAT가 억제하려던 read-noise floor
-  증폭은 YOLOv8n에게 순비용이 아니었던 것으로 보인다.
+  증폭은 순비용이 아니었던 것으로 보인다. 이 단조 순서는 SSDLite에서도
+  그대로 재현된다(§6).
 
 ## 5. 판정과 남긴 결정
 
 **확정:** stage (5)를 없애는 선택지는 배제된다. GAT는 이 조건에서 gamma
-2.0보다 열세다.
+2.0보다 열세이며, 이는 검출기 계열을 바꿔도 유지된다(§6).
 
 **남긴 결정(사용자 몫):** 배포 RM의 커브를 gamma 2.0으로 교체할지. 이는
 제안 arm의 서사 중심(§2.1)을 바꾸는 결정이라 측정 하나로 자동 반영하지
@@ -97,16 +101,46 @@ stage (5)의 4096-entry LUT **하나만** 바꾼다. binning·BLC·게인·CCM·
 교체할 경우 남는 저조도 고유 요소는 **binning + 2.0× 노출 게인 +
 H/2×W/2 출력**이며, binning은 §4에서 독립적으로 이득이 확인됐다.
 
-## 6. 한계
+## 6. 교차검증 — SSDLite MobileNetV3 (2026-08-06)
 
-- 100장 단일 야간 split, 단일 검출기(YOLOv8n), 단일 실행.
+같은 렌더 결과를 **구조가 다른 검출기 계열**로 재채점했다. 렌더는 재실행하지
+않았으므로 검출기 외의 모든 조건이 동일하다.
+도구: `tools/eval_map_newrm_ssd.py` (torchvision
+`ssdlite320_mobilenet_v3_large`, COCO-pretrained, CPU).
+
+| stage ⑤ | YOLOv8n @[.5:.95] / @50 | SSDLite @[.5:.95] / @50 |
+|---|---:|---:|
+| **gamma 2.0** | **0.1876 / 0.3797** | **0.1250 / 0.2427** |
+| GAT (배포) | 0.1775 / 0.3710 | 0.1145 / 0.2314 |
+| GAT + 구 subsample | 0.1735 / 0.3429 | 0.1093 / 0.2174 |
+| linear (커브 없음) | 0.1294 / 0.2651 | 0.0844 / 0.1699 |
+
+| | gamma − GAT |
+|---|---:|
+| YOLOv8n | +0.0101 / +0.0087 |
+| SSDLite | +0.0105 / +0.0113 |
+
+**순위가 4개 비교(2 검출기 × 2 지표) 전부에서 동일하다:**
+`gamma > GAT > subsample > linear`. 주 지표 효과 크기도 `+0.0101` 대
+`+0.0105`로 사실상 같다.
+
+> **절대값은 비교하지 말 것.** Ultralytics 경로와 pycocotools 경로는 평가
+> 프로토콜이 다르고 SSDLite는 더 약한 검출기다. 교차검증이 확인하는 것은
+> **arm 간 순위의 검출기 독립성**이지 절대 성능이 아니다.
+
+이로써 "gamma 2.0이 GAT보다 낫다"는 판정은 단일 검출기 우연으로 설명되지
+않는다. GAT 반증은 확정으로 본다.
+
+## 7. 한계
+
+- 100장 단일 야간 split, 단일 실행.
 - GAT 파라미터 `a, b`는 이 split 자체로 캘리브레이션됐다. 즉 GAT는
   홈그라운드에서 졌다 — 파라미터 오차로 설명하기 어렵다는 뜻이다.
-- gamma 2.0의 우위가 다른 검출기(YOLOv8s/SSDLite)나 다른 조도에서도
-  유지되는지는 미검증. 배포 교체 전 교차검증 권고.
-- 주광(PASCAL) 조건에서는 미측정.
+- 주광(PASCAL) 조건에서는 미측정. 저조도 arm이 주광에서 선택되지 않으므로
+  배포 판단에는 부차적이나, 논문의 일반화 주장에는 필요하다.
+- 두 검출기 모두 COCO-pretrained이며 이 데이터로 파인튜닝하지 않았다.
 
-## 7. 함께 수행한 denoise 영구 제거와 자원 재측정
+## 8. 함께 수행한 denoise 영구 제거와 자원 재측정
 
 denoise 단계와 그것을 먹이던 3행 슬라이딩 버퍼를 코드에서 제거했다
 (스위치 OFF가 아니라 삭제). `rm_lowlight_isp_top` csynth
@@ -133,9 +167,10 @@ denoise 단계와 그것을 먹이던 3행 슬라이딩 버퍼를 코드에서 �
 검증: `make lowlight-isp-verify` PASS(golden 147 pixels + C-sim smoke),
 `make verify-new-arms` PASS(40 trials / 15,966 samples).
 
-## 8. 참고
+## 9. 참고
 
 - 선행: `results/denoise-k-sweep-2026-08-06.md`(denoise 제거 근거),
   `results/v2-arm-ablation-2026-08-06.md`
 - 설계 문서: `src/lowlight_isp.md` §2.1(GAT), §5(자원)
-- 원시 수치: `results/map_gat_ablation_nod100_2026-08-06.csv`
+- 원시 수치: `results/map_gat_ablation_nod100_2026-08-06.csv`(YOLOv8n),
+  `results/map_gat_ablation_nod100_ssdlite_2026-08-06.csv`(SSDLite)

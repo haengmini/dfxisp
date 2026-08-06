@@ -81,6 +81,11 @@ stage ⑤의 LUT만 바꾼 단일 축 ablation(야간 100장, YOLOv8n):
 2. **그러나 GAT가 대체하려던 gamma 2.0이 GAT를 이긴다** — 두 지표가 같은
    방향이고, 주 지표 차이는 이 프로젝트의 ~0.005 잡음대의 2배다.
 
+**교차검증 완료(SSDLite MobileNetV3, 같은 렌더 재채점):** 순위가
+`gamma > GAT > subsample > linear`로 **4개 비교(2 검출기 × 2 지표) 전부
+동일**하고, 주 지표 효과 크기도 `+0.0101`(YOLOv8n) 대 `+0.0105`(SSDLite)로
+사실상 같다. 단일 검출기 우연이 아니다.
+
 위 표의 "노이즈 플로어에서 증폭이 절반"이라는 **의도한 동작이 곧 손해**였다:
 검출기는 어두운 영역에서 더 강한 리프트를 선호한다(리프트 순서 절단 <
 GAT < gamma가 성능 순서와 그대로 일치). GAT의 `a, b`는 평가 split
@@ -303,7 +308,7 @@ b ≤ 3.97. 두 센서의 a가 **66배**(0.9 vs 60.6, 14-bit) 차이나는 것�
 | **binning SNR 이득** (같은 잡음 프레임에서 samecolor spread < subsample, denoise OFF) | ✅ **실측 +5.6~7.1 dB** |
 | BLC (pedestal 이하 → 순흑; 평균 후 감산이라 되살아나지 않음) | ✅ |
 | GAT 플로어 억제 (near-floor 출력 < 40, 중간톤 > 150) | ✅ |
-| **톤 커브 축** (야간 100장, YOLOv8n) | ✅ **gamma 2.0 > GAT > linear** |
+| **톤 커브 축** (야간 100장) | ✅ **gamma 2.0 > GAT > linear** — YOLOv8n·SSDLite 순위 일치 |
 | 포화 입력 RGB8 무오버플로 | ✅ |
 | DFX 계약 (`rm_lowlight_isp_top` 6-인자, dev top과 동일 출력) | ✅ |
 | **mAP** | ✅ 측정(2026-08-06) — gamma 2.0 **0.1876/0.3797**, GAT **0.1775/0.3710**, GAT+구 binning **0.1735/0.3429**, linear **0.1294/0.2651**. `results/gat-tone-ablation-2026-08-06.md` |
