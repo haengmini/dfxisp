@@ -24,7 +24,11 @@ import numpy as np
 import gen_lowlight_isp_golden as G
 
 RAW12_MAX = G.RAW12_MAX
-GAT_LUT = np.asarray(G.GAT_LUT, dtype=np.uint8)
+# One 4096-entry uint8 table per stage-(5) curve, built from the scalar golden's
+# derivation so the proxy cannot drift. GAT is the deployed curve; GAMMA and
+# LINEAR exist only for the tone-curve ablation (see the golden for why).
+TONE_LUTS = {mode: np.asarray(G.tone_lut(mode), dtype=np.uint8)
+             for mode in (G.TONE_GAT, G.TONE_GAMMA, G.TONE_LINEAR)}
 # int32 throughout: the widest intermediate is the CCM accumulator
 # (288 * 4095 * 3 ~ 3.5e6) and the BLC range-restore (4095 * 258 ~ 1.06e6),
 # both far inside int32. Halves peak memory per 20MP frame, which is what
@@ -33,8 +37,6 @@ CCM_Q8 = np.asarray(G.CCM_Q8, dtype=np.int32)
 
 BIN_SUBSAMPLE = G.BIN_SUBSAMPLE
 BIN_SAMECOLOR = G.BIN_SAMECOLOR
-DENOISE_OFF = 0
-DENOISE_ON = 1
 
 
 def _cell_planes(raw12: np.ndarray, bw: int, bh: int):
@@ -85,26 +87,9 @@ def _ccm_channel(row: int, r12, g12, b12):
     return np.clip(acc >> 8, 0, RAW12_MAX)
 
 
-def _sigma_clip(plane: np.ndarray, threshold: int) -> np.ndarray:
-    """Stage (6): 3x3 sigma-clipped mean, clamp-to-edge, constant threshold."""
-    bh, bw = plane.shape
-    p = np.pad(plane.astype(np.int32), 1, mode="edge")
-    center = plane.astype(np.int32)
-    total = np.zeros_like(center)
-    count = np.zeros_like(center)
-    for dy in range(3):
-        for dx in range(3):
-            v = p[dy:dy + bh, dx:dx + bw]
-            keep = np.abs(v - center) <= threshold
-            total += np.where(keep, v, 0)
-            count += keep
-    return total // count
-
-
 def run_lowlight_isp(bayer16, w: int, h: int,
-                     denoise_mode: int = DENOISE_ON,
                      bin_mode: int = BIN_SAMECOLOR,
-                     denoise_k: float = G.DENOISE_K_DEFAULT) -> np.ndarray:
+                     tone_mode: int = G.TONE_GAT) -> np.ndarray:
     """lowlight_ISP over a full frame -> (H/2) x (W/2) x 3 uint8 (Policy A)."""
     raw12 = (np.asarray(bayer16).reshape(h, w).astype(np.int32)) >> 4
     bw, bh = max(1, w // 2), max(1, h // 2)
@@ -114,11 +99,8 @@ def run_lowlight_isp(bayer16, w: int, h: int,
     g12 = _correct_channel(g12, G.WB_G_Q8)
     b12 = _correct_channel(b12, G.WB_B_Q8)
 
-    planes = [GAT_LUT[_ccm_channel(i, r12, g12, b12)] for i in range(3)]
-    if denoise_mode == DENOISE_ON:
-        thresholds = G.denoise_thresholds(bin_mode, denoise_k)
-        planes = [_sigma_clip(p, threshold)
-                  for p, threshold in zip(planes, thresholds)]
+    lut = TONE_LUTS[tone_mode]
+    planes = [lut[_ccm_channel(i, r12, g12, b12)] for i in range(3)]
 
     out = np.empty((bh, bw, 3), dtype=np.uint8)
     for i in range(3):
@@ -129,22 +111,15 @@ def run_lowlight_isp(bayer16, w: int, h: int,
 def run_arm(bayer16, w: int, h: int, arm: str) -> np.ndarray:
     """eval_map_isp.py dispatch entry. Arm names encode the ablation axes."""
     table = {
-        "lowlight_isp": (DENOISE_ON, BIN_SAMECOLOR),
-        "lowlight_isp_nodenoise": (DENOISE_OFF, BIN_SAMECOLOR),
-        "lowlight_isp_subsample": (DENOISE_ON, BIN_SUBSAMPLE),
-        "lowlight_isp_nodenoise_subsample": (DENOISE_OFF, BIN_SUBSAMPLE),
+        # deployed arm
+        "lowlight_isp": (BIN_SAMECOLOR, G.TONE_GAT),
+        # binning ablation
+        "lowlight_isp_subsample": (BIN_SUBSAMPLE, G.TONE_GAT),
+        # tone-curve ablation: same binning, stage (5) is the only difference
+        "lowlight_isp_gamma": (BIN_SAMECOLOR, G.TONE_GAMMA),
+        "lowlight_isp_linear": (BIN_SAMECOLOR, G.TONE_LINEAR),
     }
-    # Experiment-only k sweep: these are not canonical/deployment arms.
-    k_sweep = {
-        "lowlight_isp_k10": 1.0,
-        "lowlight_isp_k15": 1.5,
-        "lowlight_isp_k24": 2.4,
-        "lowlight_isp_k40": 4.0,
-    }
-    if arm in k_sweep:
-        return run_lowlight_isp(bayer16, w, h, DENOISE_ON, BIN_SAMECOLOR,
-                                k_sweep[arm])
     if arm not in table:
         raise ValueError(arm)
-    dn, bm = table[arm]
-    return run_lowlight_isp(bayer16, w, h, dn, bm)
+    bm, tm = table[arm]
+    return run_lowlight_isp(bayer16, w, h, bm, tm)

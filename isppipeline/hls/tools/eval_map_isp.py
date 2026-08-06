@@ -53,10 +53,12 @@ ARMS = ["normal", "lowlight", "adaptive"]
 # duplicate rows labelled as different BLC values.
 ARMS_V2 = [
     "default_isp", "default_isp_noawb",
-    "lowlight_isp", "lowlight_isp_nodenoise",
-    "lowlight_isp_subsample", "lowlight_isp_nodenoise_subsample",
-    # Experiment-only denoise k sweep; not canonical/deployment arms.
-    "lowlight_isp_k10", "lowlight_isp_k15", "lowlight_isp_k24", "lowlight_isp_k40",
+    "lowlight_isp",
+    # binning ablation (stage 1)
+    "lowlight_isp_subsample",
+    # tone-curve ablation (stage 5): GAT vs the ordinary gamma it replaces, and
+    # plain truncation as the floor. Only stage (5) differs between these.
+    "lowlight_isp_gamma", "lowlight_isp_linear",
 ]
 
 

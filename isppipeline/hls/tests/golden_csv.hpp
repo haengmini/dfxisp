@@ -15,7 +15,7 @@
 // kind=raw holding input samples and kind=rgb holding the expected packed
 // output. Only the parameter columns differ between arms (dfxisp_accel has
 // mode/threshold/sel_*, default_isp has awb_mode, lowlight_isp has
-// denoise/bin_mode), so the parser is driven by the header rather than fixed
+// bin_mode), so the parser is driven by the header rather than fixed
 // column indices -- which is why one loader is shorter than any of the three
 // bespoke parsers it replaces.
 //

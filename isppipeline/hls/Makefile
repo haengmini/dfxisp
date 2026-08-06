@@ -106,7 +106,7 @@ default-isp-verify: default-isp-golden default-isp-csim
 
 # lowlight_ISP: proposal low-light arm (v2). Shares default_ISP's correction
 # backbone; specialisation = 2x2 binning + 2.0x upstream gain + GAT/VST tone
-# + edge-preserving denoise. Additive; RM_LOW_LIGHT_TONE is untouched.
+# curve. Additive; RM_LOW_LIGHT_TONE is untouched.
 lowlight-isp-golden:
 	$(PYTHON) tools/gen_lowlight_isp_golden.py --out $(LOWLIGHT_ISP_GOLDEN_CSV)
 

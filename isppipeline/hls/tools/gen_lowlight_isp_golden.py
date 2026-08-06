@@ -15,7 +15,6 @@ Pipeline (see src/lowlight_isp.md for the derivation of every stage):
                                      upstream of quantisation (principle P3 4.3)
   (4) CCM                   [RGB12]  same matrix as default_isp (shared backbone)
   (5) GAT/Anscombe VST tone [12->8]  variance-stabilising LUT, replaces gamma2.0
-  (6) edge-preserving denoise[VST]   sigma-clipped 3x3, constant threshold
   (7) pack RGB888
 
 stdlib only, integer only; every division/shift operates on non-negative values
@@ -27,7 +26,7 @@ src/lowlight_isp.cpp is produced by exactly this code path).
 from __future__ import annotations
 
 import argparse
-from math import isqrt, sqrt
+from math import isqrt
 from pathlib import Path
 
 RAW12_MAX = 4095
@@ -95,27 +94,6 @@ def n256(z: int) -> int:
 
 GAT_N0 = isqrt(n256(0))
 GAT_DENOM = isqrt(n256(RAW12_MAX)) - GAT_N0
-
-# --- (6) denoise -------------------------------------------------------------
-# This is the single canonical derivation site.  The VST-domain sigma above is
-# for one sensor sample; stage (1) has already averaged a channel-dependent
-# number of samples by the time denoise runs.  C++ constants are emitted from
-# this calculation (like GAT_LUT), and the vectorised proxy imports it.
-DENOISE_K_DEFAULT = 2.4
-DENOISE_SAMPLES = {
-    BIN_SUBSAMPLE: (1, 2, 1),
-    BIN_SAMECOLOR: (4, 8, 4),
-}
-SIGMA_UNBINNED = 255 * A_Q8 / (32 * GAT_DENOM)
-
-
-def denoise_thresholds(bin_mode: int, k: float = DENOISE_K_DEFAULT) -> tuple[int, int, int]:
-    """Rounded (R,G,B) sigma-clip thresholds after channel-wise binning."""
-    if bin_mode not in DENOISE_SAMPLES:
-        raise ValueError(f"unknown bin_mode: {bin_mode}")
-    return tuple(round(k * SIGMA_UNBINNED / sqrt(n))
-                 for n in DENOISE_SAMPLES[bin_mode])
-
 
 def gat_lut() -> list[int]:
     return [clamp((255 * (isqrt(n256(z)) - GAT_N0)) // GAT_DENOM, 0, 255)
@@ -194,91 +172,86 @@ def ccm_channel(row: int, r12: int, g12: int, b12: int) -> int:
     return clamp(acc >> 8, 0, RAW12_MAX)
 
 
-def sigma_clip(planes, bw: int, bh: int, x: int, y: int, threshold: int) -> int:
-    """Stage (6): 3x3 sigma-clipped mean -- neighbours further than
-    threshold from the centre are excluded, so edges survive."""
-    center = planes[y][x]
-    total = 0
-    count = 0
-    for dy in (-1, 0, 1):
-        yy = clamp(y + dy, 0, bh - 1)
-        for dx in (-1, 0, 1):
-            xx = clamp(x + dx, 0, bw - 1)
-            v = planes[yy][xx]
-            if abs(v - center) <= threshold:
-                total += v
-                count += 1
-    return total // count
+# --- (5) tone-curve variants: the GAT isolation experiment (2026-08-06) ------
+# GAT is the deployed curve; these alternatives exist so its contribution can be
+# isolated in SW evaluation. They are deliberately NOT a runtime switch in the
+# HLS RM: if one of them wins, the LUT constant gets swapped, not selected at
+# run time, so the fabric carries no ablation logic.
+#
+# Why these two controls: removing the denoise stage removed GAT's original
+# justification (a VST exists to make a CONSTANT-threshold denoise valid). What
+# is left is a tone curve, so the honest question is whether the noise-model
+# derived shape beats the ordinary one -- hence gamma 2.0 as the real control,
+# imported from default_ISP's golden so the two cannot drift, and plain
+# truncation as the floor.
+TONE_GAT = 0
+TONE_GAMMA = 1
+TONE_LINEAR = 2
 
 
-def lowlight_isp(raw, width: int, height: int, denoise_on: int = 1,
-                 bin_mode: int = BIN_SAMECOLOR, denoise_k: float = DENOISE_K_DEFAULT):
+def tone_lut(tone_mode: int) -> list[int]:
+    """4096-entry 12->8 table for the requested stage-(5) curve."""
+    if tone_mode == TONE_GAT:
+        return GAT_LUT
+    if tone_mode == TONE_GAMMA:
+        from gen_default_isp_golden import GAMMA2_LUT
+        return [GAMMA2_LUT[z >> 4] for z in range(RAW12_MAX + 1)]
+    if tone_mode == TONE_LINEAR:
+        return [z >> 4 for z in range(RAW12_MAX + 1)]
+    raise ValueError(f"unknown tone_mode: {tone_mode}")
+
+
+def lowlight_isp(raw, width: int, height: int, bin_mode: int = BIN_SAMECOLOR,
+                 tone_mode: int = TONE_GAT):
     bw, bh = bin_dim(width), bin_dim(height)
-    # stages (1)-(5): build the VST-domain planes
-    pr = [[0] * bw for _ in range(bh)]
-    pg = [[0] * bw for _ in range(bh)]
-    pb = [[0] * bw for _ in range(bh)]
-    for by in range(bh):
-        for bx in range(bw):
-            r12, g12, b12 = binned_rgb(raw, width, height, bw, bh, bx, by, bin_mode)
-            rc = ccm_channel(0, r12, g12, b12)
-            gc = ccm_channel(1, r12, g12, b12)
-            bc = ccm_channel(2, r12, g12, b12)
-            pr[by][bx] = GAT_LUT[rc]
-            pg[by][bx] = GAT_LUT[gc]
-            pb[by][bx] = GAT_LUT[bc]
-    # stages (6)-(7)
-    thresholds = denoise_thresholds(bin_mode, denoise_k)
+    lut = tone_lut(tone_mode)
     out = []
     for by in range(bh):
         for bx in range(bw):
-            if denoise_on:
-                r = sigma_clip(pr, bw, bh, bx, by, thresholds[0])
-                g = sigma_clip(pg, bw, bh, bx, by, thresholds[1])
-                b = sigma_clip(pb, bw, bh, bx, by, thresholds[2])
-            else:
-                r, g, b = pr[by][bx], pg[by][bx], pb[by][bx]
+            r12, g12, b12 = binned_rgb(raw, width, height, bw, bh, bx, by, bin_mode)
+            r = lut[ccm_channel(0, r12, g12, b12)]
+            g = lut[ccm_channel(1, r12, g12, b12)]
+            b = lut[ccm_channel(2, r12, g12, b12)]
             out.append((r << 16) | (g << 8) | b)
     return out, bw, bh
 
 
 def make_cases():
     """Coverage: flat levels incl. the noise floor, gradient, a noisy dark
-    patch (both binning modes -- the SNR ablation), a hard edge (denoise must
-    preserve it), saturation, odd dimensions and the 1x1 degenerate case."""
+    patch (both binning modes -- the SNR ablation), a hard edge, saturation,
+    odd dimensions and the 1x1 degenerate case."""
     cases = []
     w = h = 8
 
-    cases.append(("flat_mid", w, h, 1, BIN_SAMECOLOR, [1600] * (w * h)))
-    cases.append(("flat_dark", w, h, 1, BIN_SAMECOLOR, [200] * (w * h)))
-    cases.append(("flat_near_floor", w, h, 1, BIN_SAMECOLOR, [40] * (w * h)))
+    cases.append(("flat_mid", w, h, BIN_SAMECOLOR, [1600] * (w * h)))
+    cases.append(("flat_dark", w, h, BIN_SAMECOLOR, [200] * (w * h)))
+    cases.append(("flat_near_floor", w, h, BIN_SAMECOLOR, [40] * (w * h)))
 
     grad = [((x + y) * 4095) // (w + h - 2) for y in range(h) for x in range(w)]
-    cases.append(("gradient", w, h, 1, BIN_SAMECOLOR, grad))
-    cases.append(("gradient_subsample", w, h, 1, BIN_SUBSAMPLE, grad))
+    cases.append(("gradient", w, h, BIN_SAMECOLOR, grad))
+    cases.append(("gradient_subsample", w, h, BIN_SUBSAMPLE, grad))
 
-    # Deterministic pseudo-noise on a dark background: denoise must smooth it.
+    # Deterministic pseudo-noise on a dark background: the binning SNR case.
     noisy = []
     seed = 12345
     for i in range(w * h):
         seed = (1103515245 * seed + 12345) & 0x7FFFFFFF
         noisy.append(300 + (seed % 120))
-    cases.append(("noisy_dark_denoise_on", w, h, 1, BIN_SAMECOLOR, noisy))
-    cases.append(("noisy_dark_denoise_off", w, h, 0, BIN_SAMECOLOR, noisy))
+    cases.append(("noisy_dark", w, h, BIN_SAMECOLOR, noisy))
     # Same frame through the legacy path: the SNR ablation pair.
-    cases.append(("noisy_dark_subsample_dn_off", w, h, 0, BIN_SUBSAMPLE, noisy))
+    cases.append(("noisy_dark_subsample", w, h, BIN_SUBSAMPLE, noisy))
 
     # Hard vertical edge: dark left half, bright right half.
     edge = [(200 if x < w // 2 else 2600) for y in range(h) for x in range(w)]
-    cases.append(("hard_edge", w, h, 1, BIN_SAMECOLOR, edge))
+    cases.append(("hard_edge", w, h, BIN_SAMECOLOR, edge))
 
-    cases.append(("saturated", w, h, 1, BIN_SAMECOLOR, [4095] * (w * h)))
+    cases.append(("saturated", w, h, BIN_SAMECOLOR, [4095] * (w * h)))
 
     ow, oh = 5, 3
     odd = [((x * 7 + y * 13) * 97) % 4096 for y in range(oh) for x in range(ow)]
-    cases.append(("odd_dims", ow, oh, 1, BIN_SAMECOLOR, odd))
+    cases.append(("odd_dims", ow, oh, BIN_SAMECOLOR, odd))
 
-    cases.append(("one_pixel", 1, 1, 1, BIN_SAMECOLOR, [900]))
+    cases.append(("one_pixel", 1, 1, BIN_SAMECOLOR, [900]))
 
     return cases
 
@@ -291,40 +264,24 @@ def emit_c_lut() -> str:
     return "\n".join(lines)
 
 
-def emit_c_denoise_constants() -> str:
-    """Emit the C++ constants derived above; do not hand-edit their values."""
-    sub = denoise_thresholds(BIN_SUBSAMPLE)
-    same = denoise_thresholds(BIN_SAMECOLOR)
-    return "\n".join((
-        f"constexpr int DENOISE_THRESHOLD_SUBSAMPLE[3] = {{{sub[0]}, {sub[1]}, {sub[2]}}};",
-        f"constexpr int DENOISE_THRESHOLD_SAMECOLOR[3] = {{{same[0]}, {same[1]}, {same[2]}}};",
-    ))
-
-
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", default="tests/lowlight_isp_golden_vectors.csv")
     ap.add_argument("--emit-lut", action="store_true",
                     help="print the GAT table as a C array body and exit")
-    ap.add_argument("--emit-denoise-constants", action="store_true",
-                    help="print derived sigma-clip C++ constants and exit")
     args = ap.parse_args()
 
     if args.emit_lut:
         print(emit_c_lut())
         return 0
-    if args.emit_denoise_constants:
-        print(emit_c_denoise_constants())
-        return 0
-
-    rows = ["case,in_w,in_h,denoise,bin_mode,out_w,out_h,kind,idx,val"]
+    rows = ["case,in_w,in_h,bin_mode,out_w,out_h,kind,idx,val"]
     ncases = 0
-    for name, w, h, dn, bm, raw in make_cases():
-        expected, bw, bh = lowlight_isp(raw, w, h, dn, bm)
+    for name, w, h, bm, raw in make_cases():
+        expected, bw, bh = lowlight_isp(raw, w, h, bm)
         for i, v in enumerate(raw):
-            rows.append(f"{name},{w},{h},{dn},{bm},{bw},{bh},raw,{i},{v}")
+            rows.append(f"{name},{w},{h},{bm},{bw},{bh},raw,{i},{v}")
         for i, v in enumerate(expected):
-            rows.append(f"{name},{w},{h},{dn},{bm},{bw},{bh},rgb,{i},0x{v:06X}")
+            rows.append(f"{name},{w},{h},{bm},{bw},{bh},rgb,{i},0x{v:06X}")
         ncases += 1
 
     out = Path(args.out)

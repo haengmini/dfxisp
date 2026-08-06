@@ -1,0 +1,5 @@
+dataset,blc_offset,wb_lowlight,arm,mAP_50_95,mAP_50,model,n
+GAT-ablation-nod100,2,shared,lowlight_isp,0.1775,0.3710,yolov8n.pt,100
+GAT-ablation-nod100,2,shared,lowlight_isp_gamma,0.1876,0.3797,yolov8n.pt,100
+GAT-ablation-nod100,2,shared,lowlight_isp_linear,0.1294,0.2651,yolov8n.pt,100
+GAT-ablation-nod100,2,shared,lowlight_isp_subsample,0.1735,0.3429,yolov8n.pt,100

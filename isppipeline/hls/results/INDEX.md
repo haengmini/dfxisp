@@ -79,6 +79,7 @@ superseded 중간 산출물은 `archive/`로 이동한다(맨 아래 "아카이�
 | `lowlight-wb-mode-split-2026-08-03.md` | 08-03 | **정본(negative result)** 저조도 WB 모드별 분리 최종 판정 — 배포 WB가 저조도 B를 절반만 보정하는 것은 실측 확인됐으나(gray-world 대비 0.50×) mAP는 무반응(전 범위 spread 0.0020 = BLC 레버의 1/44), 채널 분리 실험이 효과 반증 → **분리하지 않음**. WB 검증 3회 수렴, 재실험 불필요 |
 | `v2-arm-ablation-2026-08-06.md` | 08-06 | **v2 arm 첫 mAP + ablation** — NOD/PASCAL 각 100장, YOLOv8n/BLC=2. 야간 v2 lowlight는 v1 대비 +0.0119/+0.0220이나 denoise 비용은 정당화 실패(제거 권고), same-color binning은 지표 혼합으로 불확실. 주광 default v2는 v1 대비 주 지표 −0.0042, AWB 기여 없음. 근거 CSV `map_ablation_{nod100,pascal100}_2026-08-06.csv` |
 | `denoise-k-sweep-2026-08-06.md` | 08-06 | **lowlight_ISP denoise 임계 정정 + NOD100 k sweep** — binning 후 채널별 k=2.4 임계 SAMECOLOR R/B=11, G=8 및 SUBSAMPLE R/B=21, G=15로 재유도. 주 지표는 탐색 범위 내 k=4.0이 최고(OFF 대비 +0.0049)이나 mAP@50 −0.0027·경계점·단일 100장 한계로 조건부 권고, 배포는 OFF 유지. 근거 CSV `map_denoise_k_sweep_nod100_2026-08-06.csv` |
+| `gat-tone-ablation-2026-08-06.md` | 08-06 | **lowlight_ISP stage ⑤ 톤 커브 단독 ablation** — NOD100/YOLOv8n/BLC=2/shared WB에서 gamma 2.0(0.1876/0.3797) > GAT(0.1775/0.3710) > linear(0.1294/0.2651). GAT 중심 주장은 반증됐으며 배포 RM은 이번 변경에서 GAT 유지. 근거 CSV `map_gat_ablation_nod100_2026-08-06.csv` |
 
 ## 4. 다이어그램 / RTL 부속물
 
@@ -90,7 +91,7 @@ superseded 중간 산출물은 `archive/`로 이동한다(맨 아래 "아카이�
 | `pr_controller/checker_hysteresis.md` | (08-06) 위 모듈 설계 노트 — 플래그 인코딩/트리거 프로토콜/Stage 6 잔여 배선 + pr_controller 통합 이슈 3건(NWORDS 구 bitstream, word당 2사이클, ICAP 100MHz) |
 | `pr_controller/dfxc_trigger_adapter.v` + `checker_to_dfxc_tb.v` | (08-06) **AMD DFX Controller IP(PG374) 채택** — checker_hysteresis를 IP 계약(HW trigger + shutdown ack shim)에 잇는 어댑터 + PG374 행위 모델 체인 TB(xsim PASS) |
 | (소스 노트) `../src/default_isp.md` | (08-06) **default_ISP** — Vitis Vision `isppipeline` 스테이지 순서로 재구성한 표준 ISP arm. Vitis 대조표·의도적 편차 3건·실측(csynth LUT 12,659 vs RM_NORMAL 5,202, 타이밍 동일)·남은 일(mAP 미평가, post-route 미실측, 채택 미결) |
-| (소스 노트) `../src/lowlight_isp.md` | (08-06) **lowlight_ISP v2** — 원리(GAT/VST 톤, VST 도메인 상수임계 denoise, 게인 상류배치) 기반 제안 저조도 arm. GAT가 노이즈 플로어 증폭을 gamma 대비 절반으로 억제(실측 곡선표), "GAT 도입 시 BLC 민감도 평탄화" 검증가능 예측 제시. **binning을 진짜 same-color 2×2로 교체(+5.6~7.1dB 실측)하고 BLC 앞으로 이동**, 구 subsample은 ablation 스위치로 보존. csynth LUT 12,826(v1 4,204의 3.05배 — 예측 실패 기록), 타이밍 동일, **저조도 arm이 일반 arm보다 커진 점 주의** |
+| (소스 노트) `../src/lowlight_isp.md` | (08-06) **lowlight_ISP v2** — same-color 2×2 binning(+5.6~7.1dB 실측), 상류 게인, 톤 커브로 구성. denoise는 한계효용 0 판정 뒤 코드에서 제거해 csynth 5 BRAM/14 DSP/4,417 FF/6,939 LUT를 실측했다. 톤 ablation은 **gamma 2.0 > GAT > linear**로 중심 주장을 반증했으며, 배포 RM은 사용자 결정 전까지 GAT 유지. 구 subsample은 ablation 스위치로 보존 |
 | `sonynod_convert_meta_archived-2026-08-06.json` | (08-06) 삭제된 `data/sonynod_test/`의 변환 파라미터 기록 — 카메라(RX100 VII)·Bayer(RGGB)·crop·black 800/white 16380·shift8 스케일. **LOD 재준비 시 이 값들로 동일 변환을 재현할 것**. 원본 ARW는 Drive `Sony-ARW/`(100장) |
 | `pascal_split_100_2026-08-06.csv` | (08-06) **PASCAL 100장 축소 split** — 실험 반복 속도용. `build_matched_splits.py --n 100`(ISO 층화 유지: [0,400) 9 / [400,800) 90 / [800,1600) 1)로 4,259장에서 추출. 07-15의 321장 매니페스트는 배포 이력이라 **그대로 보존**하고 별도 파일로 추가. LOD/shuffle split은 이번에 제외(LOD 원본 재준비 예정) |
 | `pr_controller/dfxc_adapter.md` | (08-06) IP 채택 결정 기록·근거 비교표·Stage 6 통합 체크리스트(포트명 IP 생성 후 확인 필요) |

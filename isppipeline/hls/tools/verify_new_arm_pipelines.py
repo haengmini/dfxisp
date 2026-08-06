@@ -36,8 +36,8 @@ def scalar_default(raw12_flat, w, h, awb_mode):
     return out
 
 
-def scalar_lowlight(raw12_flat, w, h, denoise, bin_mode):
-    packed, bw, bh = LG.lowlight_isp(list(raw12_flat), w, h, denoise, bin_mode)
+def scalar_lowlight(raw12_flat, w, h, bin_mode, tone_mode):
+    packed, bw, bh = LG.lowlight_isp(list(raw12_flat), w, h, bin_mode, tone_mode)
     out = np.empty((bh, bw, 3), dtype=np.uint8)
     for i, v in enumerate(packed):
         out[i // bw, i % bw] = ((v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF)
@@ -82,21 +82,21 @@ def main() -> int:
                     f"got {got[tuple(bad)]} expected {exp[tuple(bad)]}")
             checked_px += got.size
 
-        for dn in (LP.DENOISE_OFF, LP.DENOISE_ON):
-            for bm in (LG.BIN_SUBSAMPLE, LG.BIN_SAMECOLOR):
-                got = LP.run_lowlight_isp(raw16, w, h, dn, bm)
-                exp = scalar_lowlight(raw12, w, h, dn, bm)
+        for bm in (LG.BIN_SUBSAMPLE, LG.BIN_SAMECOLOR):
+            for tm in (LG.TONE_GAT, LG.TONE_GAMMA, LG.TONE_LINEAR):
+                got = LP.run_lowlight_isp(raw16, w, h, bm, tm)
+                exp = scalar_lowlight(raw12, w, h, bm, tm)
                 if not np.array_equal(got, exp):
                     bad = np.argwhere(got != exp)[0]
                     raise SystemExit(
-                        f"lowlight_ISP mismatch trial={t} {w}x{h} dn={dn} bin={bm} "
+                        f"lowlight_ISP mismatch trial={t} {w}x{h} bin={bm} tone={tm} "
                         f"at {tuple(bad)}: got {got[tuple(bad)]} expected {exp[tuple(bad)]}")
                 checked_px += got.size
 
     print(f"[verify_new_arm_pipelines] PASS: {args.trials} trials, "
           f"{checked_px} channel samples, vectorised proxies bit-exact with the "
           f"scalar canonical goldens (default_ISP awb off/on; lowlight_ISP "
-          f"denoise off/on x binning subsample/samecolour)")
+          f"binning subsample/samecolour x tone GAT/gamma/linear)")
     return 0
 
 

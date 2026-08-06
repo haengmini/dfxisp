@@ -23,7 +23,7 @@ static void check_golden_vectors(const char* path) {
         const int exp_w = c.param("out_w"), exp_h = c.param("out_h");
         std::vector<uint32_t> got(in_w * in_h, 0);
         int out_w = 0, out_h = 0;
-        lowlight_isp(c.raw.data(), got.data(), in_w, in_h, c.param("denoise"),
+        lowlight_isp(c.raw.data(), got.data(), in_w, in_h,
                      c.param("bin_mode"), &out_w, &out_h);
         // Policy A: shape halves (min 1)
         assert(out_w == exp_w && out_h == exp_h);
@@ -56,8 +56,7 @@ int main(int argc, char** argv) {
         for (int i = 0; i < W * H; ++i) pedestal[i] = 32;
         uint32_t out[(W / 2) * (H / 2)] = {};
         int ow = 0, oh = 0;
-        lowlight_isp(pedestal, out, W, H, LOWLIGHT_ISP_DENOISE_ON,
-                     LOWLIGHT_ISP_BIN_SAMECOLOR, &ow, &oh);
+        lowlight_isp(pedestal, out, W, H, LOWLIGHT_ISP_BIN_SAMECOLOR, &ow, &oh);
         for (int i = 0; i < ow * oh; ++i) assert(out[i] == 0u);
     }
 
@@ -72,8 +71,7 @@ int main(int argc, char** argv) {
             for (int i = 0; i < W * H; ++i) f[i] = level;
             uint32_t out[(W / 2) * (H / 2)] = {};
             int ow = 0, oh = 0;
-            lowlight_isp(f, out, W, H, LOWLIGHT_ISP_DENOISE_OFF,
-                         LOWLIGHT_ISP_BIN_SAMECOLOR, &ow, &oh);
+            lowlight_isp(f, out, W, H, LOWLIGHT_ISP_BIN_SAMECOLOR, &ow, &oh);
             long s = 0;
             for (int i = 0; i < ow * oh; ++i) s += green(out[i]);
             return s / (ow * oh);
@@ -86,7 +84,6 @@ int main(int argc, char** argv) {
         assert(near_floor < mid);
     }
 
-    // Stage (6) must suppress flat-region noise...
     uint16_t noisy[W * H];
     {
         unsigned seed = 12345u;
@@ -94,48 +91,12 @@ int main(int argc, char** argv) {
             seed = 1103515245u * seed + 12345u;
             noisy[i] = static_cast<uint16_t>(300 + ((seed >> 16) % 120));
         }
-        auto spread = [&](int mode) {
-            uint32_t out[(W / 2) * (H / 2)] = {};
-            int ow = 0, oh = 0;
-            lowlight_isp(noisy, out, W, H, mode, LOWLIGHT_ISP_BIN_SAMECOLOR, &ow, &oh);
-            int hi = 0, lo = 255;
-            for (int i = 0; i < ow * oh; ++i) {
-                const int v = green(out[i]);
-                if (v > hi) hi = v;
-                if (v < lo) lo = v;
-            }
-            return hi - lo;
-        };
-        assert(spread(LOWLIGHT_ISP_DENOISE_ON) <= spread(LOWLIGHT_ISP_DENOISE_OFF));
-    }
-
-    // ...while preserving a hard edge: the contrast across a step must survive
-    // denoising essentially intact (that is what makes it edge-preserving
-    // rather than a blur).
-    {
-        uint16_t edge[W * H];
-        for (int y = 0; y < H; ++y)
-            for (int x = 0; x < W; ++x)
-                edge[y * W + x] = (x < W / 2) ? 200 : 2600;
-        auto contrast = [&](int mode) {
-            uint32_t out[(W / 2) * (H / 2)] = {};
-            int ow = 0, oh = 0;
-            lowlight_isp(edge, out, W, H, mode, LOWLIGHT_ISP_BIN_SAMECOLOR, &ow, &oh);
-            // compare the columns immediately left/right of the step
-            const int lc = ow / 2 - 1, rc = ow / 2;
-            return int(green(out[rc])) - int(green(out[lc]));
-        };
-        const int c_off = contrast(LOWLIGHT_ISP_DENOISE_OFF);
-        const int c_on = contrast(LOWLIGHT_ISP_DENOISE_ON);
-        assert(c_off > 0);
-        assert(c_on >= c_off - 2);  // edge kept (sigma-clip excludes cross-edge neighbours)
     }
 
     // Stage (1) is the SNR claim: on a noisy flat frame, real same-colour
     // binning (4 samples per chroma site, 8 for green) must measurably reduce
-    // the output spread versus the legacy per-cell subsampling. Denoise is OFF
-    // so this isolates binning alone -- this is the ablation that turns "+6 dB"
-    // from an assumption into a measurement.
+    // the output spread versus the legacy per-cell subsampling -- the ablation
+    // that turns "+6 dB" from an assumption into a measurement.
     {
         uint16_t nf[W * H];
         unsigned seed = 987654321u;
@@ -146,7 +107,7 @@ int main(int argc, char** argv) {
         auto spread_of = [&](int bin_mode) {
             uint32_t out[(W / 2) * (H / 2)] = {};
             int ow = 0, oh = 0;
-            lowlight_isp(nf, out, W, H, LOWLIGHT_ISP_DENOISE_OFF, bin_mode, &ow, &oh);
+            lowlight_isp(nf, out, W, H, bin_mode, &ow, &oh);
             int hi = 0, lo = 255;
             for (int i = 0; i < ow * oh; ++i) {
                 const int v = green(out[i]);
@@ -164,8 +125,7 @@ int main(int argc, char** argv) {
         for (int i = 0; i < W * H; ++i) sat[i] = 4095;
         uint32_t out[(W / 2) * (H / 2)] = {};
         int ow = 0, oh = 0;
-        lowlight_isp(sat, out, W, H, LOWLIGHT_ISP_DENOISE_ON,
-                     LOWLIGHT_ISP_BIN_SAMECOLOR, &ow, &oh);
+        lowlight_isp(sat, out, W, H, LOWLIGHT_ISP_BIN_SAMECOLOR, &ow, &oh);
         for (int i = 0; i < ow * oh; ++i) {
             assert(red(out[i]) <= 255 && green(out[i]) <= 255 && blue(out[i]) <= 255);
         }
@@ -173,14 +133,12 @@ int main(int argc, char** argv) {
 
     // DFX contract: rm_lowlight_isp_top is a drop-in for the RP slot -- same
     // 6-argument signature as the other RM tops, and identical behaviour to
-    // lowlight_isp() with denoise DISABLED (the deployed configuration since
-    // the 2026-08-06 ablation).
+    // lowlight_isp() with same-colour binning.
     {
         uint32_t via_top[(W / 2) * (H / 2)] = {}, via_dev[(W / 2) * (H / 2)] = {};
         int ow1 = 0, oh1 = 0, ow2 = 0, oh2 = 0;
         rm_lowlight_isp_top(noisy, via_top, W, H, &ow1, &oh1);
-        lowlight_isp(noisy, via_dev, W, H, LOWLIGHT_ISP_DENOISE_OFF,
-                     LOWLIGHT_ISP_BIN_SAMECOLOR, &ow2, &oh2);
+        lowlight_isp(noisy, via_dev, W, H, LOWLIGHT_ISP_BIN_SAMECOLOR, &ow2, &oh2);
         assert(ow1 == W / 2 && oh1 == H / 2 && ow1 == ow2 && oh1 == oh2);
         for (int i = 0; i < ow1 * oh1; ++i) assert(via_top[i] == via_dev[i]);
     }
@@ -189,13 +147,11 @@ int main(int argc, char** argv) {
     {
         uint32_t out[4] = {};
         int ow = -1, oh = -1;
-        lowlight_isp(nullptr, out, W, H, LOWLIGHT_ISP_DENOISE_ON,
-                     LOWLIGHT_ISP_BIN_SAMECOLOR, &ow, &oh);
+        lowlight_isp(nullptr, out, W, H, LOWLIGHT_ISP_BIN_SAMECOLOR, &ow, &oh);
         assert(ow == 0 && oh == 0);
         uint16_t one = 900;
         uint32_t o1 = 0;
-        lowlight_isp(&one, &o1, 1, 1, LOWLIGHT_ISP_DENOISE_ON,
-                     LOWLIGHT_ISP_BIN_SAMECOLOR, &ow, &oh);
+        lowlight_isp(&one, &o1, 1, 1, LOWLIGHT_ISP_BIN_SAMECOLOR, &ow, &oh);
         assert(ow == 1 && oh == 1);
     }
 

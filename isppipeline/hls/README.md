@@ -51,7 +51,8 @@ C-sim이 증명하는 불변식(RESEARCH.md §8.2):
   canonical golden + C-sim (`make default-isp-verify`)
 - `include/lowlight_isp.hpp` · `src/lowlight_isp.cpp` — **lowlight_ISP**(2026-08-06 신규):
   제안 저조도 arm v2. default_ISP와 보정 백본을 공유하고 **{binning, 2.0× 상류 게인,
-  GAT/VST 톤, edge-preserving denoise}** 만 다르다 → 통제된 arm 비교가 가능하다.
+  GAT/VST 톤}** 만 다르다 → 통제된 arm 비교가 가능하다. denoise는 ablation에서
+  한계효용이 0으로 판정되어 코드에서 제거됐다.
   배포 arm(RM_LOW_LIGHT_TONE)은 무변경. 상세: `src/lowlight_isp.md`
 - `tools/gen_lowlight_isp_golden.py` · `tests/test_lowlight_isp_csim.cpp` — 위 arm의
   canonical golden + C-sim (`make lowlight-isp-verify`)
