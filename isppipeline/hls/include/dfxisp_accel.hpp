@@ -52,7 +52,9 @@
 //   * output metadata reports mode, selected RM, and output shape
 //
 // Pixel format:
-//   input : pseudo-RAW Bayer RGGB, 12-bit values stored in uint16_t
+//   input : RAW Bayer RGGB, 12-bit values stored in uint16_t (real-sensor
+//           raw_bin conversions -- PASCALRAW / Sony NOD -- or synthetic
+//           csim vectors; the old "pseudo-RAW" wording predates real-RAW)
 //   output: packed RGB888 in uint32_t, 0x00RRGGBB
 //   rgb_out capacity must be >= in_width * in_height (low-light uses <= that).
 
@@ -68,10 +70,11 @@ enum DfxIspSelectedRm : int {
 };
 
 // Per-frame Schmitt-band flags exported for the static-region hysteresis
-// block (results/pr_controller/checker_hysteresis.v, 2026-08-06). Both
-// clear = dark ratio inside the (exit 60%, enter 62%] band.
+// block (results/pr_controller/checker_hysteresis.v, 2026-08-06). Band =
+// delta 2%p around the 62% center (checker-principles principle 5):
+// enter > 64%, exit < 60%. Both clear = inside the band.
 enum DfxIspHystFlag : int {
-    DFXISP_HYST_ABOVE_ENTER = 1 << 0,  // dark ratio > enter threshold (62%)
+    DFXISP_HYST_ABOVE_ENTER = 1 << 0,  // dark ratio > enter threshold (64%)
     DFXISP_HYST_BELOW_EXIT = 1 << 1,   // dark ratio < exit threshold (60%)
 };
 

@@ -95,7 +95,7 @@ baseline core(demosaic+BLC+WB+CCM)는 두 경로가 **공유**하는 함수
 | `dark_pixel_threshold` (`uint16_t`, `dfxisp_accel`만) | in | `s_axilite bundle=control` | 스칼라 레지스터, checker 임계 |
 | `out_width`, `out_height` (`int*`) | out | `s_axilite bundle=control` | **포인터지만 m_axi 아님** — HLS가 내부 값을 latch해 read-back 레지스터로 노출(구조체 포인터 방식은 adversarial review로 폐기, SPEC.md §5.3) |
 | `selected_mode`, `selected_rm` (`int*`, `dfxisp_accel`만) | out | `s_axilite bundle=control` | 동일 read-back 패턴 |
-| `hyst_flags` (`int*`, `dfxisp_accel`만, **소스 추가 2026-08-06 — 재합성 전이라 RTL 포트는 미실측**) | out | `ap_vld` (s_axilite 아님) | Schmitt 밴드 플래그 wire 쌍(`hyst_flags[31:0]`+`_ap_vld`, 프레임당 1펄스; bit0=enter 62% 초과, bit1=exit 60% 미만) — static-region `checker_hysteresis.v` 직결용(SPEC.md §3.1) |
+| `hyst_flags` (`int*`, `dfxisp_accel`만, **소스 추가 2026-08-06 — 재합성 전이라 RTL 포트는 미실측**) | out | `ap_vld` (s_axilite 아님) | Schmitt 밴드 플래그 wire 쌍(`hyst_flags[31:0]`+`_ap_vld`, 프레임당 1펄스; bit0=enter 64% 초과, bit1=exit 60% 미만(중심 62% ±2%p)) — static-region `checker_hysteresis.v` 직결용(SPEC.md §3.1) |
 | `return` | — | `s_axilite bundle=control` | `ap_start`/`ap_done`/`ap_idle`/`ap_ready` 제어 레지스터 |
 
 **DFX 계약(중요):** `rm_normal_tone_top`과 `rm_low_light_tone_top`은 인자

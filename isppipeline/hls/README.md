@@ -146,7 +146,7 @@ extern "C" void dfxisp_accel(
 
 - `checker_select_mode()` — static-region scene checker. `AUTO`에서 dark-pixel 비율로
   NORMAL/LOW_LIGHT를 결정하고, (2026-08-06부터) 프레임당 Schmitt 밴드 비교 2개
-  (`hyst_flags`: enter 62% 초과 / exit 60% 미만)를 추가로 내보낸다. 장면 단위
+  (`hyst_flags`: enter 64% 초과 / exit 60% 미만 — 중심 62% ±2%p)를 추가로 내보낸다. 장면 단위
   히스테리시스 **상태**는 static-region RTL 모듈
   `results/pr_controller/checker_hysteresis.v`가 소유하며 PR 컨트롤러 trigger를
   직접 구동한다(request/ack, PS 무개입 — `checker_hysteresis.md` 참조). 단일

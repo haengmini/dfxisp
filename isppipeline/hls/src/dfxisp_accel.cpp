@@ -107,11 +107,15 @@ constexpr int GAIN_LOWLIGHT_NUM = 2, GAIN_LOWLIGHT_DEN = 1;  // low-light 2.0x
 // policy state (one mode FF, see tools/scheduler_sim.py); the single-frame
 // rule here stays a pure threshold compare.
 constexpr int DARK_RATIO_PCT = 62;      // AUTO -> LOW_LIGHT when dark pixels > 62%
-// Schmitt exit threshold (2026-08-06): leave LOW_LIGHT only below 60% (delta =
-// 2%p per the C1 spec / the 2026-07-03 adoption of HW-side hysteresis). The
-// mode state itself lives in the static-region RTL block
+// Schmitt band (2026-08-06; checker-principles-2026-07-05 principle 5 /
+// principled-versions adoption): delta = 2%p around the 62% center ->
+// ENTER LOW_LIGHT above 64%, EXIT below 60%. The asymmetry vs the
+// single-frame verdict (62) is intentional: enter at 64 lowers false
+// triggers, exit at 60 keeps recall on already-dark scenes. The mode state
+// itself lives in the static-region RTL block
 // results/pr_controller/checker_hysteresis.v; this core only exports the two
 // band-compare flags per frame (see hyst_flags below).
+constexpr int HYST_ENTER_PCT = 64;
 constexpr int HYST_EXIT_PCT = 60;
 
 static inline int clamp_i(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
@@ -181,14 +185,14 @@ static int checker_select_mode(const uint16_t* raw, int width, int height, int m
 #pragma HLS LOOP_TRIPCOUNT min=16 max=2073600
         if (raw[i] < dark_pixel_threshold) ++dark;
     }
-    const bool above_enter = dark * 100 > DARK_RATIO_PCT * n;
+    const bool above_enter = dark * 100 > HYST_ENTER_PCT * n;
     const bool below_exit = dark * 100 < HYST_EXIT_PCT * n;
     hyst_flags = (above_enter ? DFXISP_HYST_ABOVE_ENTER : 0) |
                  (below_exit ? DFXISP_HYST_BELOW_EXIT : 0);
     // The single-frame verdict (Arm2 runtime branch / golden contract) keeps
-    // the plain enter-threshold compare; the Schmitt state machine consumes
-    // the flags outside this core.
-    return above_enter ? DFXISP_MODE_LOW_LIGHT : DFXISP_MODE_NORMAL;
+    // the deployed C1 threshold (62), independent of the Schmitt band edges;
+    // the Schmitt state machine consumes the flags outside this core.
+    return (dark * 100 > DARK_RATIO_PCT * n) ? DFXISP_MODE_LOW_LIGHT : DFXISP_MODE_NORMAL;
 }
 
 // ---------------------------------------------------------------------------

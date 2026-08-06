@@ -5,8 +5,8 @@ project: DFXISP
 version: 1.3
 created: 2026-07-02
 updated: 2026-08-06 — Schmitt 히스테리시스를 fabric으로 이관: `dfxisp_accel`이
-  프레임당 밴드 플래그(`hyst_flags`, ap_vld wire, 11번째 인자; enter 62%/exit
-  60%)를 내보내고, 신규 static-region 모듈
+  프레임당 밴드 플래그(`hyst_flags`, ap_vld wire, 11번째 인자; 중심 62% ±2%p =
+  enter 64%/exit 60%)를 내보내고, 신규 static-region 모듈
   `results/pr_controller/checker_hysteresis.v`가 모드 상태를 소유하며
   `pr_controller.trigger`를 직접 구동한다(request/ack, 판단 경로에 PS 없음) —
   2026-07-03 채택 후 미구현으로 남아 있던 항목의 구현. 기존 "드라이버측
@@ -170,8 +170,8 @@ AUTO       -> dark_ratio = count(dark) / (W*H)
   기준 J 0.008)에도, C1 임계의 **비용-중립점 성질(C_miss≈C_FA)은 오라클 기준에서도
   유지**되어 **재조정 불필요**로 결론. 상세: `results/checker-oracle-label-gate2-2026-07-20.md`.
 - **히스테리시스(장면 레벨) — 2026-08-06부터 fabric 구현:** 단일 프레임 entry는
-  무상태를 유지하되, 프레임당 Schmitt 밴드 비교 2개(`hyst_flags`: enter 62%
-  초과 / exit 60% 미만, δ=2%p)를 ap_vld wire로 내보내고, static-region 모듈
+  무상태를 유지하되, 프레임당 Schmitt 밴드 비교 2개(`hyst_flags`: enter 64%
+  초과 / exit 60% 미만 — 중심 62% ±2%p, checker-principles 원리5)를 ap_vld wire로 내보내고, static-region 모듈
   `results/pr_controller/checker_hysteresis.v`가 mode FF·min-dwell
   (`DWELL_FRAMES`, 기본 1)·PR 컨트롤러 `pr_trigger` request/ack를 소유한다 —
   판단 경로에 PS 없음(PS는 AXI4-Lite로 `selected_mode` 관측만). 2026-07-03
@@ -331,7 +331,7 @@ AXI: `raw_bayer`/`rgb_out` = `m_axi`(gmem0/gmem1); 나머지 스칼라 인자·�
 `return` = `s_axilite`(control). 예외로 `hyst_flags`는 `ap_vld` fabric wire 쌍
 (`hyst_flags[31:0]` + `hyst_flags_ap_vld`, 프레임 완료당 1펄스)으로
 `checker_hysteresis.v`에 직결된다 — s_axilite 레지스터가 아님(§3.1; bit 0 =
-enter 62% 초과, bit 1 = exit 60% 미만).
+enter 64% 초과, bit 1 = exit 60% 미만 — 중심 62%).
 
 ### 6.2 Golden vector CSV 포맷 (검증 계약)
 헤더: `case,in_w,in_h,mode,threshold,out_w,out_h,sel_mode,sel_rm,kind,idx,val`

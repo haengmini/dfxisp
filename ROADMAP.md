@@ -641,7 +641,7 @@ low-light 모드 −50.8%**. §10.1의 csynth 기반 추정(상한 25.5%)은 과
 **완료(2026-08-06): checker 판단 + PR 트리거 fabric 내재화** — 2026-07-03
 채택 후 미구현으로 남아 있던 "Schmitt+dwell의 HW 이관"을 구현했다.
 `dfxisp_accel`이 프레임당 Schmitt 밴드 플래그(`hyst_flags`, ap_vld wire,
-enter 62%/exit 60%)를 내보내고, 신규 static-region 모듈
+중심 62% ±2%p = enter 64%/exit 60%)를 내보내고, 신규 static-region 모듈
 `checker_hysteresis.v`(mode FF + min-dwell + request/ack)가
 `pr_controller.trigger`를 직접 구동한다 — 판단 경로에 PS 없음. golden
 bit-exact 유지(`make verify` PASS), 단위·통합 TB xsim PASS
