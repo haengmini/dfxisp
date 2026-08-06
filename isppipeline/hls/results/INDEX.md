@@ -78,6 +78,7 @@ superseded 중간 산출물은 `archive/`로 이동한다(맨 아래 "아카이�
 | `HW-INTERFACE-PIN-MODULE-PROTOCOL-2026-08-03.md` | 08-03 | 핀 매핑(csynth 실측 RTL 포트)·모듈/RM 관계·통신 프로토콜(AXI4/AXI4-Lite/DFX 재구성) 브리핑 문서, ASCII 다이어그램 포함 — 다른 세션에 HW 인터페이스 인수인계용 |
 | `lowlight-wb-mode-split-2026-08-03.md` | 08-03 | **정본(negative result)** 저조도 WB 모드별 분리 최종 판정 — 배포 WB가 저조도 B를 절반만 보정하는 것은 실측 확인됐으나(gray-world 대비 0.50×) mAP는 무반응(전 범위 spread 0.0020 = BLC 레버의 1/44), 채널 분리 실험이 효과 반증 → **분리하지 않음**. WB 검증 3회 수렴, 재실험 불필요 |
 | `v2-arm-ablation-2026-08-06.md` | 08-06 | **v2 arm 첫 mAP + ablation** — NOD/PASCAL 각 100장, YOLOv8n/BLC=2. 야간 v2 lowlight는 v1 대비 +0.0119/+0.0220이나 denoise 비용은 정당화 실패(제거 권고), same-color binning은 지표 혼합으로 불확실. 주광 default v2는 v1 대비 주 지표 −0.0042, AWB 기여 없음. 근거 CSV `map_ablation_{nod100,pascal100}_2026-08-06.csv` |
+| `denoise-k-sweep-2026-08-06.md` | 08-06 | **lowlight_ISP denoise 임계 정정 + NOD100 k sweep** — binning 후 채널별 k=2.4 임계 SAMECOLOR R/B=11, G=8 및 SUBSAMPLE R/B=21, G=15로 재유도. 주 지표는 탐색 범위 내 k=4.0이 최고(OFF 대비 +0.0049)이나 mAP@50 −0.0027·경계점·단일 100장 한계로 조건부 권고, 배포는 OFF 유지. 근거 CSV `map_denoise_k_sweep_nod100_2026-08-06.csv` |
 
 ## 4. 다이어그램 / RTL 부속물
 

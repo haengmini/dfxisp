@@ -27,7 +27,7 @@ src/lowlight_isp.cpp is produced by exactly this code path).
 from __future__ import annotations
 
 import argparse
-from math import isqrt
+from math import isqrt, sqrt
 from pathlib import Path
 
 RAW12_MAX = 4095
@@ -79,19 +79,6 @@ B_DN2 = 746                 # b = 746 DN^2  (sigma_read = 27.3 DN), MEASURED
 # saturation rate is at most 2.13%, so no evidence justifies the extra shaping
 # yet. It would be a change to this table only (src/lowlight_isp.md).
 
-# --- (6) denoise -------------------------------------------------------------
-# In the VST domain the noise std-dev is signal-independent by construction:
-#   sigma_out = sigma_z * |d(out8)/dz| = 255*A_Q8 / (32*DENOM) = 8.89 LSB
-# So a single constant threshold is valid everywhere, which is what variance
-# stabilisation buys. 21 ~= 2.4 sigma, deliberately conservative because the
-# literature is consistent that over-denoising removes the high-frequency
-# features detectors rely on.
-# NOTE: this scales with the calibration and has moved twice -- 5 under the
-# original estimates (sigma_VST 2.1), 11 under the first measurement (4.56),
-# and 21 now (8.89). Re-derive it whenever a/b change, or the sigma-clip runs
-# at the wrong number of sigmas and either does nothing or over-smooths.
-DENOISE_SIGMA = 21
-
 # Binning modes (stage 1)
 BIN_SUBSAMPLE = 0   # legacy: one sample per cell for R/B (0 dB), 2 for G (+3 dB)
 BIN_SAMECOLOR = 1   # true same-colour 2x2 binning: +6 dB (R/B), +9 dB (G)
@@ -108,6 +95,26 @@ def n256(z: int) -> int:
 
 GAT_N0 = isqrt(n256(0))
 GAT_DENOM = isqrt(n256(RAW12_MAX)) - GAT_N0
+
+# --- (6) denoise -------------------------------------------------------------
+# This is the single canonical derivation site.  The VST-domain sigma above is
+# for one sensor sample; stage (1) has already averaged a channel-dependent
+# number of samples by the time denoise runs.  C++ constants are emitted from
+# this calculation (like GAT_LUT), and the vectorised proxy imports it.
+DENOISE_K_DEFAULT = 2.4
+DENOISE_SAMPLES = {
+    BIN_SUBSAMPLE: (1, 2, 1),
+    BIN_SAMECOLOR: (4, 8, 4),
+}
+SIGMA_UNBINNED = 255 * A_Q8 / (32 * GAT_DENOM)
+
+
+def denoise_thresholds(bin_mode: int, k: float = DENOISE_K_DEFAULT) -> tuple[int, int, int]:
+    """Rounded (R,G,B) sigma-clip thresholds after channel-wise binning."""
+    if bin_mode not in DENOISE_SAMPLES:
+        raise ValueError(f"unknown bin_mode: {bin_mode}")
+    return tuple(round(k * SIGMA_UNBINNED / sqrt(n))
+                 for n in DENOISE_SAMPLES[bin_mode])
 
 
 def gat_lut() -> list[int]:
@@ -187,9 +194,9 @@ def ccm_channel(row: int, r12: int, g12: int, b12: int) -> int:
     return clamp(acc >> 8, 0, RAW12_MAX)
 
 
-def sigma_clip(planes, bw: int, bh: int, x: int, y: int) -> int:
+def sigma_clip(planes, bw: int, bh: int, x: int, y: int, threshold: int) -> int:
     """Stage (6): 3x3 sigma-clipped mean -- neighbours further than
-    DENOISE_SIGMA from the centre are excluded, so edges survive."""
+    threshold from the centre are excluded, so edges survive."""
     center = planes[y][x]
     total = 0
     count = 0
@@ -198,14 +205,14 @@ def sigma_clip(planes, bw: int, bh: int, x: int, y: int) -> int:
         for dx in (-1, 0, 1):
             xx = clamp(x + dx, 0, bw - 1)
             v = planes[yy][xx]
-            if abs(v - center) <= DENOISE_SIGMA:
+            if abs(v - center) <= threshold:
                 total += v
                 count += 1
     return total // count
 
 
 def lowlight_isp(raw, width: int, height: int, denoise_on: int = 1,
-                 bin_mode: int = BIN_SAMECOLOR):
+                 bin_mode: int = BIN_SAMECOLOR, denoise_k: float = DENOISE_K_DEFAULT):
     bw, bh = bin_dim(width), bin_dim(height)
     # stages (1)-(5): build the VST-domain planes
     pr = [[0] * bw for _ in range(bh)]
@@ -221,13 +228,14 @@ def lowlight_isp(raw, width: int, height: int, denoise_on: int = 1,
             pg[by][bx] = GAT_LUT[gc]
             pb[by][bx] = GAT_LUT[bc]
     # stages (6)-(7)
+    thresholds = denoise_thresholds(bin_mode, denoise_k)
     out = []
     for by in range(bh):
         for bx in range(bw):
             if denoise_on:
-                r = sigma_clip(pr, bw, bh, bx, by)
-                g = sigma_clip(pg, bw, bh, bx, by)
-                b = sigma_clip(pb, bw, bh, bx, by)
+                r = sigma_clip(pr, bw, bh, bx, by, thresholds[0])
+                g = sigma_clip(pg, bw, bh, bx, by, thresholds[1])
+                b = sigma_clip(pb, bw, bh, bx, by, thresholds[2])
             else:
                 r, g, b = pr[by][bx], pg[by][bx], pb[by][bx]
             out.append((r << 16) | (g << 8) | b)
@@ -283,15 +291,30 @@ def emit_c_lut() -> str:
     return "\n".join(lines)
 
 
+def emit_c_denoise_constants() -> str:
+    """Emit the C++ constants derived above; do not hand-edit their values."""
+    sub = denoise_thresholds(BIN_SUBSAMPLE)
+    same = denoise_thresholds(BIN_SAMECOLOR)
+    return "\n".join((
+        f"constexpr int DENOISE_THRESHOLD_SUBSAMPLE[3] = {{{sub[0]}, {sub[1]}, {sub[2]}}};",
+        f"constexpr int DENOISE_THRESHOLD_SAMECOLOR[3] = {{{same[0]}, {same[1]}, {same[2]}}};",
+    ))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", default="tests/lowlight_isp_golden_vectors.csv")
     ap.add_argument("--emit-lut", action="store_true",
                     help="print the GAT table as a C array body and exit")
+    ap.add_argument("--emit-denoise-constants", action="store_true",
+                    help="print derived sigma-clip C++ constants and exit")
     args = ap.parse_args()
 
     if args.emit_lut:
         print(emit_c_lut())
+        return 0
+    if args.emit_denoise_constants:
+        print(emit_c_denoise_constants())
         return 0
 
     rows = ["case,in_w,in_h,denoise,bin_mode,out_w,out_h,kind,idx,val"]

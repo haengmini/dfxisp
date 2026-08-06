@@ -55,6 +55,8 @@ ARMS_V2 = [
     "default_isp", "default_isp_noawb",
     "lowlight_isp", "lowlight_isp_nodenoise",
     "lowlight_isp_subsample", "lowlight_isp_nodenoise_subsample",
+    # Experiment-only denoise k sweep; not canonical/deployment arms.
+    "lowlight_isp_k10", "lowlight_isp_k15", "lowlight_isp_k24", "lowlight_isp_k40",
 ]
 
 

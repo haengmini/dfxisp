@@ -85,7 +85,7 @@ def _ccm_channel(row: int, r12, g12, b12):
     return np.clip(acc >> 8, 0, RAW12_MAX)
 
 
-def _sigma_clip(plane: np.ndarray) -> np.ndarray:
+def _sigma_clip(plane: np.ndarray, threshold: int) -> np.ndarray:
     """Stage (6): 3x3 sigma-clipped mean, clamp-to-edge, constant threshold."""
     bh, bw = plane.shape
     p = np.pad(plane.astype(np.int32), 1, mode="edge")
@@ -95,7 +95,7 @@ def _sigma_clip(plane: np.ndarray) -> np.ndarray:
     for dy in range(3):
         for dx in range(3):
             v = p[dy:dy + bh, dx:dx + bw]
-            keep = np.abs(v - center) <= G.DENOISE_SIGMA
+            keep = np.abs(v - center) <= threshold
             total += np.where(keep, v, 0)
             count += keep
     return total // count
@@ -103,7 +103,8 @@ def _sigma_clip(plane: np.ndarray) -> np.ndarray:
 
 def run_lowlight_isp(bayer16, w: int, h: int,
                      denoise_mode: int = DENOISE_ON,
-                     bin_mode: int = BIN_SAMECOLOR) -> np.ndarray:
+                     bin_mode: int = BIN_SAMECOLOR,
+                     denoise_k: float = G.DENOISE_K_DEFAULT) -> np.ndarray:
     """lowlight_ISP over a full frame -> (H/2) x (W/2) x 3 uint8 (Policy A)."""
     raw12 = (np.asarray(bayer16).reshape(h, w).astype(np.int32)) >> 4
     bw, bh = max(1, w // 2), max(1, h // 2)
@@ -115,7 +116,9 @@ def run_lowlight_isp(bayer16, w: int, h: int,
 
     planes = [GAT_LUT[_ccm_channel(i, r12, g12, b12)] for i in range(3)]
     if denoise_mode == DENOISE_ON:
-        planes = [_sigma_clip(p) for p in planes]
+        thresholds = G.denoise_thresholds(bin_mode, denoise_k)
+        planes = [_sigma_clip(p, threshold)
+                  for p, threshold in zip(planes, thresholds)]
 
     out = np.empty((bh, bw, 3), dtype=np.uint8)
     for i in range(3):
@@ -131,6 +134,16 @@ def run_arm(bayer16, w: int, h: int, arm: str) -> np.ndarray:
         "lowlight_isp_subsample": (DENOISE_ON, BIN_SUBSAMPLE),
         "lowlight_isp_nodenoise_subsample": (DENOISE_OFF, BIN_SUBSAMPLE),
     }
+    # Experiment-only k sweep: these are not canonical/deployment arms.
+    k_sweep = {
+        "lowlight_isp_k10": 1.0,
+        "lowlight_isp_k15": 1.5,
+        "lowlight_isp_k24": 2.4,
+        "lowlight_isp_k40": 4.0,
+    }
+    if arm in k_sweep:
+        return run_lowlight_isp(bayer16, w, h, DENOISE_ON, BIN_SAMECOLOR,
+                                k_sweep[arm])
     if arm not in table:
         raise ValueError(arm)
     dn, bm = table[arm]

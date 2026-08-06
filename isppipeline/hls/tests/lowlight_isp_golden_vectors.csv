@@ -477,8 +477,8 @@ noisy_dark_denoise_on,8,8,1,1,4,4,rgb,10,0x5C5A60
 noisy_dark_denoise_on,8,8,1,1,4,4,rgb,11,0x5D5B5D
 noisy_dark_denoise_on,8,8,1,1,4,4,rgb,12,0x5C5868
 noisy_dark_denoise_on,8,8,1,1,4,4,rgb,13,0x5A5965
-noisy_dark_denoise_on,8,8,1,1,4,4,rgb,14,0x5B5B60
-noisy_dark_denoise_on,8,8,1,1,4,4,rgb,15,0x5D5D5B
+noisy_dark_denoise_on,8,8,1,1,4,4,rgb,14,0x5B5B63
+noisy_dark_denoise_on,8,8,1,1,4,4,rgb,15,0x5D5D59
 noisy_dark_denoise_off,8,8,0,1,4,4,raw,0,346
 noisy_dark_denoise_off,8,8,0,1,4,4,raw,1,395
 noisy_dark_denoise_off,8,8,0,1,4,4,raw,2,304
