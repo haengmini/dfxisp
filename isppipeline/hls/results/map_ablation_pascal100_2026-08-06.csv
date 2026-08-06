@@ -1,0 +1,4 @@
+dataset,blc_offset,wb_lowlight,arm,mAP_50_95,mAP_50,model,n
+PASCAL100-ablation-2026-08-06,2,shared,normal,0.4197,0.9205,yolov8n.pt,100
+PASCAL100-ablation-2026-08-06,2,shared,default_isp,0.4155,0.9232,yolov8n.pt,100
+PASCAL100-ablation-2026-08-06,2,shared,default_isp_noawb,0.4205,0.9230,yolov8n.pt,100
