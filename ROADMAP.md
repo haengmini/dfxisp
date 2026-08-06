@@ -664,6 +664,13 @@ pr_controller 아카이브** — IP에 내장 레이턴시 타이머는 없지�
 카운터, 계약 모델 TB에서 검증 — **부수(선택) 계측기**로 분류, 스왑 체인
 동작엔 불필요)가 측정 역할을 대체, 자체 FSM은
 `results/archive/pr_controller/`로 이동(무수정, 은퇴 기록 동봉).
+**후속 2(같은 날): IP 실제 생성으로 포트 계약 실측 확인** — Vivado 2024.1에서
+dfx_controller v1.0을 HW 트리거 2개로 생성(`scripts/dfx/gen_dfx_controller.tcl`,
+문서화된 dotted-path Tcl API 사용; ALL_PARAMS 직접 설정은 2024.1 batch 버그).
+`vsm_VS_0_hw_triggers[1:0]`(트리거당 1비트 = 어댑터 one-hot 설계와 일치)·
+shutdown req/ack·decouple·rm_reset 확인, **ICAP 클럭 도메인 CDC는 IP 내장
+(icap_clk 별도 입력)으로 미결 항목 해소**. 잔여: RM 레벨 설정(SHUTDOWN_REQUIRED
+hw 등)은 batch API로 안 돼 Stage 6에서 GUI/BD로 — `dfxc_adapter.md` 프로브 절.
 
 **Stage 6 착수 준비 (순서 유지, 실질적으로 유일하게 남은 큰 단계):**
 
