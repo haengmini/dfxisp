@@ -661,7 +661,8 @@ IP 생성 후 실제 포트명 확인 필요. Stage 6 통합 체크리스트(IP 
 `results/pr_controller/dfxc_adapter.md`. **후속(같은 날): 자체
 pr_controller 아카이브** — IP에 내장 레이턴시 타이머는 없지만 핸드셰이크
 신호가 단계 경계를 전부 노출하므로 `pr_latency_probe.v`(drain·전체 스왑
-카운터, 계약 모델 TB에서 검증)가 측정 역할을 대체, 자체 FSM은
+카운터, 계약 모델 TB에서 검증 — **부수(선택) 계측기**로 분류, 스왑 체인
+동작엔 불필요)가 측정 역할을 대체, 자체 FSM은
 `results/archive/pr_controller/`로 이동(무수정, 은퇴 기록 동봉).
 
 **Stage 6 착수 준비 (순서 유지, 실질적으로 유일하게 남은 큰 단계):**
