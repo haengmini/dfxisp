@@ -36,9 +36,23 @@ from PIL import Image
 import baseline_isp_pipeline as PB
 import low_light_isp_pipeline as PL
 import checker as PC
+import default_isp_pipeline as PD
+import lowlight_isp_pipeline as PW
 from model_paths import resolve_yolo_model
 
 ARMS = ["normal", "lowlight", "adaptive"]
+
+# v2 arms (2026-08-06): default_ISP (Vitis-Vision-ordered standard arm) and
+# lowlight_ISP (principle-derived low-light arm), each with its ablation axes
+# as separate arm names. Their black level is a fixed constant coupled to the
+# range-restore multiplier, so they do NOT participate in the BLC sweep --
+# main() refuses to run them across multiple offsets rather than emitting
+# duplicate rows labelled as different BLC values.
+ARMS_V2 = [
+    "default_isp", "default_isp_noawb",
+    "lowlight_isp", "lowlight_isp_nodenoise",
+    "lowlight_isp_subsample", "lowlight_isp_nodenoise_subsample",
+]
 
 
 def jpg_dims(p: Path):
@@ -80,6 +94,10 @@ def render_arm(bayer, w, h, arm, blc_offset, stem=None, adaptive_verdicts=None,
         return PB.run_arm(bayer, w, h, "normal", blc_offset=blc_offset)
     if arm == "lowlight":
         return PL.run_arm(bayer, w, h, "lowlight", blc_offset=blc_offset, wb=wb_lowlight)
+    if arm in ("default_isp", "default_isp_noawb"):
+        return PD.run_arm(bayer, w, h, arm)
+    if arm.startswith("lowlight_isp"):
+        return PW.run_arm(bayer, w, h, arm)
     if arm == "adaptive":
         if adaptive_verdicts is not None:
             if stem not in adaptive_verdicts:
@@ -147,6 +165,13 @@ def main() -> int:
 
     arms = [a.strip() for a in args.arms.split(",") if a.strip()]
     blc_offsets = [int(v.strip()) for v in args.blc_offsets.split(",") if v.strip() != ""]
+    v2 = [a for a in arms if a in ARMS_V2]
+    if v2 and len(blc_offsets) > 1:
+        raise SystemExit(
+            f"arms {v2} have a fixed black level (coupled to their range-restore "
+            f"multiplier) and do not participate in the BLC sweep; got "
+            f"{len(blc_offsets)} offsets. Re-run them with a single "
+            f"--blc-offsets value, or drop them from --arms.")
     wb_lowlight = None
     if args.wb_lowlight:
         parts = [int(v.strip()) for v in args.wb_lowlight.split(",") if v.strip() != ""]

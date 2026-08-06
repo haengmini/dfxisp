@@ -22,7 +22,7 @@ REPORT_MD := reports/latest.md
 HLS_SRC := src/dfxisp_accel.cpp include/dfxisp_accel.hpp
 HLS_TB := tests/test_dfxisp_csim.cpp $(GOLDEN_CSV)
 
-.PHONY: all csim golden verify cross-check report hls-report hls rm-golden rm-csim rm-verify default-isp-golden default-isp-csim default-isp-verify lowlight-isp-golden lowlight-isp-csim lowlight-isp-verify scheduler analysis sw-stage py-verify clean
+.PHONY: all csim golden verify cross-check report hls-report hls rm-golden rm-csim rm-verify default-isp-golden default-isp-csim default-isp-verify lowlight-isp-golden lowlight-isp-csim lowlight-isp-verify verify-new-arms scheduler analysis sw-stage py-verify clean
 
 all: csim
 
@@ -117,6 +117,13 @@ lowlight-isp-csim: $(LOWLIGHT_ISP_CSIM_BIN)
 	./$(LOWLIGHT_ISP_CSIM_BIN) $(LOWLIGHT_ISP_GOLDEN_CSV)
 
 lowlight-isp-verify: lowlight-isp-golden lowlight-isp-csim
+
+# The vectorised eval proxies (default_isp_pipeline / lowlight_isp_pipeline)
+# are a SECOND implementation of the v2 arms, written so dataset-sized frames
+# can be rendered. Fuzz them against the scalar canonical goldens -- the same
+# class of bug as the 2026-07-02 chroma collapse lives here.
+verify-new-arms:
+	cd tools && $(PYTHON) verify_new_arm_pipelines.py
 
 scheduler: | $(BUILD_DIR)
 	$(PYTHON) tools/scheduler_sim.py --out results/scheduler.csv
