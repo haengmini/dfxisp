@@ -57,11 +57,16 @@ CCM_Q8 = (
 # over-amplified. With b = 0 the curve degenerates to the repo's existing
 # gamma-2.0 (= exact Poisson VST), so this is a strict generalisation.
 #
-# a, b are ESTIMATES -- no EMVA1288 calibration has been performed for the
-# SonyNOD / PASCALRAW sensors. Both must be swept/calibrated before any claim
-# rests on them (src/lowlight_isp.md §"parameters").
-A_Q8 = 256                  # a = 1.0 DN  (shot-noise slope), ESTIMATE
-B_DN2 = 16                  # b = 16 DN^2 (sigma_read = 4 DN), ESTIMATE
+# MEASURED 2026-08-06 on the target sensor at the target condition: 16 Sony
+# RX100 VII night frames (RAW-NOD originals, ISO 6400, 1/100 s) via
+# tools/calibrate_noise_model.py. Fitted in the 14-bit sensor domain
+# (a = 17.92 DN, b = 734 DN^2, R^2 = 0.94) and converted to this 12-bit
+# pipeline domain by the shift8 scale s = 4080/15580: a = s*a14, b = s^2*b14.
+# `b` carries real uncertainty (per-site fits span 6..85 here); its effect on
+# the curve is +-7 LSB at the very bottom and negligible above mid-grey
+# (src/lowlight_isp.md §4.1).
+A_Q8 = 1202                 # a = 4.694 DN  (shot-noise slope), MEASURED
+B_DN2 = 50                  # b = 50 DN^2   (sigma_read = 7.1 DN), MEASURED
 
 # Soft-knee highlight roll-off is deliberately NOT implemented: the measured
 # saturation rate is at most 2.13%, so no evidence justifies the extra shaping
@@ -69,12 +74,17 @@ B_DN2 = 16                  # b = 16 DN^2 (sigma_read = 4 DN), ESTIMATE
 
 # --- (6) denoise -------------------------------------------------------------
 # In the VST domain the noise std-dev is signal-independent by construction:
-#   sigma_out = sigma_z * |d(out8)/dz| = 255*A_Q8 / (16 * 2 * DENOM) ~= 2.1 LSB
-# so a single constant threshold is valid everywhere (that is what variance
-# stabilisation buys). 5 ~= 2.4 sigma -- deliberately conservative, because the
-# literature is consistent that over-denoising removes the high-frequency
-# features detectors rely on.
-DENOISE_SIGMA = 5
+#   sigma_out = sigma_z * |d(out8)/dz| = 255*A_Q8 / (32*DENOM) = 4.56 LSB
+# (verified empirically at signal levels 100..2500: 4.6 everywhere -- the
+# stabilisation holds). So a single constant threshold is valid everywhere,
+# which is what variance stabilisation buys. 11 ~= 2.4 sigma, deliberately
+# conservative because the literature is consistent that over-denoising removes
+# the high-frequency features detectors rely on.
+# NOTE: this scales with the calibration. Under the pre-2026-08-06 estimated
+# a/b, sigma_VST was 2.1 and the threshold was 5; the measured parameters more
+# than doubled it, so keeping 5 would have run the sigma-clip at ~1.1 sigma and
+# denoised almost nothing.
+DENOISE_SIGMA = 11
 
 # Binning modes (stage 1)
 BIN_SUBSAMPLE = 0   # legacy: one sample per cell for R/B (0 dB), 2 for G (+3 dB)

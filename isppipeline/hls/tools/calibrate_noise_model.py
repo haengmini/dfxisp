@@ -46,16 +46,25 @@ except ImportError:  # pragma: no cover
     rawpy = None
 
 
-def site_planes(raw: np.ndarray, pattern: np.ndarray, desc: bytes):
-    """Return {label: plane} for the four CFA sites of a 2x2 pattern."""
+def site_planes(raw: np.ndarray, pattern: np.ndarray, desc: bytes, black=None):
+    """Return {label: plane} for the four CFA sites of a 2x2 pattern.
+
+    `black` (per-CFA-index pedestal, as rawpy reports it) is subtracted so the
+    fit is against signal above the pedestal -- otherwise the intercept absorbs
+    the pedestal instead of the read noise.
+    """
     out = {}
     seen: dict[str, int] = {}
     for dy in (0, 1):
         for dx in (0, 1):
-            ch = chr(desc[pattern[dy][dx]])
+            idx = pattern[dy][dx]
+            ch = chr(desc[idx])
             seen[ch] = seen.get(ch, 0) + 1
             label = ch if seen[ch] == 1 else f"{ch}{seen[ch]}"
-            out[label] = raw[dy::2, dx::2]
+            plane = raw[dy::2, dx::2].astype(np.float64)
+            if black is not None:
+                plane = plane - float(black[idx])
+            out[label] = plane
     return out
 
 
@@ -151,7 +160,8 @@ def main() -> int:
         with rawpy.imread(path) as r:
             white = r.white_level
             black = list(r.black_level_per_channel)
-            planes = site_planes(r.raw_image_visible, r.raw_pattern, r.color_desc)
+            planes = site_planes(r.raw_image_visible, r.raw_pattern, r.color_desc,
+                                 r.black_level_per_channel)
             for label, plane in planes.items():
                 m, v = block_stats(plane, args.block)
                 per_site.setdefault(label, []).append((m, v))
