@@ -21,6 +21,7 @@ data/
 isppipeline/hls/data/
 isppipeline/hls/runs/
 sonynod_test/
+dataset/
 *_variant_work*
 *.pt
 *.pth
