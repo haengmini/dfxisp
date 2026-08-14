@@ -104,7 +104,9 @@ flat+noise) × binning 2종 × tone 3종 — 을 재현하려면 이 스크립�
 ### 3.3 3단계 — 단일 축 격리 ablation
 
 `gat-tone-ablation-2026-08-06.md` §2의 조건을 그대로 따른다:
-- **고정**: binning(`BIN_SAMECOLOR`), BLC(`BLC_LEVEL12=32`), WB(공유 상수),
+- **고정**: binning(`BIN_BINNING`, 인용한 `gat-tone-ablation-2026-08-06.md`
+  당시 이름은 `BIN_SAMECOLOR` — 2026-08-14 통일 전, 가리키는 대상은 동일),
+  BLC(`BLC_LEVEL12=32`), WB(공유 상수),
   CCM(공유 행렬) — stage ⑤ 톤 커브만 변수.
 - **변수(4-arm)**: `TONE_GAMMA`, `TONE_GAT`, `TONE_LINEAR`(`tone_lut()`의
   세 모드를 그대로 사용), 그리고 GAT+구 subsample binning(2026-08-06 개정

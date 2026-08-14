@@ -82,7 +82,7 @@ def main() -> int:
                     f"got {got[tuple(bad)]} expected {exp[tuple(bad)]}")
             checked_px += got.size
 
-        for bm in (LG.BIN_SUBSAMPLE, LG.BIN_SAMECOLOR):
+        for bm in (LG.BIN_SUBSAMPLE, LG.BIN_BINNING):
             for tm in (LG.TONE_GAT, LG.TONE_GAMMA, LG.TONE_LINEAR):
                 got = LP.run_lowlight_isp(raw16, w, h, bm, tm)
                 exp = scalar_lowlight(raw12, w, h, bm, tm)

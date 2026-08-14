@@ -90,7 +90,7 @@ pedestal after averaging is the unbiased order...").
   모두 포함해 편향이 사라지는 지점을 관찰한다.
 - **반복 횟수**: 신호준위당 2,000회(평균의 편향은 표준편차보다 추정에
   더 많은 표본이 필요 — `binning.md`의 200회보다 10배 늘림).
-- **binning 창**: `BIN_SAMECOLOR`의 R/B 4샘플, G 8샘플 구성을 그대로 사용
+- **binning 창**: `BIN_BINNING`의 R/B 4샘플, G 8샘플 구성을 그대로 사용
   (`binning.md` §3.1과 동일 시드/생성기 재사용 권장).
 
 ### 3.2 두 순서의 구현
