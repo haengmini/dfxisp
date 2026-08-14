@@ -93,7 +93,7 @@ static inline void cell_sites(const uint16_t* raw, int width, int height,
 
 // Stage (1): binning, in the RAW domain with NO correction applied yet.
 //
-// BINNING is real 2x2 averaging by Bayer color: it averages the R sites of a 2x2
+// SAMECOLOR is real same-colour 2x2 binning: it averages the R sites of a 2x2
 // neighbourhood of Bayer cells (4 samples -> sigma/2 -> +6 dB), the B sites
 // likewise, and all 8 G sites (+9 dB). The windows overlap, so the output stays
 // H/2 x W/2 and adjacent outputs are correlated -- the price of keeping the
@@ -243,7 +243,7 @@ extern "C" void rm_lowlight_isp_top(
     }
     int ow = 0, oh = 0;
     run_lowlight_isp(raw_bayer, rgb_out, width, height,
-                     LOWLIGHT_ISP_BIN_BINNING, ow, oh);
+                     LOWLIGHT_ISP_BIN_SAMECOLOR, ow, oh);
     if (out_width) *out_width = ow;
     if (out_height) *out_height = oh;
 }

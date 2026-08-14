@@ -1,0 +1,4 @@
+dataset,blc_offset,wb_lowlight,arm,mAP_50_95,mAP_50,model,n
+GAMMA-swap-verify,2,shared,lowlight_isp,0.1876,0.3797,yolov8n.pt,100
+GAMMA-swap-verify,2,shared,lowlight_isp_gat,0.1775,0.3710,yolov8n.pt,100
+GAMMA-swap-verify,2,shared,lowlight_isp_subsample,0.1691,0.3437,yolov8n.pt,100

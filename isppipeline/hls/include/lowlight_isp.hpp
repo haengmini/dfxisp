@@ -23,7 +23,7 @@
 //
 // Pipeline (derivations in lowlight_isp.md):
 //   RAW Bayer 12-bit
-//     -> (1) binning                [RAW]    2x2 averaging by Bayer color: +6 dB on
+//     -> (1) binning                [RAW]    same-colour 2x2 average: +6 dB on
 //                                            R/B (4 samples), +9 dB on G (8).
 //                                            BEFORE black level, so the pedestal
 //                                            is subtracted once from the average
@@ -57,11 +57,11 @@
 // Binning mode (stage 1). SUBSAMPLE reproduces the pre-2026-08-06 behaviour
 // (one R and one B sample per cell = 0 dB, the cell's 2 G samples = +3 dB) and
 // exists ONLY as the ablation baseline: with it, binning's SNR contribution can
-// be measured directly instead of assumed. Measured gain of BINNING over
+// be measured directly instead of assumed. Measured gain of SAMECOLOR over
 // SUBSAMPLE on synthetic Poisson-Gaussian frames: +5.6 to +7.1 dB.
 enum LowlightIspBinning : int {
     LOWLIGHT_ISP_BIN_SUBSAMPLE = 0,
-    LOWLIGHT_ISP_BIN_BINNING = 1,
+    LOWLIGHT_ISP_BIN_SAMECOLOR = 1,
 };
 
 // Development/analysis top: exposes the binning-mode switch.
@@ -80,7 +80,7 @@ extern "C" void lowlight_isp(
 // DFX Reconfigurable Module candidate. Port list is IDENTICAL (type, order,
 // count) to rm_normal_tone_top / rm_low_light_tone_top / rm_default_isp_top,
 // so all of them are valid implementations of the same RP slot (SPEC.md §7).
-// Binning by Bayer color enabled.
+// Same-colour binning enabled.
 extern "C" void rm_lowlight_isp_top(
     const uint16_t* raw_bayer,
     uint32_t* rgb_out,

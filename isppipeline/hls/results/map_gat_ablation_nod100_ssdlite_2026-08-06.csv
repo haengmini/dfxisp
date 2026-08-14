@@ -1,0 +1,5 @@
+dataset,arm,mAP_50_95,mAP_50,model
+GAT-ablation-NOD100-SSD,lowlight_isp,0.1145,0.2314,ssdlite320_mobilenet_v3_large
+GAT-ablation-NOD100-SSD,lowlight_isp_gamma,0.1250,0.2427,ssdlite320_mobilenet_v3_large
+GAT-ablation-NOD100-SSD,lowlight_isp_linear,0.0844,0.1699,ssdlite320_mobilenet_v3_large
+GAT-ablation-NOD100-SSD,lowlight_isp_subsample,0.1093,0.2174,ssdlite320_mobilenet_v3_large

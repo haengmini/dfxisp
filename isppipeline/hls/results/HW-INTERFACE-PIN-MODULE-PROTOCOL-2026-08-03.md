@@ -95,6 +95,7 @@ baseline core(demosaic+BLC+WB+CCM)는 두 경로가 **공유**하는 함수
 | `dark_pixel_threshold` (`uint16_t`, `dfxisp_accel`만) | in | `s_axilite bundle=control` | 스칼라 레지스터, checker 임계 |
 | `out_width`, `out_height` (`int*`) | out | `s_axilite bundle=control` | **포인터지만 m_axi 아님** — HLS가 내부 값을 latch해 read-back 레지스터로 노출(구조체 포인터 방식은 adversarial review로 폐기, SPEC.md §5.3) |
 | `selected_mode`, `selected_rm` (`int*`, `dfxisp_accel`만) | out | `s_axilite bundle=control` | 동일 read-back 패턴 |
+| `hyst_flags` (`int*`, `dfxisp_accel`만, **소스 추가 2026-08-06 — 재합성 전이라 RTL 포트는 미실측**) | out | `ap_vld` (s_axilite 아님) | Schmitt 밴드 플래그 wire 쌍(`hyst_flags[31:0]`+`_ap_vld`, 프레임당 1펄스; bit0=enter 64% 초과, bit1=exit 60% 미만(중심 62% ±2%p)) — static-region `checker_hysteresis.v` 직결용(SPEC.md §3.1) |
 | `return` | — | `s_axilite bundle=control` | `ap_start`/`ap_done`/`ap_idle`/`ap_ready` 제어 레지스터 |
 
 **DFX 계약(중요):** `rm_normal_tone_top`과 `rm_low_light_tone_top`은 인자
@@ -347,6 +348,21 @@ RVALID   _________/‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\_____   N개 �
 RREADY   _______/‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\___
 RLAST    ________________________/‾\____   마지막 전송에서만 1
 ```
+
+> **갱신(2026-08-06):** 아래 "설계에 없음"은 top 합성 기준으로 여전히
+> 사실이지만(ICAPE3/STARTUPE3 0개 불변), **checker→PR 컨트롤러 트리거
+> 체인의 RTL은 이제 존재한다** —
+> `results/pr_controller/checker_hysteresis.v`(Schmitt δ=2%p + min-dwell
+> mode arbiter)가 `dfxisp_accel`의 신규 `hyst_flags` ap_vld wire를 소비해
+> `pr_controller.trigger`를 request/ack로 구동하며, end-to-end 시뮬레이션
+> `checker_to_pr_tb.v`가 xsim PASS. C1 스펙의 Schmitt 히스테리시스를
+> "드라이버측 정책"으로 남겨뒀던 서술은 이로써 대체됨(SPEC.md v1.3 §3.1).
+> 같은 날 **production 재구성 경로로 AMD DFX Controller IP(PG374)를 채택**
+> — `dfxc_trigger_adapter.v`(RM별 one-hot HW trigger + shutdown-ack shim)
+> 로 연결. 레이턴시 측정은 부수(선택) 계측기 `pr_latency_probe.v`(IP 핸드셰이크
+> 경계 카운터, 측정 시에만 부착)가 담당하고 자체 pr_controller는
+> 아카이브(`dfxc_adapter.md`).
+> 잔여 통합 과제는 `checker_hysteresis.md`·`dfxc_adapter.md` 참조.
 
 ### 4.4 DFX 재구성 프로토콜 — 현재 상태: **설계에 없음**
 
