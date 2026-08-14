@@ -57,11 +57,11 @@
 // Binning mode (stage 1). SUBSAMPLE reproduces the pre-2026-08-06 behaviour
 // (one R and one B sample per cell = 0 dB, the cell's 2 G samples = +3 dB) and
 // exists ONLY as the ablation baseline: with it, binning's SNR contribution can
-// be measured directly instead of assumed. Measured gain of SAMECOLOR over
+// be measured directly instead of assumed. Measured gain of BINNING over
 // SUBSAMPLE on synthetic Poisson-Gaussian frames: +5.6 to +7.1 dB.
 enum LowlightIspBinning : int {
     LOWLIGHT_ISP_BIN_SUBSAMPLE = 0,
-    LOWLIGHT_ISP_BIN_SAMECOLOR = 1,
+    LOWLIGHT_ISP_BIN_BINNING = 1,
 };
 
 // Development/analysis top: exposes the binning-mode switch.
