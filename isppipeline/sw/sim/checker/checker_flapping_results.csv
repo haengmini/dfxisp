@@ -1,0 +1,4 @@
+policy,enter_pct,exit_pct,single_mean,hyst_mean,single_max,hyst_max
+C0_single,80.0,80.0,49.58,49.58,62,62
+C1_single,62,62,49.58,49.58,62,62
+C1_schmitt,64,60,49.58,0.02,62,1

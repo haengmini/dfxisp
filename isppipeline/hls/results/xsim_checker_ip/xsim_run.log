@@ -1,0 +1,16 @@
+
+****** xsim v2024.1 (64-bit)
+  **** SW Build 5076996 on Wed May 22 18:36:09 MDT 2024
+  **** IP Build 5075265 on Wed May 22 21:45:21 MDT 2024
+  **** SharedData Build 5076995 on Wed May 22 18:29:18 MDT 2024
+  **** Start of session at: Fri Aug  7 00:42:02 2026
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+
+source xsim.dir/checker_ip_real/xsim_script.tcl
+# xsim {checker_ip_real} -autoloadwcfg -runall
+ERROR: unexpected exception when evaluating tcl command
+    while executing
+"xsim {checker_ip_real} -autoloadwcfg -runall"
+    (file "xsim.dir/checker_ip_real/xsim_script.tcl" line 1)
+INFO: [Common 17-206] Exiting xsim at Fri Aug  7 00:42:03 2026...

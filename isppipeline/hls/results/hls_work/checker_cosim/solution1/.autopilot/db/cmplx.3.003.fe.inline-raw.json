@@ -1,0 +1,19 @@
+{
+  "0": {
+    "basicblocks": 12,
+    "calls": "",
+    "file": "checker.cpp",
+    "fileloc": 8,
+    "instructions": 77,
+    "loads": {
+      "L": 2,
+      "T": 1
+    },
+    "name": "checker_scan",
+    "stores": {
+      "L": 8,
+      "T": 6
+    },
+    "total_instructions": 77
+  }
+}

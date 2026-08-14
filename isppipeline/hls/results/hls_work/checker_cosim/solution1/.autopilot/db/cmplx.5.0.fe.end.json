@@ -1,0 +1,32 @@
+{
+    "0": {
+        "name": "checker_scan",
+        "file": "checker.cpp",
+        "fileloc": "8",
+        "instructions": "83",
+        "total_instructions": "114",
+        "calls": "1",
+        "basicblocks": "5",
+        "loads": {
+            "L": "1"
+        }
+    },
+    "1": {
+        "name": "checker_scan_Pipeline_VITIS_LOOP_38_1",
+        "file": "local\/checker.cpp",
+        "fileloc": "36",
+        "instructions": "31",
+        "total_instructions": "31",
+        "calls": "",
+        "basicblocks": "4",
+        "loads": {
+            "L": "3"
+        },
+        "stores": {
+            "L": "4"
+        },
+        "loops": {
+            "L": "1"
+        }
+    }
+}

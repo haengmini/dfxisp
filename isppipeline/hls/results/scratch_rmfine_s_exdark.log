@@ -1,0 +1,7 @@
+[ExDark] 260 frames; versions=['B_g20', 'F_g20', 'F_vst_knee']
+/home/mini/.local/lib/python3.10/site-packages/torch/cuda/__init__.py:187: UserWarning: CUDA initialization: The NVIDIA driver on your system is too old (found version 12030). Please update your GPU driver by downloading and installing a new version from the URL: http://www.nvidia.com/Download/index.aspx Alternatively, go to: https://pytorch.org to install a PyTorch version that has been compiled with your version of the CUDA driver. (Triggered internally at /pytorch/c10/cuda/CUDAFunctions.cpp:119.)
+  return torch._C._cuda_getDeviceCount() > 0
+[ExDark] binned + sqrt (DEPLOYED tone, honest control) mAP=0.1163 95%CI[0.1003,0.1434] mAP50=0.2465 AP_S=0.0048 AP_M=0.0517 AP_L=0.1542
+[ExDark] full-res + sqrt(gamma2.0)                     mAP=0.1100 95%CI[0.0949,0.1368] mAP50=0.2427 AP_S=0.0064 AP_M=0.0622 AP_L=0.1446
+[ExDark] full-res + VST + soft-knee (== R1)            mAP=0.1119 95%CI[0.0981,0.1420] mAP50=0.2481 AP_S=0.0063 AP_M=0.0589 AP_L=0.1472
+wrote results/map_rmfine575_exdark_yolov8s_2026-07-05.csv

@@ -1,0 +1,7 @@
+dataset,blc_offset,wb_lowlight,arm,mAP_50_95,mAP_50,model,n
+"AWB-PASCALtest-256,256,256",2,256:256:256,lowlight,0.0991,0.2895,yolov8n.pt,100
+"AWB-PASCALtest-286,256,307",2,286:256:307,lowlight,0.1001,0.2903,yolov8n.pt,100
+"AWB-PASCALtest-360,256,307",2,360:256:307,lowlight,0.1007,0.2984,yolov8n.pt,100
+"AWB-PASCALtest-286,256,460",2,286:256:460,lowlight,0.0992,0.2946,yolov8n.pt,100
+"AWB-PASCALtest-360,256,460",2,360:256:460,lowlight,0.0995,0.2991,yolov8n.pt,100
+"AWB-PASCALtest-435,256,616",2,435:256:616,lowlight,0.0987,0.3016,yolov8n.pt,100

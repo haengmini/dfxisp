@@ -1,0 +1,33 @@
+{
+  "0": {
+    "basicblocks": 4,
+    "calls": "1",
+    "file": "checker.cpp",
+    "fileloc": 8,
+    "instructions": 39,
+    "loads": {
+      "L": 2
+    },
+    "name": "checker_scan",
+    "stores": {
+      "L": 2,
+      "T": 6
+    },
+    "total_instructions": 78
+  },
+  "1": {
+    "basicblocks": 8,
+    "calls": "",
+    "file": "checker.hpp",
+    "fileloc": 20,
+    "instructions": 39,
+    "loads": {
+      "L": 1
+    },
+    "name": "checker_select_mode",
+    "stores": {
+      "L": 6
+    },
+    "total_instructions": 39
+  }
+}

@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
         for (int i = 0; i < W * H; ++i) pedestal[i] = 32;
         uint32_t out[(W / 2) * (H / 2)] = {};
         int ow = 0, oh = 0;
-        lowlight_isp(pedestal, out, W, H, LOWLIGHT_ISP_BIN_SAMECOLOR, &ow, &oh);
+        lowlight_isp(pedestal, out, W, H, LOWLIGHT_ISP_BIN_BINNING, &ow, &oh);
         for (int i = 0; i < ow * oh; ++i) assert(out[i] == 0u);
     }
 
@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
             for (int i = 0; i < W * H; ++i) f[i] = level;
             uint32_t out[(W / 2) * (H / 2)] = {};
             int ow = 0, oh = 0;
-            lowlight_isp(f, out, W, H, LOWLIGHT_ISP_BIN_SAMECOLOR, &ow, &oh);
+            lowlight_isp(f, out, W, H, LOWLIGHT_ISP_BIN_BINNING, &ow, &oh);
             long s = 0;
             for (int i = 0; i < ow * oh; ++i) s += green(out[i]);
             return s / (ow * oh);
@@ -118,7 +118,7 @@ int main(int argc, char** argv) {
             }
             return hi - lo;
         };
-        assert(spread_of(LOWLIGHT_ISP_BIN_SAMECOLOR) < spread_of(LOWLIGHT_ISP_BIN_SUBSAMPLE));
+        assert(spread_of(LOWLIGHT_ISP_BIN_BINNING) < spread_of(LOWLIGHT_ISP_BIN_SUBSAMPLE));
     }
 
     // Stages (5)+(7): a saturated frame never overflows RGB8.
@@ -127,7 +127,7 @@ int main(int argc, char** argv) {
         for (int i = 0; i < W * H; ++i) sat[i] = 4095;
         uint32_t out[(W / 2) * (H / 2)] = {};
         int ow = 0, oh = 0;
-        lowlight_isp(sat, out, W, H, LOWLIGHT_ISP_BIN_SAMECOLOR, &ow, &oh);
+        lowlight_isp(sat, out, W, H, LOWLIGHT_ISP_BIN_BINNING, &ow, &oh);
         for (int i = 0; i < ow * oh; ++i) {
             assert(red(out[i]) <= 255 && green(out[i]) <= 255 && blue(out[i]) <= 255);
         }
@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
         uint32_t via_top[(W / 2) * (H / 2)] = {}, via_dev[(W / 2) * (H / 2)] = {};
         int ow1 = 0, oh1 = 0, ow2 = 0, oh2 = 0;
         rm_lowlight_isp_top(noisy, via_top, W, H, &ow1, &oh1);
-        lowlight_isp(noisy, via_dev, W, H, LOWLIGHT_ISP_BIN_SAMECOLOR, &ow2, &oh2);
+        lowlight_isp(noisy, via_dev, W, H, LOWLIGHT_ISP_BIN_BINNING, &ow2, &oh2);
         assert(ow1 == W / 2 && oh1 == H / 2 && ow1 == ow2 && oh1 == oh2);
         for (int i = 0; i < ow1 * oh1; ++i) assert(via_top[i] == via_dev[i]);
     }
@@ -149,11 +149,11 @@ int main(int argc, char** argv) {
     {
         uint32_t out[4] = {};
         int ow = -1, oh = -1;
-        lowlight_isp(nullptr, out, W, H, LOWLIGHT_ISP_BIN_SAMECOLOR, &ow, &oh);
+        lowlight_isp(nullptr, out, W, H, LOWLIGHT_ISP_BIN_BINNING, &ow, &oh);
         assert(ow == 0 && oh == 0);
         uint16_t one = 900;
         uint32_t o1 = 0;
-        lowlight_isp(&one, &o1, 1, 1, LOWLIGHT_ISP_BIN_SAMECOLOR, &ow, &oh);
+        lowlight_isp(&one, &o1, 1, 1, LOWLIGHT_ISP_BIN_BINNING, &ow, &oh);
         assert(ow == 1 && oh == 1);
     }
 

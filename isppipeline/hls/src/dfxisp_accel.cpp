@@ -1,4 +1,5 @@
 #include "dfxisp_accel.hpp"
+#include "checker.hpp"
 
 #include <cstdint>
 
@@ -92,32 +93,6 @@ constexpr int AWB_B = 307;
 constexpr int GAIN_NORMAL_NUM = 5, GAIN_NORMAL_DEN = 4;      // normal 1.25x
 constexpr int GAIN_LOWLIGHT_NUM = 2, GAIN_LOWLIGHT_DEN = 1;  // low-light 2.0x
 // gamma 2.0 realized exactly as integer sqrt: 255*(v/255)^(1/2) = floor(sqrt(255*v))
-// --- checker ---
-// C1 operating point deployed 2026-07-20 (gate 4, checker-status-2026-07-10.md
-// §1/§4): dark16 ratio > 0.62 replaces the 2026-07-02 C0 rule (dark50 > 0.80).
-// C1 dominates C0 on every metric (recall 0.936 vs 0.918, false-trigger 0.089
-// vs 0.125, Youden J 0.847 vs 0.793) with ZERO RTL change: the dark-pixel
-// threshold is the runtime `dark_pixel_threshold` AXI-lite register -- the
-// driver must now write 256 (= 16<<4 in this raw12 domain; dataset pseudo-RAW16
-// equivalent is 16<<8 = 4096) instead of the old dark50 value -- and only this
-// ratio constant changes at compile time. Gate-3 real-sensor validation:
-// SonyNOD recall + PASCALRAW false-trigger (C0 92.9% -> C1 41.8%), see
-// checker-adaptive-tau-realdata-2026-07-13.md / pascalraw-adapter-2026-07-13.md
-// §7. The Schmitt hysteresis band (delta = 2%p) of the C1 spec is driver-side
-// policy state (one mode FF, see tools/scheduler_sim.py); the single-frame
-// rule here stays a pure threshold compare.
-constexpr int DARK_RATIO_PCT = 62;      // AUTO -> LOW_LIGHT when dark pixels > 62%
-// Schmitt band (2026-08-06; checker-principles-2026-07-05 principle 5 /
-// principled-versions adoption): delta = 2%p around the 62% center ->
-// ENTER LOW_LIGHT above 64%, EXIT below 60%. The asymmetry vs the
-// single-frame verdict (62) is intentional: enter at 64 lowers false
-// triggers, exit at 60 keeps recall on already-dark scenes. The mode state
-// itself lives in the static-region RTL block
-// results/pr_controller/checker_hysteresis.v; this core only exports the two
-// band-compare flags per frame (see hyst_flags below).
-constexpr int HYST_ENTER_PCT = 64;
-constexpr int HYST_EXIT_PCT = 60;
-
 static inline int clamp_i(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
 static inline uint8_t clamp_u8(int v) { return static_cast<uint8_t>(clamp_i(v, 0, 255)); }
 
@@ -163,38 +138,6 @@ static inline uint16_t sample_clamped(const uint16_t* raw, int width, int height
 // budget: dev 640x480 .. eval 1280x720; matches existing LOOP_TRIPCOUNT max=960
 // on the binned-grid loops, i.e. supports raw width up to 1920).
 constexpr int MAX_BINNED_W = 960;
-
-// ---------------------------------------------------------------------------
-// Scene checker / mode decision (static region). Dark-pixel ratio on RAW.
-// ---------------------------------------------------------------------------
-static int checker_select_mode(const uint16_t* raw, int width, int height, int mode,
-                               uint16_t dark_pixel_threshold, int& hyst_flags) {
-    // Forced modes report flags matching the forced state so the hysteresis
-    // block (if wired) tracks the override instead of fighting it.
-    if (mode == DFXISP_MODE_NORMAL) {
-        hyst_flags = DFXISP_HYST_BELOW_EXIT;
-        return DFXISP_MODE_NORMAL;
-    }
-    if (mode == DFXISP_MODE_LOW_LIGHT) {
-        hyst_flags = DFXISP_HYST_ABOVE_ENTER;
-        return DFXISP_MODE_LOW_LIGHT;
-    }
-    const int n = width * height;
-    int dark = 0;
-    for (int i = 0; i < n; ++i) {
-#pragma HLS LOOP_TRIPCOUNT min=16 max=2073600
-        if (raw[i] < dark_pixel_threshold) ++dark;
-    }
-    const int dark_pct100 = dark * 100;
-    const bool above_enter = dark_pct100 > HYST_ENTER_PCT * n;
-    const bool below_exit = dark_pct100 < HYST_EXIT_PCT * n;
-    hyst_flags = (above_enter ? DFXISP_HYST_ABOVE_ENTER : 0) |
-                 (below_exit ? DFXISP_HYST_BELOW_EXIT : 0);
-    // The single-frame verdict (Arm2 runtime branch / golden contract) keeps
-    // the deployed C1 threshold (62), independent of the Schmitt band edges;
-    // the Schmitt state machine consumes the flags outside this core.
-    return (dark_pct100 > DARK_RATIO_PCT * n) ? DFXISP_MODE_LOW_LIGHT : DFXISP_MODE_NORMAL;
-}
 
 // ---------------------------------------------------------------------------
 // RGGB demosaic keeping 12-bit precision (no >>4 here). Pattern:

@@ -1,0 +1,1 @@
+set ::AESL_AUTOSIM::gTopFileName /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/./sim/autowrap/testbench/checker.cpp_pre.cpp.tb.cpp

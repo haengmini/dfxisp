@@ -1,0 +1,6 @@
+   Build using "/tools/Xilinx/Vitis_HLS/2024.1/vcxx/libexec//clang++"
+   Compiling apatb_checker_scan.cpp
+   Compiling checker.cpp_pre.cpp.tb.cpp
+   Compiling checker_hls_tb.cpp_pre.cpp.tb.cpp
+   Compiling apatb_checker_scan_ir.ll
+   Generating cosim.tv.exe

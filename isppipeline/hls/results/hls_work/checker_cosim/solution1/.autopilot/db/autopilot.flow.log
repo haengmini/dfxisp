@@ -1,0 +1,557 @@
+INFO-FLOW: Workspace /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1 opened at Fri Aug 07 00:36:09 KST 2026
+Execute       send_msg_by_id INFO @200-1505@%s%s  vivado 
+INFO: [HLS 200-1505] Using flow_target 'vivado'
+Execute     set_part xczu7ev-ffvc1156-2-e 
+INFO: [HLS 200-1510] Running: set_part xczu7ev-ffvc1156-2-e 
+Execute       create_platform xczu7ev-ffvc1156-2-e -board  
+DBG:HLSDevice: Trying to load device library: /tools/Xilinx/Vitis_HLS/2024.1/lib/lnx64.o/libxv_hlsvwrap.so
+DBG:HLSDevice: first parts/arch.xml in RDI_DATADIR: /tools/Xilinx/Vivado/2024.1/data/parts/arch.xml
+DBG:HLSDevice: init success
+INFO: [HLS 200-1611] Setting target device to 'xczu7ev-ffvc1156-2-e'
+Command       create_platform done; 0.71 sec.
+Execute       source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/common/xilinx.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/interface/plb46.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/interface/axi4.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/interface/nativeAXI4.gen 
+Execute           source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/interface/saxilite.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/scripts/xilinxcoregen.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/interface/XilEDKCoreGen.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/ip/xfir.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/ip/util.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/ip/xfft.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/ip/dds_compiler.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/DSP48/dsp48.gen 
+Execute       ap_part_info -name xczu7ev-ffvc1156-2-e -data info 
+Execute       config_compile -quiet -complex-mul-dsp=0 
+Command     set_part done; 0.78 sec.
+Execute     create_clock -period 5.0 
+INFO: [HLS 200-1510] Running: create_clock -period 5.0 
+Execute       ap_set_clock -name default -period 5 -unit ns -default=false 
+INFO: [SYN 201-201] Setting up clock 'default' with a period of 5ns.
+Execute     config_interface -m_axi_alignment_byte_size 16 -m_axi_max_widen_bitwidth 128 
+INFO: [HLS 200-1510] Running: config_interface -m_axi_alignment_byte_size 16 -m_axi_max_widen_bitwidth 128 
+Execute     csynth_design 
+INFO: [HLS 200-1510] Running: csynth_design 
+INFO-FLOW: Running SLX 'csynth' proc: ::SLX::run_csynth
+Execute       elaborate -effort=medium -skip_syncheck=0 -keep_printf=0 -skip_cdt=0 -skip_transform=0 -ng=0 -g=0 -opt_fp=0 -from_csynth_design=1 
+INFO: [HLS 200-111] Finished File checks and directory preparation: CPU user time: 0.05 seconds. CPU system time: 0 seconds. Elapsed time: 0.06 seconds; current allocated memory: 279.191 MB.
+Execute         set_directive_top checker_scan -name=checker_scan 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/tps/tcl/tcllib1.11.1/yaml/huddle.tcl 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/tps/tcl/tcllib1.11.1/yaml/json2huddle.tcl 
+Execute           source /tools/Xilinx/Vitis_HLS/2024.1/tps/tcl/tcllib1.11.1/try/try.tcl 
+INFO: [HLS 200-10] Analyzing design file 'local/checker.cpp' ... 
+INFO-FLOW: Compiling one TU...
+INFO-FLOW: Handling local/checker.cpp as C++
+Execute         ap_part_info -name xczu7ev-ffvc1156-2-e -data info 
+INFO-FLOW: Running: GCC PP 39
+INFO-FLOW: Source preprocessing
+INFO-FLOW: run_clang exec: /tools/Xilinx/Vitis_HLS/2024.1/lnx64/tools/clang-3.9-csynth/bin/clang local/checker.cpp -foptimization-record-file=/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.cpp.clang.diag.yml -mllvm -pass-remarks-missed=reflow|pasta|unroll -mllvm -pass-remarks=reflow|pasta|unroll|inline -fno-limit-debug-info -gcc-toolchain /tools/Xilinx/Vitis_HLS/2024.1/tps/lnx64/gcc-8.3.0 -fhls -fno-exceptions -insert-hls-directive=/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/all.directive.json -E -I/home/mini/workspace/dfxisp_v2/include -fno-math-errno -c -emit-llvm -mllvm -disable-llvm-optzns -Werror=implicit-function-declaration -Werror=implicit-hls-streams -Werror=return-type -Wpragmas -Wunused-parameter -Wdump-hls-pragmas -Wno-error=dump-hls-pragmas -hls-clock-period=5 -fno-threadsafe-statics -fno-use-cxa-atexit -std=gnu++14 -target fpga64-xilinx-linux-gnu -fno-threadsafe-statics -fno-use-cxa-atexit -D__VITIS_HLS__ -DAESL_SYN -D__SYNTHESIS__ -D__HLS_SYN__ -I /tools/Xilinx/Vitis_HLS/2024.1/common/technology/autopilot -I /tools/Xilinx/Vitis_HLS/2024.1/common/technology/autopilot/ap_sysc -include etc/autopilot_ssdm_op.h -D__DSP48E2__ -I /usr/include/x86_64-linux-gnu -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp -hls-platform-db-name=/tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/common/platform.db -hls-platform-name=zynquplus_medium -device-resource-info=BRAM_624.000000_DSP_1728.000000_FF_460800.000000_LUT_230400.000000_SLICE_28800.000000_URAM_96.000000 -device-name-info=xczu7ev-ffvc1156-2-e > /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.cpp.clang.out.log 2> /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.cpp.clang.err.log
+INFO-FLOW: Done: GCC PP 39 time: 0.2 seconds per iteration
+INFO-FLOW: Source syntax check for synthesis
+INFO-FLOW: run_clang exec: /tools/Xilinx/Vitis_HLS/2024.1/lnx64/tools/clang-3.9-csynth/bin/clang -foptimization-record-file=/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/clang.diag.yml -mllvm -pass-remarks-missed=reflow|pasta|unroll -mllvm -pass-remarks=reflow|pasta|unroll|inline -fsyntax-only -fhls -target fpga64-xilinx-linux-gnu /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp -hls-platform-db-name=/tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/common/platform.db -hls-platform-name=zynquplus_medium -device-resource-info=BRAM_624.000000_DSP_1728.000000_FF_460800.000000_LUT_230400.000000_SLICE_28800.000000_URAM_96.000000 -device-name-info=xczu7ev-ffvc1156-2-e > /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/clang.out.log 2> /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/clang.err.log
+Execute         clang_tidy xilinx-systemc-detector -desc systemc-detector /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp std=gnu++14 -target fpga  -directive=/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/.systemc_flag 
+INFO-FLOW: exec /tools/Xilinx/Vitis_HLS/2024.1/lnx64/tools/clang-3.9-csynth/bin/clang-tidy -header-filter=.* --checks=-*,xilinx-systemc-detector -import-directive=/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/.systemc_flag -fix-errors /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp -- -std=gnu++14 -target fpga -fhls -ferror-limit=0
+INFO-FLOW: Running: clang-tidy CDT preprocess 39
+Execute         clang_tidy xilinx-directive2pragma -desc directive2pragma /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp std=gnu++14 -target fpga  -directive=/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/all.directive.json 
+INFO-FLOW: exec /tools/Xilinx/Vitis_HLS/2024.1/lnx64/tools/clang-3.9-csynth/bin/clang-tidy -header-filter=.* --checks=-*,xilinx-directive2pragma -import-directive=/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/all.directive.json -fix-errors /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp -- -std=gnu++14 -target fpga -fhls -ferror-limit=0
+INFO-FLOW: Done: clang-tidy CDT preprocess 39 time: 0.1 seconds per iteration
+INFO-FLOW: Calling xilinx-label-all-loops ... 
+INFO-FLOW: Calling xilinx-aggregate-on-hls-vector ... 
+Execute         clang_tidy -errorcheck -desc loop-label xilinx-label-all-loops,xilinx-aggregate-on-hls-vector,,xilinx-warn-mayneed-no-ctor-attribute /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp std=gnu++14 -target fpga  
+INFO-FLOW: run_clang exec: /tools/Xilinx/Vitis_HLS/2024.1/lnx64/tools/clang-3.9-csynth/bin/clang-tidy -export-fixes=/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp.clang-tidy.loop-label.diag.yml -header-filter=.* --checks=-*,xilinx-label-all-loops,xilinx-aggregate-on-hls-vector,,xilinx-warn-mayneed-no-ctor-attribute -fix-errors /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp -- -std=gnu++14 -target fpga -fhls -ferror-limit=0 > /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp.clang-tidy.loop-label.out.log 2> /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp.clang-tidy.loop-label.err.log
+Execute           source /tools/Xilinx/Vitis_HLS/2024.1/tps/tcl/tcllib1.11.1/yaml/yaml.tcl 
+INFO-FLOW: run_clang exec: /tools/Xilinx/Vitis_HLS/2024.1/lnx64/tools/clang-3.9-csynth/bin/xilinx-dataflow-lawyer -export-fixes=/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp.xilinx-dataflow-lawyer.diag.yml /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp -- -std=gnu++14 -target fpga -fhls -ferror-limit=0 -fstrict-dataflow > /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp.xilinx-dataflow-lawyer.out.log 2> /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp.xilinx-dataflow-lawyer.err.log
+Execute         ap_part_info -name xczu7ev-ffvc1156-2-e -data info 
+INFO-FLOW: compiling source code to llvm bc
+INFO-FLOW: run_clang exec: /tools/Xilinx/Vitis_HLS/2024.1/lnx64/tools/clang-3.9-csynth/bin/clang -foptimization-record-file=/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp.clang.diag.yml -mllvm -pass-remarks-missed=reflow|pasta|unroll -mllvm -pass-remarks=reflow|pasta|unroll|inline -fno-limit-debug-info -fhls -flto -fno-exceptions -Wno-error=c++11-narrowing -hls-emit-hint-scope /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp -I/home/mini/workspace/dfxisp_v2/include -fno-math-errno -c -emit-llvm -mllvm -disable-llvm-optzns -Werror=implicit-function-declaration -Werror=implicit-hls-streams -Werror=return-type -Wpragmas -Wunused-parameter -Wdump-hls-pragmas -Wno-error=dump-hls-pragmas -hls-clock-period=5 -fno-threadsafe-statics -fno-use-cxa-atexit -std=gnu++14 -target fpga64-xilinx-linux-gnu -D__VITIS_HLS__ -DAESL_SYN -D__SYNTHESIS__ -D__HLS_SYN__ -I /tools/Xilinx/Vitis_HLS/2024.1/common/technology/autopilot -I /tools/Xilinx/Vitis_HLS/2024.1/common/technology/autopilot/ap_sysc -include etc/autopilot_ssdm_op.h -D__DSP48E2__ -g -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.bc -hls-platform-db-name=/tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/common/platform.db -hls-platform-name=zynquplus_medium -device-resource-info=BRAM_624.000000_DSP_1728.000000_FF_460800.000000_LUT_230400.000000_SLICE_28800.000000_URAM_96.000000 -device-name-info=xczu7ev-ffvc1156-2-e > /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp.clang.out.log 2> /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp.clang.err.log
+INFO: [HLS 200-111] Finished Source Code Analysis and Preprocessing: CPU user time: 0.27 seconds. CPU system time: 0.38 seconds. Elapsed time: 0.79 seconds; current allocated memory: 281.219 MB.
+INFO-FLOW: Linking Debug ...
+INFO-FLOW: Linking dut bc code.
+Execute         run_link_or_opt -out /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.0.bc -args  "/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.g.bc"  
+INFO-FLOW: run_clang exec: /tools/Xilinx/Vitis_HLS/2024.1/lnx64/tools/clang-3.9-csynth/bin/llvm-link /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.g.bc -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.0.bc > /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.0.bc.llvm-link.out.log 2> /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.0.bc.llvm-link.err.log
+INFO-FLOW: 
+Execute         run_link_or_opt -opt -out /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.1.lower.bc -args /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.0.bc -reflow-lower-math-intrinsics 
+INFO-FLOW: run_clang exec: /tools/Xilinx/Vitis_HLS/2024.1/lnx64/tools/clang-3.9-csynth/bin/opt -pass-remarks-missed=reflow|pasta|unroll -pass-remarks=reflow|pasta|unroll|inline -pass-remarks-output=/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.1.lower.bc.opt.diag.yml /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.0.bc -reflow-lower-math-intrinsics -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.1.lower.bc > /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.1.lower.bc.opt.out.log 2> /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.1.lower.bc.opt.err.log
+INFO-FLOW: 
+INFO-FLOW: Running: gen_design_size_report post-opt
+INFO-FLOW: Done: gen_design_size_report post-opt time: 0 seconds per iteration
+INFO-FLOW: Linking math bc lib
+Execute         run_link_or_opt -out /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.2.m1.bc -args /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.1.lower.bc -only-needed /tools/Xilinx/Vitis_HLS/2024.1/lnx64/lib/libhlsm_39.bc /tools/Xilinx/Vitis_HLS/2024.1/lnx64/lib/libhlsmc++_39.bc 
+INFO-FLOW: run_clang exec: /tools/Xilinx/Vitis_HLS/2024.1/lnx64/tools/clang-3.9-csynth/bin/llvm-link /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.1.lower.bc -only-needed /tools/Xilinx/Vitis_HLS/2024.1/lnx64/lib/libhlsm_39.bc /tools/Xilinx/Vitis_HLS/2024.1/lnx64/lib/libhlsmc++_39.bc -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.2.m1.bc > /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.2.m1.bc.llvm-link.out.log 2> /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.2.m1.bc.llvm-link.err.log
+INFO-FLOW: 
+Command         run_link_or_opt done; 1.15 sec.
+Execute         run_link_or_opt -opt -out /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.3.fpc.bc -args /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.2.m1.bc -reflow-globaldce -hls-top-function-name=checker_scan -reflow-float-conversion 
+INFO-FLOW: run_clang exec: /tools/Xilinx/Vitis_HLS/2024.1/lnx64/tools/clang-3.9-csynth/bin/opt -pass-remarks-missed=reflow|pasta|unroll -pass-remarks=reflow|pasta|unroll|inline -pass-remarks-output=/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.3.fpc.bc.opt.diag.yml /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.2.m1.bc -reflow-globaldce -hls-top-function-name=checker_scan -reflow-float-conversion -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.3.fpc.bc > /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.3.fpc.bc.opt.out.log 2> /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.3.fpc.bc.opt.err.log
+INFO-FLOW: 
+INFO-FLOW: Running: gen_design_size_report post-opt
+INFO-FLOW: Done: gen_design_size_report post-opt time: 0 seconds per iteration
+Command         run_link_or_opt done; 0.49 sec.
+Execute         run_link_or_opt -out /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.4.m2.bc -args /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.3.fpc.bc -only-needed /tools/Xilinx/Vitis_HLS/2024.1/lnx64/lib/libfloatconversion_39.bc 
+INFO-FLOW: run_clang exec: /tools/Xilinx/Vitis_HLS/2024.1/lnx64/tools/clang-3.9-csynth/bin/llvm-link /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.3.fpc.bc -only-needed /tools/Xilinx/Vitis_HLS/2024.1/lnx64/lib/libfloatconversion_39.bc -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.4.m2.bc > /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.4.m2.bc.llvm-link.out.log 2> /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.4.m2.bc.llvm-link.err.log
+INFO-FLOW: 
+Execute         run_link_or_opt -opt -out /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.5.gdce.bc -args /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.4.m2.bc -reflow-globaldce -hls-top-function-name=checker_scan 
+INFO-FLOW: run_clang exec: /tools/Xilinx/Vitis_HLS/2024.1/lnx64/tools/clang-3.9-csynth/bin/opt -pass-remarks-missed=reflow|pasta|unroll -pass-remarks=reflow|pasta|unroll|inline -pass-remarks-output=/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.5.gdce.bc.opt.diag.yml /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.4.m2.bc -reflow-globaldce -hls-top-function-name=checker_scan -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.5.gdce.bc > /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.5.gdce.bc.opt.out.log 2> /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.5.gdce.bc.opt.err.log
+INFO-FLOW: 
+INFO-FLOW: Running: gen_design_size_report post-opt
+INFO-FLOW: Done: gen_design_size_report post-opt time: 0 seconds per iteration
+Execute         send_msg_by_id INFO @200-777@%s Vivado 
+INFO: [HLS 200-777] Using interface defaults for 'Vivado' flow target.
+Execute         is_m_axi_addr64 
+INFO-FLOW: Doing LTO.
+INFO-FLOW: run_clang (background poll_ms 5000) exec: /tools/Xilinx/Vitis_HLS/2024.1/lnx64/tools/clang-3.9-csynth/bin/clang -foptimization-record-file=/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.0.bc.clang.reflow.diag.yml -mllvm -pass-remarks-missed=reflow|pasta|unroll -mllvm -pass-remarks=reflow|pasta|unroll|inline -fhls -mllvm -hls-top-function-name=checker_scan -mllvm -hls-db-dir -mllvm /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db -emit-llvm -c -target fpga64-xilinx-none -mllvm -xcl-xmlinfo=/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/kernel.internal.xml -mllvm -top-io-mapping-info=/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/top-io-fe.xml -mllvm -hls-bitcode-version=3.1 -mllvm -reflow-enable-slave-interface-default-setting=true -mllvm -gen-kernel-xml=false -mllvm -default-maxi-offset=slave -mllvm -maxi-latency=0 -mllvm -hls-maxi-data-size-in-bits=8 -mllvm -hls-maxi-max-data-size-in-bits=1024 -mllvm -hls-max-widen-size-in-bits=128 -mllvm -xcl-kernel-max-mem-ports=0 -mllvm -maxi-read-trans=16 -mllvm -maxi-write-trans=16 -mllvm -maxi-read-burst-len=16 -mllvm -maxi-write-burst-len=16 -mllvm -reflow-enable-saxi-64bits=0 -mllvm -reflow-basic-block-instr-threshold=200000 -mllvm -reflow-auto-pipeline-threshold=64 -mllvm -reflow-enable-maxi-auto-id-channel=0 -mllvm -enable-fp-thr=0 -mllvm -reflow-bdd-simplify-threshold=1048576 -mllvm -reflow-fanout-threshold=16 -mllvm -reflow-complete-threshold=4 -mllvm -reflow-array-promotion-threshold=64 -mllvm -assume-maxi-align=16 -mllvm -reflow-enable-dataflow-strict-mode-checking=1 -ftime-report -mllvm -time-passes -mllvm -reflow-auto-array-partition-mode=default -mllvm -reflow-enable-auto-small-array-partition=true -mllvm -reflow-enable-auto-array-partition-for-flatten=true -mllvm -reflow-enable-auto-parallel-performance-driven=true -mllvm -reflow-enable-partition-for-automation=true -mllvm -reflow-aggregate-bitwidth-threshold=4096 -mllvm -reflow-reserved-saxilite-registers=0 -mllvm -enable-reflow-auto-loop-pipeline -mllvm -reflow-max-unroll-threshold=409600 -mllvm -auto-unroll-tripcount-threshold=0 -mllvm -reflow-assume-no-address-wrap=true -mllvm -reflow-enable-occurrence-inference=true -mllvm -reflow-emit-hint-scope=true -mllvm -reflow-enable-codegen-with-if=true -mllvm -hls -mllvm -disable-inlined-alloca-merging=true -mllvm -default-clock-period=5 -mllvm -use_read_first_ram_in_loop=1 -mllvm -default-clock-uncertainty=1.35 -x ir /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.5.gdce.bc -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.lto.bc -hls-platform-db-name=/tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/common/platform.db -hls-platform-name=zynquplus_medium -device-resource-info=BRAM_624.000000_DSP_1728.000000_FF_460800.000000_LUT_230400.000000_SLICE_28800.000000_URAM_96.000000 -device-name-info=xczu7ev-ffvc1156-2-e 2> /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.ld.0.bc.clang.reflow.err.log bg_poll_cmd: ::AP::poll_clang_39_closed_source
+Execute         send_msg_by_id INFO @200-1995@%s%s%s 111 Compile/Link /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt 
+INFO: [HLS 200-1995] There were 111 instructions in the design after the 'Compile/Link' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+Execute         send_msg_by_id INFO @200-1995@%s%s%s 104 Unroll/Inline (step 1) /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt 
+INFO: [HLS 200-1995] There were 104 instructions in the design after the 'Unroll/Inline (step 1)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+Execute         send_msg_by_id INFO @200-1995@%s%s%s 78 Unroll/Inline (step 2) /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt 
+INFO: [HLS 200-1995] There were 78 instructions in the design after the 'Unroll/Inline (step 2)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+Execute         send_msg_by_id INFO @200-1995@%s%s%s 77 Unroll/Inline (step 3) /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt 
+INFO: [HLS 200-1995] There were 77 instructions in the design after the 'Unroll/Inline (step 3)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+Execute         send_msg_by_id INFO @200-1995@%s%s%s 60 Unroll/Inline (step 4) /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt 
+INFO: [HLS 200-1995] There were 60 instructions in the design after the 'Unroll/Inline (step 4)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+Execute         send_msg_by_id INFO @200-1995@%s%s%s 60 Array/Struct (step 1) /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt 
+INFO: [HLS 200-1995] There were 60 instructions in the design after the 'Array/Struct (step 1)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+Execute         send_msg_by_id INFO @200-1995@%s%s%s 60 Array/Struct (step 2) /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt 
+INFO: [HLS 200-1995] There were 60 instructions in the design after the 'Array/Struct (step 2)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+Execute         send_msg_by_id INFO @200-1995@%s%s%s 60 Array/Struct (step 3) /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt 
+INFO: [HLS 200-1995] There were 60 instructions in the design after the 'Array/Struct (step 3)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+Execute         send_msg_by_id INFO @200-1995@%s%s%s 60 Array/Struct (step 4) /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt 
+INFO: [HLS 200-1995] There were 60 instructions in the design after the 'Array/Struct (step 4)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+Execute         send_msg_by_id INFO @200-1995@%s%s%s 64 Array/Struct (step 5) /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt 
+INFO: [HLS 200-1995] There were 64 instructions in the design after the 'Array/Struct (step 5)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+Execute         send_msg_by_id INFO @200-1995@%s%s%s 63 Performance (step 1) /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt 
+INFO: [HLS 200-1995] There were 63 instructions in the design after the 'Performance (step 1)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+Execute         send_msg_by_id INFO @200-1995@%s%s%s 62 Performance (step 2) /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt 
+INFO: [HLS 200-1995] There were 62 instructions in the design after the 'Performance (step 2)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+Execute         send_msg_by_id INFO @200-1995@%s%s%s 62 Performance (step 3) /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt 
+INFO: [HLS 200-1995] There were 62 instructions in the design after the 'Performance (step 3)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+Execute         send_msg_by_id INFO @200-1995@%s%s%s 62 Performance (step 4) /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt 
+INFO: [HLS 200-1995] There were 62 instructions in the design after the 'Performance (step 4)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+Execute         send_msg_by_id INFO @200-1995@%s%s%s 84 HW Transforms (step 1) /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt 
+INFO: [HLS 200-1995] There were 84 instructions in the design after the 'HW Transforms (step 1)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+Execute         send_msg_by_id INFO @200-1995@%s%s%s 87 HW Transforms (step 2) /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt 
+INFO: [HLS 200-1995] There were 87 instructions in the design after the 'HW Transforms (step 2)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+INFO: [HLS 214-178] Inlining function 'checker_select_mode(unsigned short const*, int, int, int, unsigned short, int, int, int, int&, int&)' into 'checker_scan' (local/checker.cpp:12:0)
+INFO: [HLS 214-376] automatically set the pipeline for Loop< VITIS_LOOP_38_1> at /home/mini/workspace/dfxisp_v2/include/checker.hpp:38:22 
+INFO: [HLS 214-115] Multiple burst reads of variable length and bit width 16 in loop 'VITIS_LOOP_38_1'(/home/mini/workspace/dfxisp_v2/include/checker.hpp:38:22) has been inferred on bundle 'gmem0'. These burst requests might be further partitioned into multiple requests during RTL generation, based on max_read_burst_length or max_write_burst_length settings. (/home/mini/workspace/dfxisp_v2/include/checker.hpp:38:22)
+INFO-FLOW: DBG:PUTS: copy_raw_kernel_xml ap_link_39: kernel.xml not generated: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/kernel.internal.xml
+INFO: [HLS 200-111] Finished Compiling Optimization and Transform: CPU user time: 1.86 seconds. CPU system time: 0.34 seconds. Elapsed time: 6.81 seconds; current allocated memory: 291.004 MB.
+INFO: [HLS 200-111] Finished Checking Pragmas: CPU user time: 0 seconds. CPU system time: 0 seconds. Elapsed time: 0 seconds; current allocated memory: 291.004 MB.
+Execute         opt_and_import_c a -opt_level=2 -skip_syncheck=0 -ng=0 -keep_printf=0 
+Execute           cleanup_all_models 
+INFO: [HLS 200-10] Starting code transformations ...
+INFO-FLOW: Running Standard Transforms...
+Execute           transform -hls -share-std-xform -demangle-name -inline-byval-memcpy -always-inline -promote-dbg-pointer -interface-preproc -mem2reg -scalarrepl -mem2reg -keep-read-access -instcombine -dce -promote-dbg-pointer -bitop-raise -loop-simplify -indvarspre -indvars -loop-simplify -constprop -instcombine -simplifycfg -indvars -simplifycfg -dce -globaldce -basicaa -simplifycfg -mem2reg -globalopt -global-constprop -deadargelim -instcombine -simplifycfg -scalarrepl -instcombine -reassociate -licm -simplifycfg -loop-simplify -indvars -instcombine -simplifycfg -mem2reg -loop-simplify -indvars -instcombine -gvn -gvn -instcombine -adce -break-crit-edges -simplifycfg -loop-delete -global-array-opt -dce -dse -adce -find-syn-modules -top checker_scan -deadargelim -mem2reg -instcombine -dce -presyn-prepare -interface-preproc -syn-check -check-rec-only -find-region -simplifycfg -func-extr -function-inline -globaldce -mem2reg -instcombine -dce -gvn -globaldce -adce -adse -constprop -instcombine -bit-constprop -instcombine -dce -simplifycfg -bitop-raise -simplifycfg -dce -loop-delete -reassociate -globalopt -global-privatize -mem2reg -dce -global-constprop -pointer-simplify -constprop -dce -promote-dbg-pointer -norm-name /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.0.bc -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.1.bc -f -phase std-opt 
+INFO: [HLS 200-111] Finished Standard Transforms: CPU user time: 0.01 seconds. CPU system time: 0 seconds. Elapsed time: 0.01 seconds; current allocated memory: 291.203 MB.
+INFO: [HLS 200-10] Checking synthesizability ...
+INFO-FLOW: Checking Synthesizability 1/2..
+Execute           transform -hls -syn-check -check-rec-only -scalarrepl -norm-name -dce -mem2reg -instcombine -directive-preproc -mem2reg -dse -dce -dce -pag -array-normalize -instcombine -dce -array-seg-normalize -instcombine -dce -data-pack -instcombine -dce -inst-simplify -array-flatten -instcombine -dce -array-burst -dce -deadargelim -promote-global-argument -simplifycfg -mem2reg -globaldce -dce -deadargelim -dce -instcombine -function-inline -globaldce -dce -doublePtrSimplify -doublePtrElim -dce -doublePtrSimplify -promote-dbg-pointer -dce -scalarrepl -dse -adse -instcombine -ptrLegalization -simplifycfg -dce -instcombine -pointer-simplify -ptrArgReplace -dce -instcombine -resolve-double-ptr -scalarrepl -norm-name -dce -mem2reg -instcombine -ptrLegalization -simplifycfg -deadargelim -instcombine -dce -inst-simplify -directive-preproc -mem2reg -dse -dce -globaldce /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.1.bc -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.2.prechk.bc -f 
+INFO-FLOW: Checking Synthesizability 2/2..
+Execute           transform -syn-check /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.2.prechk.bc -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.2.bc -f -phase syn-check 
+INFO: [HLS 200-111] Finished Checking Synthesizability: CPU user time: 0 seconds. CPU system time: 0 seconds. Elapsed time: 0.01 seconds; current allocated memory: 291.203 MB.
+INFO-FLOW: Compiler optimizing ...
+INFO-FLOW: Share syncheck's 1.bc for syn flow: copy /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.g.1.bc to /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.o.1.bc
+INFO-FLOW: Presyn 1...
+Execute           transform -hls -tmp /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db -interface-port-rename -directive-preproc -mem2reg -dse -dce -scalarrepl -norm-name -deadargelim -mem2reg -instcombine -dce -simplifycfg -dce -resource-proc -clib-intrinsic-prepare -dce -func-buffer -dce -pag -array-normalize -func-legal -instcombine -gvn -constprop -dce -simplifycfg -mem2reg -globaldce -resolve-double-ptr -dce -deadargelim -dce -instcombine -ptrArgReplace -mem2reg -dce -array-seg-normalize -deadargelim -instcombine -dce -directive-preproc -mem2reg -dse -dce -pointer-simplify -dce -port-alignment -dce -interface-preproc -data-pack -instcombine -dce -basicaa -aggr-aa -aggrmodref-aa -aggr-aa -gvn -gvn -basicaa -aggr-aa -aggrmodref-aa -aggr-aa -dse -adse -adce -loop-simplify -indvars -instcombine -gvn -loop-simplify -mem2reg -dce -find-region -instcombine -inst-simplify -interface-preproc -cfgopt -instcombine -indvars -loop-simplify -loop-bound -constprop -instcombine -simplifycfg -indvars -simplifycfg -dce -globaldce -clean-region -attach-range -gvn -inst-simplify -constprop -simplifycfg -dce -pointer-simplify -dce -globalopt -constprop -dce -array-promote -constprop -dce -ptrArgReplace -mem2reg -simplifycfg -dce -instcombine -dce -array-transform-check -array-reshape -instcombine -simplifycfg -dce -ptrArgReplace -deadargelim -mem2reg -instcombine -simplifycfg -dce -indvars -loop-simplify -loop-bound -constprop -instcombine -simplifycfg -indvars -simplifycfg -dce -globaldce -basicaa -aggr-aa -aggrmodref-aa -aggr-aa -dse -duplicate-dataflow-processes -globaldce -instcombine -array-partition -prepare-dynamic-array-partition -instcombine -simplifycfg -dce -ptrArgReplace -global-constprop -deadargelim -mem2reg -func-legal -dce -global-constprop -deadargelim -mem2reg -simplifycfg -dce -merge-param -deadargelim -globalopt -constprop -dce -array-promote -constprop -dce -ptrArgReplace -mem2reg -simplifycfg -dce -mem-intrinsic-preproc -dce -global-internalize -global-privatize -mem2reg -globaldce -lcssa -loop-simplify -phi-select-elim -promote-global-argument -ptrArgReplace -mem2reg -dce -globalopt -mergereturn -simplify-global-access -mem2reg -dce -pointer-simplify -dce -basicaa -aggr-aa -aggrmodref-aa -aggr-aa -functionattrs -basicaa -aggr-aa -aggrmodref-aa -aggr-aa -gvn -gvn -basicaa -aggr-aa -aggrmodref-aa -aggr-aa -dse -adse -adce -dce -norm-name -basicaa -aggr-aa -aggrmodref-aa -aggr-aa -accesses-merge -function-inline -complex-op-raise -inst-simplify -globaldce -func-legal -dce -loop-bound -arraycheck -bitwidthmin2 -bitwidthmin2 -on-by-dataflow -loop-delete -instcombine -simplifycfg -globaldce -dce -gvn -deadargelim -dce -loop-simplify -clean-region -simplifycfg -propagate-stable-arguments -loop-stream -instcombine -simplifycfg -dce -globaldce -duplicate-dataflow-processes -stream-intrinsic-preproc -dce -check-ap-stream -loop-simplify -eliminate-keepreads -extract-dataflow-in-loop -loop-simplify -dce -gvn -deadargelim -dse -duplicate-dataflow-processes -check-dataflow-syntax -legalize-stream-variable -globaldce -legalize-global -extract-subproc -dce -dead-channel-elimination -canonicalize-gep -globaldce -dce -gvn -hls-dead-arg-elim -deadargelim -directive-preproc -canonicalize-dataflow -dce -globaldce -scalar-preprocessing -scalar-propagation2 -scalar-stream -deadargelim -globaldce -mem2reg -check-dataflow-channels -function-stream -dce -globaldce -prop-fifo-spec -internal-stream-gen -canonicalize-gep -globaldce -dce -gvn -deadargelim -mergereturn -indvars -loop-simplify -instcombine -array-stream -array-seg-normalize -array-partition -clean-array-spec -func-legal -instcombine -simplifycfg -dce -bundle-memfifo-ops -deadargelim -directive-preproc -mem2reg -dse -dce -group-axi-access -licm -simplifycfg -dce -loop-delete -hls-display -norm-name /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.o.1.bc -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.o.1.tmp.bc -f 
+INFO-FLOW: Presyn 2...
+Execute           transform -hls -keep-callgraph -scalarrepl -mem2reg -port-alignment -attach-range -dce -pipe-mux-gen -indvars -loop-bound -inst-simplify -instcombine -dce -merge-array-access -mem2reg -dce -clean-region -mergereturn -if-conv -instcombine -dce -constprop -basicaa -aggr-aa -aggrmodref-aa -aggr-aa -gvn -gvn -basicaa -aggr-aa -aggrmodref-aa -aggr-aa -dse -adse -adce -scalarrepl -mem2reg -global-constprop -deadargelim -deadargelim -instcombine -dce -simplifycfg -ptrArgReplace -mem2reg -function-inline -globaldce -mem2reg -instcombine -dce -expr-balance -instcombine -dce -bitwidthmin2 -bitwidthmin2 -interface-preproc -directive-preproc -inst-rectify -instcombine -dce -basicaa -aggr-aa -aggrmodref-aa -aggr-aa -functionattrs -constprop -instcombine -bit-constprop -simplify-global-access -globalopt -globaldce -inst-simplify -instcombine -elimdeaddata -dce -loop-delete -simplifycfg -loop-simplify -barrier -norm-name /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.o.1.tmp.bc -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.o.2.bc -f -phase presyn 
+INFO: [HLS 200-111] Finished Loop, function and other optimizations: CPU user time: 0.02 seconds. CPU system time: 0.02 seconds. Elapsed time: 0.04 seconds; current allocated memory: 312.734 MB.
+Execute           transform -hls -auto-function-inline -globaldce -ptrArgReplace -mem2reg -dce -reset-lda -loop-simplify -indvars -aggr-aa -licm -loop-dep -loop-bound -licm -loop-simplify -loop-sink-hoist -flattenloopnest -array-flatten -gvn -instcombine -dce -array-map -dce -func-legal -gvn -adce -instcombine -cfgopt -simplifycfg-lite -loop-simplify -array-burst -promote-global-argument -dce -array-seg-normalize -basicaa -aggrmodref-aa -globalsmodref-aa -aggr-aa -gvn -gvn -basicaa -aggrmodref-aa -globalsmodref-aa -aggr-aa -dse -adse -adce -licm -inst-simplify -dce -globaldce -instcombine -array-stream -eliminate-keepreads -instcombine -dce -deadargelim -doublePtrSimplify -doublePtrElim -dce -doublePtrSimplify -promote-dbg-pointer -dce -scalarrepl -mem2reg -norm-name -mem2reg -instcombine -dse -adse -adce -ptrLegalization -dce -array-flatten -dce -instcombine -check-doubleptr -loop-rot -constprop -inst-simplify -cfgopt -simplifycfg-lite -loop-simplify -indvars -pointer-simplify -dce -loop-bound -loop-simplify -loop-preproc -constprop -global-constprop -gvn -mem2reg -instcombine -dce -loop-bound -loop-merge -dce -deadargelim -dce -canonicalize-dataflow -dce -deadargelim -globaldce -mem2reg -bram-byte-enable -inst-simplify -inst-rectify -instcombine -adce -deadargelim -load-elim -read-loop-dep -loop-simplify -loop-extract-inner -directive-preproc -bitwidthmin2 -bitwidthmin2 -read-loop-dep -interface-preproc -directive-preproc -interface-gen -bram-byte-enable-spec-prop -mul2addshift -deadargelim -inst-simplify -dce -mem2reg -instcombine -gvn -dce -adse -loop-bound -instcombine -cfgopt -simplifycfg-lite -loop-simplify -clean-region -io-protocol -find-region -mem2reg -bitop-raise -complex-op-raise -inst-simplify -inst-rectify -instcombine -adce -deadargelim -float-op-raise -loop-simplify -phi-opt -bitop-raise -cfgopt -simplifycfg-lite -strip-dead-prototypes -interface-lower -bitop-lower -intrinsic-lower -auto-function-inline -basicaa -aggrmodref-aa -globalsmodref-aa -aggr-aa -inst-simplify -simplifycfg-lite -loop-simplify -mergereturn -inst-simplify -inst-rectify -globaldce -dce -load-elim -bitop-lower -float-op-raise -fma-raise -loop-rewind -pointer-simplify -dce -cfgopt -dce -loop-bound -loop-dep -read-loop-dep -dce -dyn-mem-reuse -dce -recurrence-min -dce -share-scalar-alloca -deadargelim -dce -check-stream -norm-name -legalize -inst-clarity -bitwidth -dce -validate-dataflow -dump-loop-dep-to-ir -check-all-ssdm -dump-complexity-metric /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.o.2.bc -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.o.3.bc -f -phase build-ssdm 
+Execute             auto_get_db
+INFO-FLOW: Building ssdm...
+Execute           transform -hls -cdfg-build /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.o.3.bc -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/a.o.3.bc -f -phase build-ssdm 
+INFO: [HLS 200-111] Finished Architecture Synthesis: CPU user time: 0.03 seconds. CPU system time: 0 seconds. Elapsed time: 0.02 seconds; current allocated memory: 312.906 MB.
+INFO-FLOW: Finish building internal data model.
+Command       elaborate done; 7.68 sec.
+Execute       ap_eval exec zip -j /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/dut.hcp $dbDir/a.o.3.bc $dbDir/${topname}.rtl_wrap.cfg.tcl $dbDir/apatb_${topname}.cpp $dbDir/apatb_${topname}_util.cpp $dbDir/apatb_${topname}_ir.ll $dbDir/mapper_${topname}.cpp $dbDir/top-io-fe.xml $dbDir/kernel.internal.xml $workdir/../hls.app 
+Execute       autosyn -from_csynth_design=1 
+INFO: [HLS 200-10] Starting hardware synthesis ...
+INFO-FLOW: Synthesizing C/C++ design ...
+INFO: [HLS 200-10] Synthesizing 'checker_scan' ...
+Execute         ap_set_top_model checker_scan 
+Execute         get_model_list checker_scan -filter all-wo-channel -topdown 
+Execute         preproc_iomode -model checker_scan 
+Execute         preproc_iomode -model checker_scan_Pipeline_VITIS_LOOP_38_1 
+Execute         get_model_list checker_scan -filter all-wo-channel 
+INFO-FLOW: Model list for configure: checker_scan_Pipeline_VITIS_LOOP_38_1 checker_scan
+INFO-FLOW: Configuring Module : checker_scan_Pipeline_VITIS_LOOP_38_1 ...
+Execute         set_default_model checker_scan_Pipeline_VITIS_LOOP_38_1 
+Execute         apply_spec_resource_limit checker_scan_Pipeline_VITIS_LOOP_38_1 
+INFO-FLOW: Configuring Module : checker_scan ...
+Execute         set_default_model checker_scan 
+Execute         apply_spec_resource_limit checker_scan 
+INFO-FLOW: Model list for preprocess: checker_scan_Pipeline_VITIS_LOOP_38_1 checker_scan
+INFO-FLOW: Preprocessing Module: checker_scan_Pipeline_VITIS_LOOP_38_1 ...
+Execute         set_default_model checker_scan_Pipeline_VITIS_LOOP_38_1 
+Execute         cdfg_preprocess -model checker_scan_Pipeline_VITIS_LOOP_38_1 
+Execute         rtl_gen_preprocess checker_scan_Pipeline_VITIS_LOOP_38_1 
+INFO-FLOW: Preprocessing Module: checker_scan ...
+Execute         set_default_model checker_scan 
+Execute         cdfg_preprocess -model checker_scan 
+Execute         rtl_gen_preprocess checker_scan 
+INFO-FLOW: Model list for synthesis: checker_scan_Pipeline_VITIS_LOOP_38_1 checker_scan
+INFO: [HLS 200-10] ----------------------------------------------------------------
+INFO: [HLS 200-42] -- Implementing module 'checker_scan_Pipeline_VITIS_LOOP_38_1' 
+INFO: [HLS 200-10] ----------------------------------------------------------------
+Execute         set_default_model checker_scan_Pipeline_VITIS_LOOP_38_1 
+Execute         schedule -model checker_scan_Pipeline_VITIS_LOOP_38_1 
+INFO: [SCHED 204-11] Starting scheduling ...
+INFO: [SCHED 204-61] Pipelining loop 'VITIS_LOOP_38_1'.
+INFO: [HLS 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 3, loop 'VITIS_LOOP_38_1'
+INFO: [SCHED 204-11] Finished scheduling.
+INFO: [HLS 200-111] Finished Scheduling: CPU user time: 0.03 seconds. CPU system time: 0.03 seconds. Elapsed time: 0.12 seconds; current allocated memory: 313.855 MB.
+Execute         syn_report -verbosereport -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan_Pipeline_VITIS_LOOP_38_1.verbose.sched.rpt 
+Execute           list_part -family xczu7ev-ffvc1156-2-e 
+Execute             ap_family_info -name xczu7ev-ffvc1156-2-e -data names 
+Execute             ap_part_info -quiet -name xczu7ev-ffvc1156-2-e -data family 
+Execute         db_write -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan_Pipeline_VITIS_LOOP_38_1.sched.adb -f 
+INFO-FLOW: Finish scheduling checker_scan_Pipeline_VITIS_LOOP_38_1.
+Execute         set_default_model checker_scan_Pipeline_VITIS_LOOP_38_1 
+Execute         bind -model checker_scan_Pipeline_VITIS_LOOP_38_1 
+INFO: [BIND 205-100] Starting micro-architecture generation ...
+INFO: [BIND 205-101] Performing variable lifetime analysis.
+INFO: [BIND 205-101] Exploring resource sharing.
+INFO: [BIND 205-101] Binding ...
+INFO: [BIND 205-100] Finished micro-architecture generation.
+INFO: [HLS 200-111] Finished Binding: CPU user time: 0.02 seconds. CPU system time: 0 seconds. Elapsed time: 0.05 seconds; current allocated memory: 313.855 MB.
+Execute         syn_report -verbosereport -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan_Pipeline_VITIS_LOOP_38_1.verbose.bind.rpt 
+Execute           list_part -family xczu7ev-ffvc1156-2-e 
+Execute             ap_family_info -name xczu7ev-ffvc1156-2-e -data names 
+Execute             ap_part_info -quiet -name xczu7ev-ffvc1156-2-e -data family 
+Execute         db_write -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan_Pipeline_VITIS_LOOP_38_1.bind.adb -f 
+INFO-FLOW: Finish binding checker_scan_Pipeline_VITIS_LOOP_38_1.
+INFO: [HLS 200-10] ----------------------------------------------------------------
+INFO: [HLS 200-42] -- Implementing module 'checker_scan' 
+INFO: [HLS 200-10] ----------------------------------------------------------------
+Execute         set_default_model checker_scan 
+Execute         schedule -model checker_scan 
+INFO: [SCHED 204-11] Starting scheduling ...
+INFO: [SCHED 204-11] Finished scheduling.
+INFO: [HLS 200-111] Finished Scheduling: CPU user time: 0.04 seconds. CPU system time: 0 seconds. Elapsed time: 0.04 seconds; current allocated memory: 313.883 MB.
+Execute         syn_report -verbosereport -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.verbose.sched.rpt 
+Execute           list_part -family xczu7ev-ffvc1156-2-e 
+Execute             ap_family_info -name xczu7ev-ffvc1156-2-e -data names 
+Execute             ap_part_info -quiet -name xczu7ev-ffvc1156-2-e -data family 
+Execute         db_write -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.sched.adb -f 
+INFO-FLOW: Finish scheduling checker_scan.
+Execute         set_default_model checker_scan 
+Execute         bind -model checker_scan 
+INFO: [BIND 205-100] Starting micro-architecture generation ...
+INFO: [BIND 205-101] Performing variable lifetime analysis.
+INFO: [BIND 205-101] Exploring resource sharing.
+INFO: [BIND 205-101] Binding ...
+INFO: [BIND 205-100] Finished micro-architecture generation.
+INFO: [HLS 200-111] Finished Binding: CPU user time: 0.02 seconds. CPU system time: 0 seconds. Elapsed time: 0.02 seconds; current allocated memory: 313.883 MB.
+Execute         syn_report -verbosereport -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.verbose.bind.rpt 
+Execute           list_part -family xczu7ev-ffvc1156-2-e 
+Execute             ap_family_info -name xczu7ev-ffvc1156-2-e -data names 
+Execute             ap_part_info -quiet -name xczu7ev-ffvc1156-2-e -data family 
+Execute         db_write -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.bind.adb -f 
+INFO-FLOW: Finish binding checker_scan.
+Execute         get_model_list checker_scan -filter all-wo-channel 
+INFO-FLOW: Preprocessing for RTLGen ...
+Execute         rtl_gen_preprocess checker_scan_Pipeline_VITIS_LOOP_38_1 
+Execute         rtl_gen_preprocess checker_scan 
+INFO-FLOW: Model list for RTL generation: checker_scan_Pipeline_VITIS_LOOP_38_1 checker_scan
+INFO: [HLS 200-10] ----------------------------------------------------------------
+INFO: [HLS 200-10] -- Generating RTL for module 'checker_scan_Pipeline_VITIS_LOOP_38_1' 
+INFO: [HLS 200-10] ----------------------------------------------------------------
+Execute         create_rtl_model checker_scan_Pipeline_VITIS_LOOP_38_1 -top_prefix checker_scan_ -sub_prefix checker_scan_ -mg_file /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan_Pipeline_VITIS_LOOP_38_1.compgen.tcl 
+INFO: [HLS 200-1030] Apply Unified Pipeline Control on module 'checker_scan_Pipeline_VITIS_LOOP_38_1' pipeline 'VITIS_LOOP_38_1' pipeline type 'loop pipeline'
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARVALID' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARADDR' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARID' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARLEN' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARSIZE' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARBURST' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARLOCK' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARCACHE' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARPROT' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARQOS' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARREGION' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARUSER' to 0.
+INFO: [RTGEN 206-100] Finished creating RTL model for 'checker_scan_Pipeline_VITIS_LOOP_38_1'.
+INFO: [HLS 200-111] Finished Creating RTL model: CPU user time: 0.02 seconds. CPU system time: 0 seconds. Elapsed time: 0.03 seconds; current allocated memory: 313.883 MB.
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.rtl_wrap.cfg.tcl 
+Execute         gen_rtl checker_scan_Pipeline_VITIS_LOOP_38_1 -style xilinx -f -lang vhdl -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/vhdl/checker_scan_checker_scan_Pipeline_VITIS_LOOP_38_1 
+Execute         gen_rtl checker_scan_Pipeline_VITIS_LOOP_38_1 -style xilinx -f -lang vlog -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/verilog/checker_scan_checker_scan_Pipeline_VITIS_LOOP_38_1 
+Execute         syn_report -csynth -model checker_scan_Pipeline_VITIS_LOOP_38_1 -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/checker_scan_Pipeline_VITIS_LOOP_38_1_csynth.rpt 
+Execute           list_part -family xczu7ev-ffvc1156-2-e 
+Execute             ap_family_info -name xczu7ev-ffvc1156-2-e -data names 
+Execute             ap_part_info -quiet -name xczu7ev-ffvc1156-2-e -data family 
+Execute         syn_report -rtlxml -model checker_scan_Pipeline_VITIS_LOOP_38_1 -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/checker_scan_Pipeline_VITIS_LOOP_38_1_csynth.xml 
+Execute           list_part -family xczu7ev-ffvc1156-2-e 
+Execute             ap_family_info -name xczu7ev-ffvc1156-2-e -data names 
+Execute             ap_part_info -quiet -name xczu7ev-ffvc1156-2-e -data family 
+Execute         syn_report -verbosereport -model checker_scan_Pipeline_VITIS_LOOP_38_1 -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan_Pipeline_VITIS_LOOP_38_1.verbose.rpt 
+Execute           list_part -family xczu7ev-ffvc1156-2-e 
+Execute             ap_family_info -name xczu7ev-ffvc1156-2-e -data names 
+Execute             ap_part_info -quiet -name xczu7ev-ffvc1156-2-e -data family 
+Execute         db_write -model checker_scan_Pipeline_VITIS_LOOP_38_1 -f -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan_Pipeline_VITIS_LOOP_38_1.adb 
+Execute         db_write -model checker_scan_Pipeline_VITIS_LOOP_38_1 -bindview -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/design.bindinfo.xml 
+Execute         gen_tb_info checker_scan_Pipeline_VITIS_LOOP_38_1 -p /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan_Pipeline_VITIS_LOOP_38_1 
+INFO: [HLS 200-10] ----------------------------------------------------------------
+INFO: [HLS 200-10] -- Generating RTL for module 'checker_scan' 
+INFO: [HLS 200-10] ----------------------------------------------------------------
+Execute         create_rtl_model checker_scan -top_prefix  -sub_prefix checker_scan_ -mg_file /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.compgen.tcl 
+WARNING: [RTGEN 206-101] Design contains AXI ports. Reset is fixed to synchronous and active low.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/gmem0' to 'm_axi'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/raw_bayer' to 's_axilite & ap_none'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/width' to 's_axilite & ap_none'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/height' to 's_axilite & ap_none'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/mode' to 's_axilite & ap_none'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/dark_pixel_threshold' to 's_axilite & ap_none'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/verdict_pct' to 's_axilite & ap_none'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/enter_pct' to 's_axilite & ap_none'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/exit_pct' to 's_axilite & ap_none'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/selected_mode' to 's_axilite & ap_vld'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/hyst_flags' to 'ap_vld'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/dark_count' to 's_axilite & ap_vld'.
+INFO: [RTGEN 206-500] Setting interface mode on function 'checker_scan' to 's_axilite & ap_ctrl_hs'.
+INFO: [RTGEN 206-100] Bundling port 'raw_bayer', 'width', 'height', 'mode', 'dark_pixel_threshold', 'verdict_pct', 'enter_pct', 'exit_pct', 'selected_mode', 'dark_count' to AXI-Lite port control.
+INFO: [RTGEN 206-100] Generating core module 'mul_32s_32s_32_1_1': 4 instance(s).
+INFO: [RTGEN 206-100] Finished creating RTL model for 'checker_scan'.
+INFO: [HLS 200-111] Finished Creating RTL model: CPU user time: 0.06 seconds. CPU system time: 0 seconds. Elapsed time: 0.08 seconds; current allocated memory: 314.160 MB.
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.rtl_wrap.cfg.tcl 
+Execute         gen_rtl checker_scan -istop -style xilinx -f -lang vhdl -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/vhdl/checker_scan 
+Execute         gen_rtl checker_scan -istop -style xilinx -f -lang vlog -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/verilog/checker_scan 
+Execute         syn_report -csynth -model checker_scan -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/checker_scan_csynth.rpt 
+Execute           list_part -family xczu7ev-ffvc1156-2-e 
+Execute             ap_family_info -name xczu7ev-ffvc1156-2-e -data names 
+Execute             ap_part_info -quiet -name xczu7ev-ffvc1156-2-e -data family 
+Execute         syn_report -rtlxml -model checker_scan -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/checker_scan_csynth.xml 
+Execute           list_part -family xczu7ev-ffvc1156-2-e 
+Execute             ap_family_info -name xczu7ev-ffvc1156-2-e -data names 
+Execute             ap_part_info -quiet -name xczu7ev-ffvc1156-2-e -data family 
+Execute         syn_report -verbosereport -model checker_scan -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.verbose.rpt 
+Execute           list_part -family xczu7ev-ffvc1156-2-e 
+Execute             ap_family_info -name xczu7ev-ffvc1156-2-e -data names 
+Execute             ap_part_info -quiet -name xczu7ev-ffvc1156-2-e -data family 
+Execute         db_write -model checker_scan -f -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.adb 
+Execute         db_write -model checker_scan -bindview -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/design.bindinfo.xml 
+Execute         gen_tb_info checker_scan -p /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan 
+Execute         export_constraint_db -f -tool general -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.constraint.tcl 
+Execute         syn_report -designview -model checker_scan -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.design.xml 
+Execute         syn_report -csynthDesign -model checker_scan -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth.rpt -MHOut /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/kernel_module_hierarchy.tcl 
+Execute           list_part -family xczu7ev-ffvc1156-2-e 
+Execute             ap_family_info -name xczu7ev-ffvc1156-2-e -data names 
+Execute             ap_part_info -quiet -name xczu7ev-ffvc1156-2-e -data family 
+Execute         syn_report -wcfg -model checker_scan -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan_dataflow_ana.wcfg 
+Execute         syn_report -protoinst -model checker_scan -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.protoinst 
+Execute         sc_get_clocks checker_scan 
+Execute         sc_get_portdomain checker_scan 
+INFO-FLOW: Model list for RTL component generation: checker_scan_Pipeline_VITIS_LOOP_38_1 checker_scan
+INFO-FLOW: Handling components in module [checker_scan_Pipeline_VITIS_LOOP_38_1] ... 
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan_Pipeline_VITIS_LOOP_38_1.compgen.tcl 
+INFO-FLOW: Found component checker_scan_flow_control_loop_pipe_sequential_init.
+INFO-FLOW: Append model checker_scan_flow_control_loop_pipe_sequential_init
+INFO-FLOW: Handling components in module [checker_scan] ... 
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.compgen.tcl 
+INFO-FLOW: Found component checker_scan_mul_32s_32s_32_1_1.
+INFO-FLOW: Append model checker_scan_mul_32s_32s_32_1_1
+INFO-FLOW: Found component checker_scan_gmem0_m_axi.
+INFO-FLOW: Append model checker_scan_gmem0_m_axi
+INFO-FLOW: Found component checker_scan_control_s_axi.
+INFO-FLOW: Append model checker_scan_control_s_axi
+INFO-FLOW: Append model checker_scan_Pipeline_VITIS_LOOP_38_1
+INFO-FLOW: Append model checker_scan
+INFO-FLOW: Generating RTL model list ...
+INFO-FLOW: All models in this session: checker_scan_flow_control_loop_pipe_sequential_init checker_scan_mul_32s_32s_32_1_1 checker_scan_gmem0_m_axi checker_scan_control_s_axi checker_scan_Pipeline_VITIS_LOOP_38_1 checker_scan
+INFO-FLOW: Generating /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/autopilot.rtl.models.txt file...
+INFO-FLOW: To file: write model checker_scan_flow_control_loop_pipe_sequential_init
+INFO-FLOW: To file: write model checker_scan_mul_32s_32s_32_1_1
+INFO-FLOW: To file: write model checker_scan_gmem0_m_axi
+INFO-FLOW: To file: write model checker_scan_control_s_axi
+INFO-FLOW: To file: write model checker_scan_Pipeline_VITIS_LOOP_38_1
+INFO-FLOW: To file: write model checker_scan
+INFO-FLOW: Generating /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/autopilot.rtl.models.tcl file...
+INFO-FLOW: Finished generating RTL model list.
+
+
+INFO-FLOW: RTL Generation done.
+INFO-FLOW: CAS Generation done.
+INFO-FLOW: CBC Generation done.
+INFO-FLOW: DBG:PROC: ::AESL_AUTOMG::auto_generate_csynth_design
+INFO-FLOW: DBG:PUTS: read_platform_lib /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/global.setting.tcl
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/generic/autopilot/common.gen 
+Execute           source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/generic/autopilot/APCoreGen.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/generic/autopilot/op.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/generic/autopilot/op_simcore.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/generic/autopilot/interface.gen 
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/global.setting.tcl 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/common/xilinx.gen 
+Execute           source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/interface/plb46.gen 
+Execute           source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/interface/axi4.gen 
+Execute           source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/interface/nativeAXI4.gen 
+Execute             source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/interface/saxilite.gen 
+Execute           source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/scripts/xilinxcoregen.gen 
+Execute           source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/interface/XilEDKCoreGen.gen 
+Execute           source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/ip/xfir.gen 
+Execute           source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/ip/util.gen 
+Execute           source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/ip/xfft.gen 
+Execute           source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/ip/dds_compiler.gen 
+Execute           source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/DSP48/dsp48.gen 
+INFO-FLOW: DBG:PUTS:   using AESL_AUTOCG::g_clock_period=5.000 (was NA)
+INFO-FLOW: DBG:PROC: ::AESL_AUTOMG::generate_ip_cores gen_sim_model='1' gen_fp_models='0' gen_for_export='0' dstSCDir='' dstVhdlDir='/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/vhdl' dstVlogDir='/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/vlog' tclDir='/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db' modelList='checker_scan_flow_control_loop_pipe_sequential_init
+checker_scan_mul_32s_32s_32_1_1
+checker_scan_gmem0_m_axi
+checker_scan_control_s_axi
+checker_scan_Pipeline_VITIS_LOOP_38_1
+checker_scan
+' expOnly='0'
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/global.setting.tcl 
+Execute         ap_part_info -name xczu7ev-ffvc1156-2-e -data names -quiet 
+Execute         ap_part_info -name xczu7ev-ffvc1156-2-e -data info -quiet 
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/global.setting.tcl 
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/global.setting.tcl 
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan_Pipeline_VITIS_LOOP_38_1.compgen.tcl 
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.compgen.tcl 
+Execute           source ./control.slave.tcl 
+INFO: [HLS 200-111] Finished Generating all RTL models: CPU user time: 0.15 seconds. CPU system time: 0 seconds. Elapsed time: 0.17 seconds; current allocated memory: 317.703 MB.
+INFO-FLOW: DBG:PROC: ::HLSREPORTS::create_csynth_xml bind_info_var='bind_info' RtlSubPrefix='checker_scan_' outfile=''
+INFO-FLOW: Running: create_csynth_xml read xml data
+INFO-FLOW: Done: create_csynth_xml read xml data time: 0 seconds per iteration
+INFO-FLOW: Running: create_csynth_xml bind info
+INFO-FLOW: Done: create_csynth_xml bind info time: 0 seconds per iteration
+INFO-FLOW: Running: create_csynth_xml config info
+INFO-FLOW: Done: create_csynth_xml config info time: 0 seconds per iteration
+INFO-FLOW: Running: create_csynth_xml write xml
+INFO-FLOW: Done: create_csynth_xml write xml time: 0 seconds per iteration
+INFO-FLOW: DBG:PUTS:      create_csynth_xml wrote csynth_xml=/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth.xml
+INFO-FLOW: DBG:PROC: ::AP::DESIGN_DATA::generate_json generate_bd_files='0' generate_xo_files='0' modelList='checker_scan_flow_control_loop_pipe_sequential_init
+checker_scan_mul_32s_32s_32_1_1
+checker_scan_gmem0_m_axi
+checker_scan_control_s_axi
+checker_scan_Pipeline_VITIS_LOOP_38_1
+checker_scan
+' rtl_lang='both' bootstrap_tcl='false' outdir='' outfilename=''
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/global.setting.tcl 
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/global.setting.tcl 
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/top-io-be.tcl 
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.compgen.dataonly.tcl 
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.compgen.dataonly.tcl 
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.rtl_wrap.cfg.tcl 
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.compgen.dataonly.tcl 
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan_Pipeline_VITIS_LOOP_38_1.tbgen.tcl 
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/global.setting.tcl 
+Execute         ap_part_info -name xczu7ev-ffvc1156-2-e -data names -quiet 
+Execute         ap_part_info -name xczu7ev-ffvc1156-2-e -data info -quiet 
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.constraint.tcl 
+Execute         sc_get_clocks checker_scan 
+Execute         source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/global.setting.tcl 
+INFO-FLOW: DBG:PROC: ::HLSREPORTS::add_csynth_report_sections bind_info_dict='adapter_nodes {{BINDTYPE adapter ID {} IMPL {} LATENCY {} OPTYPE {} PRAGMA {} RTLNAME control_s_axi_U SOURCE {} VARIABLE {} LOOP {} BUNDLEDNAME control DSP 0 BRAM 0 URAM 0 STORAGESUBTYPE s_axilite STORAGESIZE {} STORAGEUSAGE interface DISPNAME {bind_adapter }} {BINDTYPE adapter ID {} IMPL {} LATENCY {} OPTYPE {} PRAGMA {} RTLNAME gmem0_m_axi_U SOURCE {} VARIABLE {} LOOP {} BUNDLEDNAME gmem0 DSP 0 BRAM 1 URAM 0 STORAGESUBTYPE m_axi STORAGESIZE {} STORAGEUSAGE interface DISPNAME {bind_adapter }}} cache_nodes {} report_dict {TOPINST checker_scan MODULE2INSTS {checker_scan checker_scan checker_scan_Pipeline_VITIS_LOOP_38_1 grp_checker_scan_Pipeline_VITIS_LOOP_38_1_fu_250} INST2MODULE {checker_scan checker_scan grp_checker_scan_Pipeline_VITIS_LOOP_38_1_fu_250 checker_scan_Pipeline_VITIS_LOOP_38_1} INSTDATA {checker_scan {DEPTH 1 CHILDREN grp_checker_scan_Pipeline_VITIS_LOOP_38_1_fu_250} grp_checker_scan_Pipeline_VITIS_LOOP_38_1_fu_250 {DEPTH 2 CHILDREN {}}} MODULEDATA {checker_scan_Pipeline_VITIS_LOOP_38_1 {BINDINFO {{BINDTYPE op ID {} IMPL auto LATENCY 0 OPTYPE setlt PRAGMA {} RTLNAME icmp_ln38_fu_119_p2 SOURCE /home/mini/workspace/dfxisp_v2/include/checker.hpp:38 VARIABLE icmp_ln38 LOOP VITIS_LOOP_38_1 BUNDLEDNAME {} DSP 0 BRAM 0 URAM 0 STORAGESUBTYPE {} DISPNAME {bind_op setlt} VISIBLE false} {BINDTYPE op ID {} IMPL fabric LATENCY 0 OPTYPE add PRAGMA {} RTLNAME add_ln38_fu_125_p2 SOURCE /home/mini/workspace/dfxisp_v2/include/checker.hpp:38 VARIABLE add_ln38 LOOP VITIS_LOOP_38_1 BUNDLEDNAME {} DSP 0 BRAM 0 URAM 0 STORAGESUBTYPE {} DISPNAME {bind_op add} VISIBLE true} {BINDTYPE op ID {} IMPL auto LATENCY 0 OPTYPE setlt PRAGMA {} RTLNAME icmp_ln40_fu_145_p2 SOURCE /home/mini/workspace/dfxisp_v2/include/checker.hpp:40 VARIABLE icmp_ln40 LOOP VITIS_LOOP_38_1 BUNDLEDNAME {} DSP 0 BRAM 0 URAM 0 STORAGESUBTYPE {} DISPNAME {bind_op setlt} VISIBLE false} {BINDTYPE op ID {} IMPL fabric LATENCY 0 OPTYPE add PRAGMA {} RTLNAME add_ln40_fu_149_p2 SOURCE /home/mini/workspace/dfxisp_v2/include/checker.hpp:40 VARIABLE add_ln40 LOOP VITIS_LOOP_38_1 BUNDLEDNAME {} DSP 0 BRAM 0 URAM 0 STORAGESUBTYPE {} DISPNAME {bind_op add} VISIBLE true} {BINDTYPE op ID {} IMPL auto_sel LATENCY 0 OPTYPE select PRAGMA {} RTLNAME dark_1_fu_155_p3 SOURCE /home/mini/workspace/dfxisp_v2/include/checker.hpp:40 VARIABLE dark_1 LOOP VITIS_LOOP_38_1 BUNDLEDNAME {} DSP 0 BRAM 0 URAM 0 STORAGESUBTYPE {} DISPNAME {bind_op select} VISIBLE false}} AREA {DSP 0 BRAM 0 URAM 0}} checker_scan {BINDINFO {{BINDTYPE op ID {} IMPL auto LATENCY 0 OPTYPE setlt PRAGMA {} RTLNAME icmp_ln29_fu_276_p2 SOURCE local/checker.cpp:29 VARIABLE icmp_ln29 LOOP {} BUNDLEDNAME {} DSP 0 BRAM 0 URAM 0 STORAGESUBTYPE {} DISPNAME {bind_op setlt} VISIBLE false} {BINDTYPE op ID {} IMPL auto LATENCY 0 OPTYPE setlt PRAGMA {} RTLNAME icmp_ln29_1_fu_282_p2 SOURCE local/checker.cpp:29 VARIABLE icmp_ln29_1 LOOP {} BUNDLEDNAME {} DSP 0 BRAM 0 URAM 0 STORAGESUBTYPE {} DISPNAME {bind_op setlt} VISIBLE false} {BINDTYPE op ID {} IMPL auto LATENCY 0 OPTYPE or PRAGMA {} RTLNAME or_ln29_fu_288_p2 SOURCE local/checker.cpp:29 VARIABLE or_ln29 LOOP {} BUNDLEDNAME {} DSP 0 BRAM 0 URAM 0 STORAGESUBTYPE {} DISPNAME {bind_op or} VISIBLE false} {BINDTYPE op ID {} IMPL auto LATENCY 0 OPTYPE mul PRAGMA {} RTLNAME mul_32s_32s_32_1_1_U9 SOURCE /home/mini/workspace/dfxisp_v2/include/checker.hpp:36 VARIABLE n LOOP {} BUNDLEDNAME {} DSP 3 BRAM 0 URAM 0 STORAGESUBTYPE {} DISPNAME {bind_op mul} VISIBLE true} {BINDTYPE op ID {} IMPL auto LATENCY 0 OPTYPE setgt PRAGMA {} RTLNAME icmp_ln38_fu_308_p2 SOURCE /home/mini/workspace/dfxisp_v2/include/checker.hpp:38 VARIABLE icmp_ln38 LOOP {} BUNDLEDNAME {} DSP 0 BRAM 0 URAM 0 STORAGESUBTYPE {} DISPNAME {bind_op setgt} VISIBLE false} {BINDTYPE op ID {} IMPL auto_sel LATENCY 0 OPTYPE select PRAGMA {} RTLNAME empty_fu_313_p3 SOURCE /home/mini/workspace/dfxisp_v2/include/checker.hpp:38 VARIABLE empty LOOP {} BUNDLEDNAME {} DSP 0 BRAM 0 URAM 0 STORAGESUBTYPE {} DISPNAME {bind_op select} VISIBLE false} {BINDTYPE op ID {} IMPL auto LATENCY 0 OPTYPE mul PRAGMA {} RTLNAME mul_32s_32s_32_1_1_U6 SOURCE /home/mini/workspace/dfxisp_v2/include/checker.hpp:44 VARIABLE mul_ln44 LOOP {} BUNDLEDNAME {} DSP 3 BRAM 0 URAM 0 STORAGESUBTYPE {} DISPNAME {bind_op mul} VISIBLE true} {BINDTYPE op ID {} IMPL auto LATENCY 0 OPTYPE setgt PRAGMA {} RTLNAME above_enter_fu_368_p2 SOURCE /home/mini/workspace/dfxisp_v2/include/checker.hpp:44 VARIABLE above_enter LOOP {} BUNDLEDNAME {} DSP 0 BRAM 0 URAM 0 STORAGESUBTYPE {} DISPNAME {bind_op setgt} VISIBLE false} {BINDTYPE op ID {} IMPL auto LATENCY 0 OPTYPE mul PRAGMA {} RTLNAME mul_32s_32s_32_1_1_U7 SOURCE /home/mini/workspace/dfxisp_v2/include/checker.hpp:45 VARIABLE mul_ln45 LOOP {} BUNDLEDNAME {} DSP 3 BRAM 0 URAM 0 STORAGESUBTYPE {} DISPNAME {bind_op mul} VISIBLE true} {BINDTYPE op ID {} IMPL auto LATENCY 0 OPTYPE setlt PRAGMA {} RTLNAME below_exit_fu_373_p2 SOURCE /home/mini/workspace/dfxisp_v2/include/checker.hpp:45 VARIABLE below_exit LOOP {} BUNDLEDNAME {} DSP 0 BRAM 0 URAM 0 STORAGESUBTYPE {} DISPNAME {bind_op setlt} VISIBLE false} {BINDTYPE op ID {} IMPL auto LATENCY 0 OPTYPE mul PRAGMA {} RTLNAME mul_32s_32s_32_1_1_U8 SOURCE /home/mini/workspace/dfxisp_v2/include/checker.hpp:51 VARIABLE mul_ln51 LOOP {} BUNDLEDNAME {} DSP 3 BRAM 0 URAM 0 STORAGESUBTYPE {} DISPNAME {bind_op mul} VISIBLE true} {BINDTYPE op ID {} IMPL auto LATENCY 0 OPTYPE setgt PRAGMA {} RTLNAME icmp_ln51_fu_387_p2 SOURCE /home/mini/workspace/dfxisp_v2/include/checker.hpp:51 VARIABLE icmp_ln51 LOOP {} BUNDLEDNAME {} DSP 0 BRAM 0 URAM 0 STORAGESUBTYPE {} DISPNAME {bind_op setgt} VISIBLE false}} AREA {DSP 12 BRAM 1 URAM 0}}}}'
+INFO-FLOW: DBG:PUTS:      update_csynth_reports json2rpt_hw_sw_interfaces
+Execute         send_msg_by_id INFO @200-1603@%s  and missed bursts 
+INFO: [HLS 200-1603] Design has inferred MAXI bursts and missed bursts, see Vitis HLS GUI synthesis summary report for detailed information.
+INFO-FLOW: Running: gen_csynth_sec_pragma
+INFO-FLOW: Done: gen_csynth_sec_pragma time: 0 seconds per iteration
+INFO-FLOW: DBG:PUTS:      update_csynth_reports wrote xml
+INFO-FLOW: DBG:PUTS:      update_csynth_reports appended to csynth rpt file
+INFO: [HLS 200-111] Finished Updating report files: CPU user time: 0.54 seconds. CPU system time: 0.02 seconds. Elapsed time: 0.56 seconds; current allocated memory: 323.172 MB.
+INFO: [VHDL 208-304] Generating VHDL RTL for checker_scan.
+INFO: [VLOG 209-307] Generating Verilog RTL for checker_scan.
+Execute         syn_report -model checker_scan -printsummary 
+INFO: [HLS 200-790] **** Loop Constraint Status: All loop constraints were satisfied.
+INFO: [HLS 200-789] **** Estimated Fmax: 273.97 MHz
+Command       autosyn done; 1.05 sec.
+Command     csynth_design done; 8.81 sec.
+INFO: [HLS 200-2161] Finished Command csynth_design Elapsed time: 00:00:08; Allocated memory: 43.980 MB.
+Execute     cosim_design -rtl verilog -tool xsim -trace_level none -argv /home/mini/workspace/dfxisp_v2/results/checker_validation_2026-08-06/checker_cosim_crops_2026-08-06.csv /home/mini/workspace/dfxisp_v2/results/checker_validation_2026-08-06/checker_crop_cosim_frames_2026-08-06.csv 
+INFO: [HLS 200-1510] Running: cosim_design -rtl verilog -tool xsim -trace_level none -argv /home/mini/workspace/dfxisp_v2/results/checker_validation_2026-08-06/checker_cosim_crops_2026-08-06.csv /home/mini/workspace/dfxisp_v2/results/checker_validation_2026-08-06/checker_crop_cosim_frames_2026-08-06.csv 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/global.setting.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/global.setting.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/global.setting.tcl 
+INFO-FLOW: DBG:PUTS: read_platform_lib /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/global.setting.tcl
+Execute       source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/generic/autopilot/common.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/generic/autopilot/APCoreGen.gen 
+Execute       source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/generic/autopilot/op.gen 
+Execute       source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/generic/autopilot/op_simcore.gen 
+Execute       source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/generic/autopilot/interface.gen 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/global.setting.tcl 
+Execute       source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/common/xilinx.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/interface/plb46.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/interface/axi4.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/interface/nativeAXI4.gen 
+Execute           source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/interface/saxilite.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/scripts/xilinxcoregen.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/interface/XilEDKCoreGen.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/ip/xfir.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/ip/util.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/ip/xfft.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/ip/dds_compiler.gen 
+Execute         source /tools/Xilinx/Vitis_HLS/2024.1/common/technology/xilinx/DSP48/dsp48.gen 
+Execute       ap_part_info -name xczu7ev-ffvc1156-2-e -data names -quiet 
+Execute       ap_part_info -name xczu7ev-ffvc1156-2-e -data info -quiet 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/global.setting.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.rtl_wrap.cfg.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+INFO: [COSIM 212-47] Using XSIM for RTL simulation.
+INFO: [COSIM 212-14] Instrumenting C test bench ...
+Execute       ap_part_info -name xczu7ev-ffvc1156-2-e -data info 
+INFO-FLOW: run_clang exec: /tools/Xilinx/Vitis_HLS/2024.1/vcxx/libexec/clang -fno-builtin-isinf -fno-builtin-isnan -E -I/home/mini/workspace/dfxisp_v2/include -Wno-unknown-pragmas -Wno-unknown-pragmas -DGCC_COMPATIBLE_APINT -DAESL_TB -D__HLS_COSIM__ -D__VITIS_HLS__ -I /tools/Xilinx/Vitis_HLS/2024.1/include -I include /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/local/checker_hls_tb.cpp -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/./sim/autowrap/testbench/checker_hls_tb.cpp_pre.cpp -std=gnu++14 -D__DSP48E2__ --gcc-toolchain=/tools/Xilinx/Vitis_HLS/2024.1/tps/lnx64/gcc-8.3.0 > /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_hls_tb.cpp.clang.autosim-tb.out.log 2> /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_hls_tb.cpp.clang.autosim-tb.err.log
+INFO-FLOW: TB processing: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/local/checker_hls_tb.cpp /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/./sim/autowrap/testbench/checker_hls_tb.cpp_pre.cpp
+Execute       clang_tidy xilinx-tb-process -desc tb-process /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/./sim/autowrap/testbench/checker_hls_tb.cpp_pre.cpp.tb.cpp std=gnu++14 
+INFO-FLOW: exec /tools/Xilinx/Vitis_HLS/2024.1/lnx64/tools/clang-3.9-csynth/bin/clang-tidy -header-filter=.* --checks=-*,xilinx-tb-process -fix-errors /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/./sim/autowrap/testbench/checker_hls_tb.cpp_pre.cpp.tb.cpp -- -std=gnu++14 -fhls -ferror-limit=0
+Command       clang_tidy done; 0.36 sec.
+Execute       ap_part_info -name xczu7ev-ffvc1156-2-e -data info 
+INFO-FLOW: run_clang exec: /tools/Xilinx/Vitis_HLS/2024.1/vcxx/libexec/clang -fno-builtin-isinf -fno-builtin-isnan -E -I/home/mini/workspace/dfxisp_v2/include -DGCC_COMPATIBLE_APINT -DAESL_TB -D__HLS_COSIM__ -D__VITIS_HLS__ -I /tools/Xilinx/Vitis_HLS/2024.1/include -I include /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/local/checker.cpp -o /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/./sim/autowrap/testbench/checker.cpp_pre.cpp -std=gnu++14 -D__DSP48E2__ --gcc-toolchain=/tools/Xilinx/Vitis_HLS/2024.1/tps/lnx64/gcc-8.3.0 > /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.cpp.clang.autosim-tb.out.log 2> /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.cpp.clang.autosim-tb.err.log
+INFO-FLOW: TB processing: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/local/checker.cpp /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/./sim/autowrap/testbench/checker.cpp_pre.cpp
+Execute       clang_tidy xilinx-tb-process -desc tb-process /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/./sim/autowrap/testbench/checker.cpp_pre.cpp.tb.cpp std=gnu++14 
+INFO-FLOW: exec /tools/Xilinx/Vitis_HLS/2024.1/lnx64/tools/clang-3.9-csynth/bin/clang-tidy -header-filter=.* --checks=-*,xilinx-tb-process -fix-errors /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/./sim/autowrap/testbench/checker.cpp_pre.cpp.tb.cpp -- -std=gnu++14 -fhls -ferror-limit=0
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/./sim/autowrap/testbench/tb.status.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/global.setting.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.rtl_wrap.cfg.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.rtl_wrap.cfg.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.rtl_wrap.cfg.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute       ap_part_info -name xczu7ev-ffvc1156-2-e -data info 
+Execute       source .run_sim.tcl 
+INFO: [COSIM 212-302] Starting C TB testing ... 
+INFO: [COSIM 212-333] Generating C post check test bench ...
+INFO: [COSIM 212-12] Generating RTL test bench ...
+Execute       source ../tv/cdatafile/ref.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute       source ../tv/cdatafile/ref.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.DependenceCheck.tcl 
+Execute       source /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker_scan.tbgen.tcl 
+INFO: [COSIM 212-1] *** C/RTL co-simulation file generation completed. ***
+Execute       source .run_sim.tcl 
+Execute         source check_sim.tcl 
+Execute         source dataflow_monitor_API.tcl 
+Execute         source .sim.status.tcl 
+INFO: [COSIM 212-323] Starting verilog simulation. 
+INFO: [COSIM 212-15] Starting XSIM ...
+Command       ap_source done; error code: 1; 8.13 sec.
+INFO-FLOW: AESL_AUTOSIM::auto_sim errorInfo:
+
+    while executing
+"::AESL_AUTOSIM::auto_sim "$argn" "
+ERROR: [COSIM 212-4] *** C/RTL co-simulation finished: FAIL ***
+INFO-FLOW: Caught error in cosim_design: 
+    while executing
+"ap_internal_cosim_design "
+Command     cosim_design done; error code: 2; 14.04 sec.
+INFO: [HLS 200-2161] Finished Command cosim_design Elapsed time: 00:00:14; Allocated memory: 6.137 MB.
+Command   ap_source done; error code: 1; 23.65 sec.
+Execute   cleanup_all 

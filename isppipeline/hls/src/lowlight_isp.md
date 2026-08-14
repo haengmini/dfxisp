@@ -114,7 +114,10 @@ GAT는 Python 골든에 `lowlight_isp_gat` ablation arm으로만 남아 이 결�
 
 원래 설계는 "VST가 분산을 안정화했으니 **상수 임계** σ-clip 하나면 된다"였다.
 논리 자체는 옳고, 임계 유도도 나중에 바로잡았다(binning 후 채널별
-σ_unbinned/√n → SAMECOLOR R/B 11, G 8).
+σ_unbinned/√n → BINNING R/B 11, G 8). 그 유도를 기록한
+`results/denoise-k-sweep-2026-08-06.md`는 이 모드를 당시 이름인 SAMECOLOR로
+표기한다 — 2026-08-14에 열거자를 `LOWLIGHT_ISP_BIN_BINNING`으로 통일하기
+전의 이름이며, 가리키는 대상은 같다.
 
 그러나 **k = 1.0 / 1.5 / 2.4 / 4.0 스윕 전 구간에서 denoise는 값을 벌지
 못했다**: mAP@[.5:.95]는 `+0.0008~+0.0049`(전부 잡음대 안), mAP@50은

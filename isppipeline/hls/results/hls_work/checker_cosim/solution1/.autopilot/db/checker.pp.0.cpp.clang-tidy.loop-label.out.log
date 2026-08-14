@@ -1,0 +1,5 @@
+/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp:537:5: warning: Added loop label VITIS_LOOP_38_1:   [xilinx-label-all-loops]
+    for (int i = 0; i < n; ++i) {
+    ^~~
+    VITIS_LOOP_38_1: 
+/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp:537:5: note: FIX-IT applied suggested code changes

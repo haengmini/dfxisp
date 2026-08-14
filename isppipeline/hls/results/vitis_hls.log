@@ -1,0 +1,271 @@
+
+****** Vitis HLS - High-Level Synthesis from C, C++ and OpenCL v2024.1 (64-bit)
+  **** SW Build 5069499 on May 21 2024
+  **** IP Build 5075265 on Wed May 22 21:45:21 MDT 2024
+  **** SharedData Build 5076995 on Wed May 22 18:29:18 MDT 2024
+  **** Start of session at: Fri Aug  7 00:36:08 2026
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+
+source /tools/Xilinx/Vitis_HLS/2024.1/scripts/vitis_hls/hls.tcl -notrace
+INFO: [HLS 200-10] For user 'mini' on host 'DESKTOP-9MHPU7S.localdomain' (Linux_x86_64 version 6.18.33.2-microsoft-standard-WSL2) on Fri Aug 07 00:36:09 KST 2026
+INFO: [HLS 200-10] On os Ubuntu 22.04.5 LTS
+INFO: [HLS 200-10] In directory '/home/mini/workspace/dfxisp_v2/results'
+WARNING: [HLS 200-2053] The vitis_hls executable is deprecated. Consider using vitis-run --mode hls --tcl
+Sourcing Tcl script 'tools/run_checker_cosim.tcl'
+INFO: [HLS 200-1510] Running: open_project -reset hls_work/checker_cosim 
+INFO: [HLS 200-10] Opening and resetting project '/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim'.
+INFO: [HLS 200-1510] Running: set_top checker_scan 
+INFO: [HLS 200-1510] Running: add_files local/checker.cpp -cflags -I/home/mini/workspace/dfxisp_v2/include 
+INFO: [HLS 200-10] Adding design file 'local/checker.cpp' to the project
+INFO: [HLS 200-1510] Running: add_files -tb local/checker_hls_tb.cpp -cflags -I/home/mini/workspace/dfxisp_v2/include 
+INFO: [HLS 200-10] Adding test bench file 'local/checker_hls_tb.cpp' to the project
+INFO: [HLS 200-1510] Running: open_solution -reset solution1 -flow_target vivado 
+INFO: [HLS 200-10] Creating and opening solution '/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1'.
+INFO: [HLS 200-10] Cleaning up the solution database.
+INFO: [HLS 200-1505] Using flow_target 'vivado'
+Resolution: For help on HLS 200-1505 see docs.xilinx.com/access/sources/dita/topic?Doc_Version=2024.1%20English&url=ug1448-hls-guidance&resourceid=200-1505.html
+INFO: [HLS 200-1510] Running: set_part xczu7ev-ffvc1156-2-e 
+INFO: [HLS 200-1611] Setting target device to 'xczu7ev-ffvc1156-2-e'
+INFO: [HLS 200-1510] Running: create_clock -period 5.0 
+INFO: [SYN 201-201] Setting up clock 'default' with a period of 5ns.
+INFO: [HLS 200-1510] Running: config_interface -m_axi_alignment_byte_size 16 -m_axi_max_widen_bitwidth 128 
+INFO: [HLS 200-1510] Running: csynth_design 
+INFO: [HLS 200-111] Finished File checks and directory preparation: CPU user time: 0.05 seconds. CPU system time: 0 seconds. Elapsed time: 0.06 seconds; current allocated memory: 279.191 MB.
+INFO: [HLS 200-10] Analyzing design file 'local/checker.cpp' ... 
+INFO: [HLS 200-111] Finished Source Code Analysis and Preprocessing: CPU user time: 0.27 seconds. CPU system time: 0.38 seconds. Elapsed time: 0.79 seconds; current allocated memory: 281.219 MB.
+INFO: [HLS 200-777] Using interface defaults for 'Vivado' flow target.
+INFO: [HLS 200-1995] There were 111 instructions in the design after the 'Compile/Link' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+INFO: [HLS 200-1995] There were 104 instructions in the design after the 'Unroll/Inline (step 1)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+INFO: [HLS 200-1995] There were 78 instructions in the design after the 'Unroll/Inline (step 2)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+INFO: [HLS 200-1995] There were 77 instructions in the design after the 'Unroll/Inline (step 3)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+INFO: [HLS 200-1995] There were 60 instructions in the design after the 'Unroll/Inline (step 4)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+INFO: [HLS 200-1995] There were 60 instructions in the design after the 'Array/Struct (step 1)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+INFO: [HLS 200-1995] There were 60 instructions in the design after the 'Array/Struct (step 2)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+INFO: [HLS 200-1995] There were 60 instructions in the design after the 'Array/Struct (step 3)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+INFO: [HLS 200-1995] There were 60 instructions in the design after the 'Array/Struct (step 4)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+INFO: [HLS 200-1995] There were 64 instructions in the design after the 'Array/Struct (step 5)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+INFO: [HLS 200-1995] There were 63 instructions in the design after the 'Performance (step 1)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+INFO: [HLS 200-1995] There were 62 instructions in the design after the 'Performance (step 2)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+INFO: [HLS 200-1995] There were 62 instructions in the design after the 'Performance (step 3)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+INFO: [HLS 200-1995] There were 62 instructions in the design after the 'Performance (step 4)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+INFO: [HLS 200-1995] There were 84 instructions in the design after the 'HW Transforms (step 1)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+INFO: [HLS 200-1995] There were 87 instructions in the design after the 'HW Transforms (step 2)' phase of compilation. See the Design Size Report for more details: /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/syn/report/csynth_design_size.rpt
+INFO: [HLS 214-178] Inlining function 'checker_select_mode(unsigned short const*, int, int, int, unsigned short, int, int, int, int&, int&)' into 'checker_scan' (local/checker.cpp:12:0)
+INFO: [HLS 214-376] automatically set the pipeline for Loop< VITIS_LOOP_38_1> at /home/mini/workspace/dfxisp_v2/include/checker.hpp:38:22 
+INFO: [HLS 214-115] Multiple burst reads of variable length and bit width 16 in loop 'VITIS_LOOP_38_1'(/home/mini/workspace/dfxisp_v2/include/checker.hpp:38:22) has been inferred on bundle 'gmem0'. These burst requests might be further partitioned into multiple requests during RTL generation, based on max_read_burst_length or max_write_burst_length settings. (/home/mini/workspace/dfxisp_v2/include/checker.hpp:38:22)
+INFO: [HLS 200-111] Finished Compiling Optimization and Transform: CPU user time: 1.86 seconds. CPU system time: 0.34 seconds. Elapsed time: 6.81 seconds; current allocated memory: 291.004 MB.
+INFO: [HLS 200-111] Finished Checking Pragmas: CPU user time: 0 seconds. CPU system time: 0 seconds. Elapsed time: 0 seconds; current allocated memory: 291.004 MB.
+INFO: [HLS 200-10] Starting code transformations ...
+INFO: [HLS 200-111] Finished Standard Transforms: CPU user time: 0.01 seconds. CPU system time: 0 seconds. Elapsed time: 0.01 seconds; current allocated memory: 291.203 MB.
+INFO: [HLS 200-10] Checking synthesizability ...
+INFO: [HLS 200-111] Finished Checking Synthesizability: CPU user time: 0 seconds. CPU system time: 0 seconds. Elapsed time: 0.01 seconds; current allocated memory: 291.203 MB.
+INFO: [HLS 200-111] Finished Loop, function and other optimizations: CPU user time: 0.02 seconds. CPU system time: 0.02 seconds. Elapsed time: 0.04 seconds; current allocated memory: 312.734 MB.
+INFO: [HLS 200-111] Finished Architecture Synthesis: CPU user time: 0.03 seconds. CPU system time: 0 seconds. Elapsed time: 0.02 seconds; current allocated memory: 312.906 MB.
+INFO: [HLS 200-10] Starting hardware synthesis ...
+INFO: [HLS 200-10] Synthesizing 'checker_scan' ...
+INFO: [HLS 200-10] ----------------------------------------------------------------
+INFO: [HLS 200-42] -- Implementing module 'checker_scan_Pipeline_VITIS_LOOP_38_1' 
+INFO: [HLS 200-10] ----------------------------------------------------------------
+INFO: [SCHED 204-11] Starting scheduling ...
+INFO: [SCHED 204-61] Pipelining loop 'VITIS_LOOP_38_1'.
+INFO: [HLS 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 3, loop 'VITIS_LOOP_38_1'
+INFO: [SCHED 204-11] Finished scheduling.
+INFO: [HLS 200-111] Finished Scheduling: CPU user time: 0.03 seconds. CPU system time: 0.03 seconds. Elapsed time: 0.12 seconds; current allocated memory: 313.855 MB.
+INFO: [BIND 205-100] Starting micro-architecture generation ...
+INFO: [BIND 205-101] Performing variable lifetime analysis.
+INFO: [BIND 205-101] Exploring resource sharing.
+INFO: [BIND 205-101] Binding ...
+INFO: [BIND 205-100] Finished micro-architecture generation.
+INFO: [HLS 200-111] Finished Binding: CPU user time: 0.02 seconds. CPU system time: 0 seconds. Elapsed time: 0.05 seconds; current allocated memory: 313.855 MB.
+INFO: [HLS 200-10] ----------------------------------------------------------------
+INFO: [HLS 200-42] -- Implementing module 'checker_scan' 
+INFO: [HLS 200-10] ----------------------------------------------------------------
+INFO: [SCHED 204-11] Starting scheduling ...
+INFO: [SCHED 204-11] Finished scheduling.
+INFO: [HLS 200-111] Finished Scheduling: CPU user time: 0.04 seconds. CPU system time: 0 seconds. Elapsed time: 0.04 seconds; current allocated memory: 313.883 MB.
+INFO: [BIND 205-100] Starting micro-architecture generation ...
+INFO: [BIND 205-101] Performing variable lifetime analysis.
+INFO: [BIND 205-101] Exploring resource sharing.
+INFO: [BIND 205-101] Binding ...
+INFO: [BIND 205-100] Finished micro-architecture generation.
+INFO: [HLS 200-111] Finished Binding: CPU user time: 0.02 seconds. CPU system time: 0 seconds. Elapsed time: 0.02 seconds; current allocated memory: 313.883 MB.
+INFO: [HLS 200-10] ----------------------------------------------------------------
+INFO: [HLS 200-10] -- Generating RTL for module 'checker_scan_Pipeline_VITIS_LOOP_38_1' 
+INFO: [HLS 200-10] ----------------------------------------------------------------
+INFO: [HLS 200-1030] Apply Unified Pipeline Control on module 'checker_scan_Pipeline_VITIS_LOOP_38_1' pipeline 'VITIS_LOOP_38_1' pipeline type 'loop pipeline'
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARVALID' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARADDR' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARID' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARLEN' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARSIZE' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARBURST' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARLOCK' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARCACHE' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARPROT' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARQOS' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARREGION' to 0.
+WARNING: [RTGEN 206-101] Setting dangling out port 'checker_scan_Pipeline_VITIS_LOOP_38_1/m_axi_gmem0_ARUSER' to 0.
+INFO: [RTGEN 206-100] Finished creating RTL model for 'checker_scan_Pipeline_VITIS_LOOP_38_1'.
+INFO: [HLS 200-111] Finished Creating RTL model: CPU user time: 0.02 seconds. CPU system time: 0 seconds. Elapsed time: 0.03 seconds; current allocated memory: 313.883 MB.
+INFO: [HLS 200-10] ----------------------------------------------------------------
+INFO: [HLS 200-10] -- Generating RTL for module 'checker_scan' 
+INFO: [HLS 200-10] ----------------------------------------------------------------
+WARNING: [RTGEN 206-101] Design contains AXI ports. Reset is fixed to synchronous and active low.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/gmem0' to 'm_axi'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/raw_bayer' to 's_axilite & ap_none'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/width' to 's_axilite & ap_none'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/height' to 's_axilite & ap_none'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/mode' to 's_axilite & ap_none'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/dark_pixel_threshold' to 's_axilite & ap_none'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/verdict_pct' to 's_axilite & ap_none'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/enter_pct' to 's_axilite & ap_none'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/exit_pct' to 's_axilite & ap_none'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/selected_mode' to 's_axilite & ap_vld'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/hyst_flags' to 'ap_vld'.
+INFO: [RTGEN 206-500] Setting interface mode on port 'checker_scan/dark_count' to 's_axilite & ap_vld'.
+INFO: [RTGEN 206-500] Setting interface mode on function 'checker_scan' to 's_axilite & ap_ctrl_hs'.
+INFO: [RTGEN 206-100] Bundling port 'raw_bayer', 'width', 'height', 'mode', 'dark_pixel_threshold', 'verdict_pct', 'enter_pct', 'exit_pct', 'selected_mode', 'dark_count' to AXI-Lite port control.
+INFO: [RTGEN 206-100] Generating core module 'mul_32s_32s_32_1_1': 4 instance(s).
+INFO: [RTGEN 206-100] Finished creating RTL model for 'checker_scan'.
+INFO: [HLS 200-111] Finished Creating RTL model: CPU user time: 0.06 seconds. CPU system time: 0 seconds. Elapsed time: 0.08 seconds; current allocated memory: 314.160 MB.
+INFO: [HLS 200-111] Finished Generating all RTL models: CPU user time: 0.15 seconds. CPU system time: 0 seconds. Elapsed time: 0.17 seconds; current allocated memory: 317.703 MB.
+INFO: [HLS 200-1603] Design has inferred MAXI bursts and missed bursts, see Vitis HLS GUI synthesis summary report for detailed information.
+INFO: [HLS 200-111] Finished Updating report files: CPU user time: 0.54 seconds. CPU system time: 0.02 seconds. Elapsed time: 0.56 seconds; current allocated memory: 323.172 MB.
+INFO: [VHDL 208-304] Generating VHDL RTL for checker_scan.
+INFO: [VLOG 209-307] Generating Verilog RTL for checker_scan.
+INFO: [HLS 200-790] **** Loop Constraint Status: All loop constraints were satisfied.
+INFO: [HLS 200-789] **** Estimated Fmax: 273.97 MHz
+INFO: [HLS 200-2161] Finished Command csynth_design Elapsed time: 00:00:08; Allocated memory: 43.980 MB.
+INFO: [HLS 200-1510] Running: cosim_design -rtl verilog -tool xsim -trace_level none -argv /home/mini/workspace/dfxisp_v2/results/checker_validation_2026-08-06/checker_cosim_crops_2026-08-06.csv /home/mini/workspace/dfxisp_v2/results/checker_validation_2026-08-06/checker_crop_cosim_frames_2026-08-06.csv 
+INFO: [COSIM 212-47] Using XSIM for RTL simulation.
+INFO: [COSIM 212-14] Instrumenting C test bench ...
+   Build using "/tools/Xilinx/Vitis_HLS/2024.1/vcxx/libexec//clang++"
+   Compiling apatb_checker_scan.cpp
+   Compiling checker.cpp_pre.cpp.tb.cpp
+   Compiling checker_hls_tb.cpp_pre.cpp.tb.cpp
+   Compiling apatb_checker_scan_ir.ll
+   Generating cosim.tv.exe
+INFO: [COSIM 212-302] Starting C TB testing ... 
+HLS_TB_COMPLETE frames=4 output=/home/mini/workspace/dfxisp_v2/results/checker_validation_2026-08-06/checker_crop_cosim_frames_2026-08-06.csv
+INFO: [COSIM 212-333] Generating C post check test bench ...
+INFO: [COSIM 212-12] Generating RTL test bench ...
+INFO: [COSIM 212-1] *** C/RTL co-simulation file generation completed. ***
+INFO: [COSIM 212-323] Starting verilog simulation. 
+INFO: [COSIM 212-15] Starting XSIM ...
+Vivado Simulator v2024.1
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+Running: /tools/Xilinx/Vivado/2024.1/bin/unwrapped/lnx64.o/xelab xil_defaultlib.apatb_checker_scan_top glbl -Oenable_linking_all_libraries -prj checker_scan.prj -L smartconnect_v1_0 -L axi_protocol_checker_v1_1_12 -L axi_protocol_checker_v1_1_13 -L axis_protocol_checker_v1_1_11 -L axis_protocol_checker_v1_1_12 -L xil_defaultlib -L unisims_ver -L xpm -L floating_point_v7_0_23 -L floating_point_v7_1_18 --lib ieee_proposed=./ieee_proposed -s checker_scan 
+Multi-threading is on. Using 14 slave threads.
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/sim/verilog/glbl.v" into library work
+INFO: [VRFC 10-311] analyzing module glbl
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/sim/verilog/AESL_axi_slave_control.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module AESL_axi_slave_control
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/sim/verilog/checker_scan_flow_control_loop_pipe_sequential_init.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module checker_scan_flow_control_loop_pipe_sequential_init
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/sim/verilog/checker_scan_mul_32s_32s_32_1_1.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module checker_scan_mul_32s_32s_32_1_1
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/sim/verilog/checker_scan.autotb.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module apatb_checker_scan_top
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/sim/verilog/checker_scan.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module checker_scan
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/sim/verilog/checker_scan_checker_scan_Pipeline_VITIS_LOOP_38_1.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module checker_scan_checker_scan_Pipeline_VITIS_LOOP_38_1
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/sim/verilog/checker_scan_control_s_axi.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module checker_scan_control_s_axi
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/sim/verilog/AESL_axi_master_gmem0.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module AESL_axi_master_gmem0
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/sim/verilog/checker_scan_gmem0_m_axi.v" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module checker_scan_gmem0_m_axi
+INFO: [VRFC 10-311] analyzing module checker_scan_gmem0_m_axi_load
+INFO: [VRFC 10-311] analyzing module checker_scan_gmem0_m_axi_store
+INFO: [VRFC 10-311] analyzing module checker_scan_gmem0_m_axi_read
+INFO: [VRFC 10-311] analyzing module checker_scan_gmem0_m_axi_write
+INFO: [VRFC 10-311] analyzing module checker_scan_gmem0_m_axi_burst_converter
+INFO: [VRFC 10-311] analyzing module checker_scan_gmem0_m_axi_throttle
+INFO: [VRFC 10-311] analyzing module checker_scan_gmem0_m_axi_reg_slice
+INFO: [VRFC 10-311] analyzing module checker_scan_gmem0_m_axi_fifo
+INFO: [VRFC 10-311] analyzing module checker_scan_gmem0_m_axi_srl
+INFO: [VRFC 10-311] analyzing module checker_scan_gmem0_m_axi_mem
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "/home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/sim/verilog/dataflow_monitor.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module dataflow_monitor
+Starting static elaboration
+Pass Through NonSizing Optimizer
+Completed static elaboration
+Starting simulation data flow analysis
+Completed simulation data flow analysis
+Time Resolution for simulation is 1ps
+Compiling package xil_defaultlib.$unit_dataflow_monitor_sv
+Compiling module xil_defaultlib.checker_scan_flow_control_loop_p...
+Compiling module xil_defaultlib.checker_scan_checker_scan_Pipeli...
+Compiling module xil_defaultlib.checker_scan_control_s_axi
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_srl(DAT...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_fifo(DA...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_mem(MEM...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_fifo(ME...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_srl(ADD...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_fifo(AD...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_srl(DAT...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_fifo(DA...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_srl(DAT...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_fifo(DA...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_store(N...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_mem(MEM...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_fifo(ME...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_srl(DAT...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_fifo(DA...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_reg_sli...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_load(NU...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_reg_sli...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_burst_c...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_srl(DAT...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_fifo(DA...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_reg_sli...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_srl(DAT...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_fifo(DA...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_srl(DAT...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_fifo(DA...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_throttl...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_reg_sli...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_write(C...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_srl(DAT...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_fifo(DA...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi_read(C_...
+Compiling module xil_defaultlib.checker_scan_gmem0_m_axi(CONSERV...
+Compiling module xil_defaultlib.checker_scan_mul_32s_32s_32_1_1(...
+Compiling module xil_defaultlib.checker_scan
+Compiling module xil_defaultlib.AESL_axi_master_gmem0
+Compiling module xil_defaultlib.AESL_axi_slave_control
+Compiling module xil_defaultlib.nodf_module_intf_default
+Compiling module xil_defaultlib.upc_loop_intf(FSM_WIDTH=1)
+Compiling module xil_defaultlib.dataflow_monitor_1
+Compiling module xil_defaultlib.apatb_checker_scan_top
+Compiling module work.glbl
+Built simulation snapshot checker_scan
+
+****** xsim v2024.1 (64-bit)
+  **** SW Build 5076996 on Wed May 22 18:36:09 MDT 2024
+  **** IP Build 5075265 on Wed May 22 21:45:21 MDT 2024
+  **** SharedData Build 5076995 on Wed May 22 18:29:18 MDT 2024
+  **** Start of session at: Fri Aug  7 00:36:31 2026
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+
+source xsim.dir/checker_scan/xsim_script.tcl
+# xsim {checker_scan} -autoloadwcfg -tclbatch {checker_scan.tcl}
+ERROR: unexpected exception when evaluating tcl command
+    while executing
+"xsim {checker_scan} -autoloadwcfg -tclbatch {checker_scan.tcl}"
+    (file "xsim.dir/checker_scan/xsim_script.tcl" line 1)
+INFO: [Common 17-206] Exiting xsim at Fri Aug  7 00:36:34 2026...
+ERROR: [COSIM 212-4] *** C/RTL co-simulation finished: FAIL ***
+INFO: [HLS 200-2161] Finished Command cosim_design Elapsed time: 00:00:14; Allocated memory: 6.137 MB.
+command 'ap_source' returned error code
+    while executing
+"source tools/run_checker_cosim.tcl"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel \#0 [list source $tclfile] "
+
+INFO: [HLS 200-112] Total CPU user time: 21.9 seconds. Total CPU system time: 2.42 seconds. Total elapsed time: 25.17 seconds; peak allocated memory: 329.309 MB.

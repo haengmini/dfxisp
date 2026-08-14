@@ -1,0 +1,51 @@
+<xilinx:hls_fe_msgs>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="/home/mini/workspace/dfxisp_v2/include/checker.hpp:39:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="checker_select_mode" ARG_PragmaIsValid="1" ARG_PragmaOptions="min=16 max=2073600" ARG_PragmaType="loop_tripcount" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="/home/mini/workspace/dfxisp_v2/results/tools/run_checker_cosim.tcl:15:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaContext="directive" ARG_PragmaFunction="checker_scan" ARG_PragmaIsValid="1" ARG_PragmaOptions="name=checker_scan" ARG_PragmaType="top" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="local/checker.cpp:16:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="checker_scan" ARG_PragmaIsValid="1" ARG_PragmaOptions="m_axi port=raw_bayer offset=slave bundle=gmem0 depth=2048 max_widen_bitwidth=128" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="local/checker.cpp:17:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="checker_scan" ARG_PragmaIsValid="1" ARG_PragmaOptions="s_axilite port=raw_bayer bundle=control" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="local/checker.cpp:18:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="checker_scan" ARG_PragmaIsValid="1" ARG_PragmaOptions="s_axilite port=width bundle=control" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="local/checker.cpp:19:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="checker_scan" ARG_PragmaIsValid="1" ARG_PragmaOptions="s_axilite port=height bundle=control" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="local/checker.cpp:20:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="checker_scan" ARG_PragmaIsValid="1" ARG_PragmaOptions="s_axilite port=mode bundle=control" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="local/checker.cpp:21:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="checker_scan" ARG_PragmaIsValid="1" ARG_PragmaOptions="s_axilite port=dark_pixel_threshold bundle=control" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="local/checker.cpp:22:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="checker_scan" ARG_PragmaIsValid="1" ARG_PragmaOptions="s_axilite port=verdict_pct bundle=control" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="local/checker.cpp:23:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="checker_scan" ARG_PragmaIsValid="1" ARG_PragmaOptions="s_axilite port=enter_pct bundle=control" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="local/checker.cpp:24:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="checker_scan" ARG_PragmaIsValid="1" ARG_PragmaOptions="s_axilite port=exit_pct bundle=control" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="local/checker.cpp:25:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="checker_scan" ARG_PragmaIsValid="1" ARG_PragmaOptions="s_axilite port=selected_mode bundle=control" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="local/checker.cpp:26:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="checker_scan" ARG_PragmaIsValid="1" ARG_PragmaOptions="ap_vld port=hyst_flags" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="local/checker.cpp:27:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="checker_scan" ARG_PragmaIsValid="1" ARG_PragmaOptions="s_axilite port=dark_count bundle=control" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="local/checker.cpp:28:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="checker_scan" ARG_PragmaIsValid="1" ARG_PragmaOptions="s_axilite port=return bundle=control" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_INLINE" msg_id="214-178" msg_severity="INFO" msg_loc="local/checker.cpp:12:0" msg_body="Inlining function 'checker_select_mode(unsigned short const*, int, int, int, unsigned short, int, int, int, int&amp;, int&amp;)' into 'checker_scan'">
+        <args Callee="checker_select_mode(unsigned short const*, int, int, int, unsigned short, int, int, int, int&amp;, int&amp;)" Callee-DebugLoc="File /home/mini/workspace/dfxisp_v2/include/checker.hpp Line 23 Column 0" Caller="checker_scan" Caller-DebugLoc="File local/checker.cpp Line 12 Column 0"/>
+    </msg>
+</xilinx:hls_fe_msgs>
+

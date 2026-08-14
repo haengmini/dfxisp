@@ -1,6 +1,0 @@
-Model: TensorFlow Object Detection API SSD MobileNetV1 COCO 2018-01-28
-Source: http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz
-Local archive: ssd_mobilenet_v1_coco_2018_01_28.tar.gz
-Primary graph: ssd_mobilenet_v1_coco_2018_01_28/frozen_inference_graph.pb
-SavedModel: ssd_mobilenet_v1_coco_2018_01_28/saved_model/saved_model.pb
-Intended use: TF1/TF-compatible detector evaluation or Vitis-AI/DPU preparation.

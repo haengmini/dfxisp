@@ -1,0 +1,28 @@
+<AutoPilot:solution xmlns:AutoPilot="com.autoesl.autopilot.solution">
+    <name>
+        <value string="solution1"/>
+    </name>
+    <project>
+        <value string="checker_cosim"/>
+    </project>
+    <flowTarget value="vivado"/>
+    <targetInfo>
+        <TargetInfo value="xczu7ev:-ffvc1156:-2-e"/>
+    </targetInfo>
+    <libraryList>
+        <library value="xilinx/zynquplus/zynquplus" name="DefaultPlatform"/>
+    </libraryList>
+    <clockList>
+        <clock name="default" period="5.0" default="false"/>
+    </clockList>
+    <config>
+        <config_interface m_axi_alignment_byte_size="16" m_axi_max_widen_bitwidth="128"/>
+    </config>
+    <Simulation argv="/home/mini/workspace/dfxisp_v2/results/checker_validation_2026-08-06/checker_cosim_crops_2026-08-06.csv /home/mini/workspace/dfxisp_v2/results/checker_validation_2026-08-06/checker_crop_cosim_frames_2026-08-06.csv">
+        <SimFlow name="cosim" setup="false" dumpTrace="none" optimizeCompile="false" ldflags="" mflags="" compiledLibrary="" toolName="xsim">
+            <Rtl name="verilog" active="true"/>
+            <Rtl name="vhdl" active="false"/>
+        </SimFlow>
+    </Simulation>
+</AutoPilot:solution>
+

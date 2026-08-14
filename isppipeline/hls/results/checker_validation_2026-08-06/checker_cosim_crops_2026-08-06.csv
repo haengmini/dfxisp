@@ -1,0 +1,5 @@
+source,stem,width,height,raw_path,full_ratio,crop_dark_count,python_selected_mode,python_hyst_flags
+day,2014_002271,32,32,/home/mini/workspace/dfxisp_v2/results/checker_validation_2026-08-06/crops/day_2014_002271_32x32.bin,0.2431224721592597,5,0,2
+day,2014_000886,32,32,/home/mini/workspace/dfxisp_v2/results/checker_validation_2026-08-06/crops/day_2014_000886_32x32.bin,0.9350293914411886,1024,1,1
+night,DSC03787,32,32,/home/mini/workspace/dfxisp_v2/results/checker_validation_2026-08-06/crops/night_DSC03787_32x32.bin,0.46165216300528367,196,0,2
+night,DSC01105,32,32,/home/mini/workspace/dfxisp_v2/results/checker_validation_2026-08-06/crops/night_DSC01105_32x32.bin,0.9999751526110598,1024,1,1

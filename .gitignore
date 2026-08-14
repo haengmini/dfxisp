@@ -21,6 +21,8 @@ data/
 isppipeline/hls/data/
 isppipeline/hls/runs/
 sonynod_test/
+dataset/
+isppipeline/sw/sim/checker/_cache/
 *_variant_work*
 *.pt
 *.pth
