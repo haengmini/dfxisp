@@ -1,0 +1,9 @@
+[COCO] 347 frames; versions=['B_g25', 'B_g20', 'F_g20', 'F_vst_knee', 'B_vst_dn']
+/home/mini/.local/lib/python3.10/site-packages/torch/cuda/__init__.py:187: UserWarning: CUDA initialization: The NVIDIA driver on your system is too old (found version 12030). Please update your GPU driver by downloading and installing a new version from the URL: http://www.nvidia.com/Download/index.aspx Alternatively, go to: https://pytorch.org to install a PyTorch version that has been compiled with your version of the CUDA driver. (Triggered internally at /pytorch/c10/cuda/CUDAFunctions.cpp:119.)
+  return torch._C._cuda_getDeviceCount() > 0
+[COCO] binned + gamma2.5 (~old R0)                   mAP=0.2650 95%CI[0.2376,0.3120] mAP50=0.3919 AP_S=0.0451 AP_M=0.1952 AP_L=0.4707
+[COCO] binned + sqrt (DEPLOYED tone, honest control) mAP=0.2671 95%CI[0.2401,0.3128] mAP50=0.3942 AP_S=0.0495 AP_M=0.2019 AP_L=0.4682
+[COCO] full-res + sqrt(gamma2.0)                     mAP=0.2847 95%CI[0.2547,0.3318] mAP50=0.4256 AP_S=0.1958 AP_M=0.2184 AP_L=0.4594
+[COCO] full-res + VST + soft-knee (== R1)            mAP=0.2814 95%CI[0.2552,0.3305] mAP50=0.4224 AP_S=0.1992 AP_M=0.2207 AP_L=0.4557
+[COCO] binned + VST + edge-denoise (== R2)           mAP=0.2508 95%CI[0.2255,0.2996] mAP50=0.3697 AP_S=0.0466 AP_M=0.1919 AP_L=0.4444
+wrote results/map_rmfine575_coco_yolov8n_2026-07-05.csv

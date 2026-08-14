@@ -1,0 +1,16 @@
+{
+  "frames": 200,
+  "day": 100,
+  "night": 100,
+  "threshold": 4096,
+  "csv_mismatches": 0,
+  "max_abs_diff": 4.948589950704019e-06,
+  "combinations": 64,
+  "plots": [
+    "/home/mini/workspace/dfxisp_v2/results/checker_validation_2026-08-06/checker_raw_swaps_block_day_night_2026-08-06.png",
+    "/home/mini/workspace/dfxisp_v2/results/checker_validation_2026-08-06/checker_raw_swaps_block_night_day_2026-08-06.png",
+    "/home/mini/workspace/dfxisp_v2/results/checker_validation_2026-08-06/checker_raw_swaps_chunk_shuffle_2026-08-06.png",
+    "/home/mini/workspace/dfxisp_v2/results/checker_validation_2026-08-06/checker_raw_swaps_random_interleave_2026-08-06.png",
+    "/home/mini/workspace/dfxisp_v2/results/checker_validation_2026-08-06/checker_band_comparison_2026-08-06.png"
+  ]
+}

@@ -1,0 +1,30 @@
+#-----------------------------------------------------------
+# xsim v2024.1 (64-bit)
+# SW Build 5076996 on Wed May 22 18:36:09 MDT 2024
+# IP Build 5075265 on Wed May 22 21:45:21 MDT 2024
+# SharedData Build 5076995 on Wed May 22 18:29:18 MDT 2024
+# Start of session at: Fri Aug  7 00:42:02 2026
+# Process ID: 144
+# Current directory: /home/mini/workspace/dfxisp_v2/results/xsim_checker_ip
+# Command line: xsim -mode tcl -source {xsim.dir/checker_ip_real/xsim_script.tcl}
+# Log file: /home/mini/workspace/dfxisp_v2/results/xsim_checker_ip/xsim.log
+# Journal file: /home/mini/workspace/dfxisp_v2/results/xsim_checker_ip/xsim.jou
+# Running On        :DESKTOP-9MHPU7S
+# Platform          :Ubuntu
+# Operating System  :Ubuntu 22.04.5 LTS
+# Processor Detail  :11th Gen Intel(R) Core(TM) i7-11700 @ 2.50GHz
+# CPU Frequency     :2495.996 MHz
+# CPU Physical cores:8
+# CPU Logical cores :16
+# Host memory       :16690 MB
+# Swap memory       :4294 MB
+# Total Virtual     :20985 MB
+# Available Virtual :17012 MB
+#-----------------------------------------------------------
+source xsim.dir/checker_ip_real/xsim_script.tcl
+# xsim {checker_ip_real} -autoloadwcfg -runall
+ERROR: unexpected exception when evaluating tcl command
+    while executing
+"xsim {checker_ip_real} -autoloadwcfg -runall"
+    (file "xsim.dir/checker_ip_real/xsim_script.tcl" line 1)
+INFO: [Common 17-206] Exiting xsim at Fri Aug  7 00:42:03 2026...

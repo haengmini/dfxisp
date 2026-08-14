@@ -1,6 +1,0 @@
-Model: Ultralytics YOLOv8 COCO detectors
-Sources:
-- https://github.com/ultralytics/assets/releases/download/v8.3.0/yolov8n.pt
-- https://github.com/ultralytics/assets/releases/download/v8.3.0/yolov8s.pt
-Intended use: `tools/eval_map.py`, `tools/eval_map_coco.py`, `tools/eval_map_dark.py`, and `tools/eval_map_newrm.py`.
-Path resolution: pass `--model yolov8n.pt` or `--model yolov8s.pt`; scripts resolve these bare names to this folder through `tools/model_paths.py`.

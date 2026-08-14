@@ -1,0 +1,5 @@
+dataset,blc_offset,wb_lowlight,arm,mAP_50_95,mAP_50,model,n
+Gamma-Repro-2026-08-12,2,shared,lowlight_isp,0.1813,0.3650,yolov8n.pt,83
+Gamma-Repro-2026-08-12,2,shared,lowlight_isp_gat,0.1707,0.3551,yolov8n.pt,83
+Gamma-Repro-2026-08-12,2,shared,lowlight_isp_subsample,0.1628,0.3264,yolov8n.pt,83
+Gamma-Repro-2026-08-12,2,shared,lowlight_isp_linear,0.1212,0.2524,yolov8n.pt,83

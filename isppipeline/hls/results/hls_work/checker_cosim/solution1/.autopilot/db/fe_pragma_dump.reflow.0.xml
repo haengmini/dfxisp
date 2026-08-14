@@ -1,0 +1,16 @@
+<pragmas>
+<pragma file="local/checker.cpp" line="16" pragmaType="interface" parentfunction="checker_scan" mode="m_axi" port="raw_bayer" bundle="gmem0" offset="slave" name="" depth="2048" num_read_outstanding="-1" num_write_outstanding="-1" max_burst_read_length="-1" max_burst_write_length="-1" latency="-1" max_widen_bitwidth="128" channel=""/>
+<pragma file="local/checker.cpp" line="17" pragmaType="interface" parentfunction="checker_scan" mode="s_axilite" port="raw_bayer" bundle="control" offset="-1" name="" clock="" impl="" register="0"/>
+<pragma file="local/checker.cpp" line="18" pragmaType="interface" parentfunction="checker_scan" mode="s_axilite" port="width" bundle="control" offset="-1" name="" clock="" impl="" register="0"/>
+<pragma file="local/checker.cpp" line="19" pragmaType="interface" parentfunction="checker_scan" mode="s_axilite" port="height" bundle="control" offset="-1" name="" clock="" impl="" register="0"/>
+<pragma file="local/checker.cpp" line="20" pragmaType="interface" parentfunction="checker_scan" mode="s_axilite" port="mode" bundle="control" offset="-1" name="" clock="" impl="" register="0"/>
+<pragma file="local/checker.cpp" line="21" pragmaType="interface" parentfunction="checker_scan" mode="s_axilite" port="dark_pixel_threshold" bundle="control" offset="-1" name="" clock="" impl="" register="0"/>
+<pragma file="local/checker.cpp" line="22" pragmaType="interface" parentfunction="checker_scan" mode="s_axilite" port="verdict_pct" bundle="control" offset="-1" name="" clock="" impl="" register="0"/>
+<pragma file="local/checker.cpp" line="23" pragmaType="interface" parentfunction="checker_scan" mode="s_axilite" port="enter_pct" bundle="control" offset="-1" name="" clock="" impl="" register="0"/>
+<pragma file="local/checker.cpp" line="24" pragmaType="interface" parentfunction="checker_scan" mode="s_axilite" port="exit_pct" bundle="control" offset="-1" name="" clock="" impl="" register="0"/>
+<pragma file="local/checker.cpp" line="25" pragmaType="interface" parentfunction="checker_scan" mode="s_axilite" port="selected_mode" bundle="control" offset="-1" name="" clock="" impl="" register="0"/>
+<pragma file="local/checker.cpp" line="26" pragmaType="interface" parentfunction="checker_scan" mode="ap_vld" port="hyst_flags" name="" register="0"/>
+<pragma file="local/checker.cpp" line="27" pragmaType="interface" parentfunction="checker_scan" mode="s_axilite" port="dark_count" bundle="control" offset="-1" name="" clock="" impl="" register="0"/>
+<pragma file="local/checker.cpp" line="28" pragmaType="interface" parentfunction="checker_scan" mode="s_axilite" port="" bundle="control" offset="-1" name="" clock="" impl="" register="0"/>
+<pragma file="/home/mini/workspace/dfxisp_v2/include/checker.hpp" line="39" pragmaType="loop_tripcount" parentfunction="checker_select_mode" min="16" max="2073600" avg="1036808"/>
+</pragmas>

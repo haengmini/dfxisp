@@ -1,0 +1,5 @@
+source,stem,expected_dark_count,expected_hyst_flags,expected_selected_mode,actual_dark_count,actual_hyst_flags,actual_selected_mode,bit_exact
+day,2014_002271,5,2,0,5,2,0,1
+day,2014_000886,1024,1,1,1024,1,1,1
+night,DSC03787,196,2,0,196,2,0,1
+night,DSC01105,1024,1,1,1024,1,1,1

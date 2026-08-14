@@ -1,0 +1,13 @@
+---
+MainSourceFile:  /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp
+Diagnostics:     
+  - DiagnosticName:  xilinx-label-all-loops
+    Message:         'Added loop label VITIS_LOOP_38_1:  '
+    FileOffset:      38
+    FilePath:        /home/mini/workspace/dfxisp_v2/include/checker.hpp
+    Replacements:    
+      - FilePath:        /home/mini/workspace/dfxisp_v2/results/hls_work/checker_cosim/solution1/.autopilot/db/checker.pp.0.cpp
+        Offset:          20769
+        Length:          0
+        ReplacementText: 'VITIS_LOOP_38_1: '
+...

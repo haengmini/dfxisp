@@ -1,0 +1,7 @@
+dataset,blc_offset,wb_lowlight,arm,mAP_50_95,mAP_50,model,n
+AWB-F2-BLC-LODtest,0,shared,lowlight,0.0705,0.1321,yolov8n.pt,100
+AWB-F2-BLC-LODtest,1,shared,lowlight,0.0745,0.1431,yolov8n.pt,100
+AWB-F2-BLC-LODtest,2,shared,lowlight,0.0720,0.1389,yolov8n.pt,100
+AWB-F2-BLC-LODtest,4,shared,lowlight,0.0611,0.1242,yolov8n.pt,100
+AWB-F2-BLC-LODtest,8,shared,lowlight,0.0398,0.0764,yolov8n.pt,100
+AWB-F2-BLC-LODtest,16,shared,lowlight,0.0244,0.0459,yolov8n.pt,100

@@ -1,0 +1,14 @@
+{
+  "0": {
+    "basicblocks": 11,
+    "calls": "",
+    "file": "checker.cpp",
+    "fileloc": 8,
+    "instructions": 63,
+    "name": "checker_scan",
+    "stores": {
+      "T": 6
+    },
+    "total_instructions": 63
+  }
+}

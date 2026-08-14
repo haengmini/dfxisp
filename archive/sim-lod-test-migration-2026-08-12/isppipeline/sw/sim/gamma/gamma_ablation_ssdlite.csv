@@ -1,0 +1,5 @@
+dataset,blc_offset,arm,mAP_50_95,mAP_50,model,n
+Gamma-Repro-2026-08-12-SSDLite,2,lowlight_isp,0.1161,0.2287,ssdlite320_mobilenet_v3_large,83
+Gamma-Repro-2026-08-12-SSDLite,2,lowlight_isp_gat,0.1063,0.2213,ssdlite320_mobilenet_v3_large,83
+Gamma-Repro-2026-08-12-SSDLite,2,lowlight_isp_subsample,0.1059,0.2095,ssdlite320_mobilenet_v3_large,83
+Gamma-Repro-2026-08-12-SSDLite,2,lowlight_isp_linear,0.0759,0.1579,ssdlite320_mobilenet_v3_large,83

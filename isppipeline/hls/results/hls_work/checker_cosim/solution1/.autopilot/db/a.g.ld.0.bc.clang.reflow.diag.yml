@@ -1,0 +1,136 @@
+--- !Passed
+Pass:            reflow-inliner
+Name:            Inline
+DebugLoc:        { File: local/checker.cpp, Line: 12, Column: 0 }
+Function:        checker_scan
+Args:            
+  - String:          'Inlining function '''
+  - Callee:          'checker_select_mode(unsigned short const*, int, int, int, unsigned short, int, int, int, int&, int&)'
+    DebugLoc:        { File: /home/mini/workspace/dfxisp_v2/include/checker.hpp, 
+                       Line: 23, Column: 0 }
+  - String:          ''' into '''
+  - Caller:          checker_scan
+    DebugLoc:        { File: local/checker.cpp, Line: 12, Column: 0 }
+  - String:          ''''
+...
+--- !Passed
+Pass:            reflow-burst-inference
+Name:            BurstInferred
+DebugLoc:        { File: /home/mini/workspace/dfxisp_v2/include/checker.hpp, 
+                   Line: 38, Column: 22 }
+Function:        checker_scan
+Args:            
+  - String:          'Sequential '
+  - Direction:       read
+  - String:          ' of '
+  - Length:          variable
+  - String:          ' length'
+  - String:          ' has been inferred'
+  - String:          ' _XLX_SEP_ '
+  - AccessID:        raw_bayer2seq
+  - ArrayName:       raw_bayer
+  - String:          ' '
+  - BundleName:      gmem0
+  - String:          ' '
+  - LoopName:        VITIS_LOOP_38_1
+  - String:          ' '
+  - LoopLoc:         '/home/mini/workspace/dfxisp_v2/include/checker.hpp:38:22'
+  - String:          ' '
+  - Function:        checker_scan
+    DebugLoc:        { File: local/checker.cpp, Line: 12, Column: 0 }
+  - String:          ' '
+  - String:          ' _XLX_SEP_ '
+  - OrigAccess:      load
+    DebugLoc:        { File: /home/mini/workspace/dfxisp_v2/include/checker.hpp, 
+                       Line: 40, Column: 6 }
+  - OrigDirection:   read
+  - OrigID:          for.body.i.load.6
+...
+--- !Missed
+Pass:            reflow-burst-widen
+Name:            BadAccessLen
+DebugLoc:        { File: /home/mini/workspace/dfxisp_v2/include/checker.hpp, 
+                   Line: 38, Column: 22 }
+Function:        checker_scan
+Args:            
+  - String:          Sequential access length is not divisible by 2
+  - String:          ' _XLX_SEP_ '
+  - OrigAccess:      call
+    DebugLoc:        { File: /home/mini/workspace/dfxisp_v2/include/checker.hpp, 
+                       Line: 38, Column: 22 }
+  - OrigDirection:   read
+  - OrigID:          raw_bayer2seq
+  - ArrayName:       raw_bayer
+  - String:          ' '
+  - BundleName:      gmem0
+  - String:          ' '
+  - LoopName:        VITIS_LOOP_38_1
+  - String:          ' '
+  - LoopLoc:         '/home/mini/workspace/dfxisp_v2/include/checker.hpp:38:22'
+  - String:          ' '
+  - Function:        checker_scan
+    DebugLoc:        { File: local/checker.cpp, Line: 12, Column: 0 }
+  - String:          ' '
+...
+--- !HLSReportInfo
+Pass:            auto-loop-pipeline
+Name:            AutoLoopPipeline
+Args:            
+  - String:          'automatically set the pipeline for Loop< '
+  - LoopName:        VITIS_LOOP_38_1
+  - String:          '> at '
+  - LoopLoc:         '/home/mini/workspace/dfxisp_v2/include/checker.hpp:38:22'
+  - String:          ' '
+...
+--- !Passed
+Pass:            reflow-burst-summary
+Name:            BurstInferredVerboseSummary
+DebugLoc:        { File: /home/mini/workspace/dfxisp_v2/include/checker.hpp, 
+                   Line: 38, Column: 22 }
+Function:        checker_scan
+Args:            
+  - String:          'Multiple burst '
+  - Direction:       reads
+  - String:          ' of '
+  - Length:          variable
+  - String:          ' length and bit width '
+  - Width:           '16'
+  - String:          ' has been inferred.'
+  - String:          ' These burst requests might be further partitioned into multiple requests during RTL generation, based on max_read_burst_length or max_write_burst_length settings.'
+  - String:          ' _XLX_SEP_ '
+  - AccessID:        seq
+  - ArrayName:       ''
+  - String:          ' '
+  - BundleName:      gmem0
+  - String:          ' '
+  - LoopName:        VITIS_LOOP_38_1
+  - String:          ' '
+  - LoopLoc:         '/home/mini/workspace/dfxisp_v2/include/checker.hpp:38:22'
+  - String:          ' '
+  - Function:        checker_scan
+    DebugLoc:        { File: local/checker.cpp, Line: 12, Column: 0 }
+  - String:          ' '
+...
+--- !Passed
+Pass:            reflow-burst-summary
+Name:            BurstInferredSummary
+DebugLoc:        { File: /home/mini/workspace/dfxisp_v2/include/checker.hpp, 
+                   Line: 38, Column: 22 }
+Function:        checker_scan
+Args:            
+  - String:          'Multiple burst '
+  - Direction:       reads
+  - String:          ' of '
+  - Length:          variable
+  - String:          ' length and bit width '
+  - Width:           '16'
+  - String:          ' in loop '''
+  - LoopName:        VITIS_LOOP_38_1
+  - String:          '''('
+  - LoopLoc:         '/home/mini/workspace/dfxisp_v2/include/checker.hpp:38:22'
+  - String:          ')'
+  - String:          ' has been inferred on bundle '''
+  - BundleName:      gmem0
+  - String:          '''.'
+  - String:          ' These burst requests might be further partitioned into multiple requests during RTL generation, based on max_read_burst_length or max_write_burst_length settings.'
+...

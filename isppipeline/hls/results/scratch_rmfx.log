@@ -1,0 +1,12 @@
+[COCO] 347 frames; versions=['B_g20f', 'F_g20f']
+/home/mini/.local/lib/python3.10/site-packages/torch/cuda/__init__.py:187: UserWarning: CUDA initialization: The NVIDIA driver on your system is too old (found version 12030). Please update your GPU driver by downloading and installing a new version from the URL: http://www.nvidia.com/Download/index.aspx Alternatively, go to: https://pytorch.org to install a PyTorch version that has been compiled with your version of the CUDA driver. (Triggered internally at /pytorch/c10/cuda/CUDAFunctions.cpp:119.)
+  return torch._C._cuda_getDeviceCount() > 0
+[COCO] binned + floor-sqrt (BIT-EXACT deployed HLS tone) mAP=0.2680 95%CI[0.2408,0.3122] mAP50=0.3911 AP_S=0.0511 AP_M=0.1971 AP_L=0.4738
+[COCO] full-res + floor-sqrt (deployed tone, binning removed) mAP=0.2843 95%CI[0.2572,0.3312] mAP50=0.4251 AP_S=0.1965 AP_M=0.2206 AP_L=0.4578
+wrote results/map_rmfine_deployexact_coco_yolov8n_2026-07-05.csv
+[ExDark] 260 frames; versions=['B_g20f', 'F_g20f']
+/home/mini/.local/lib/python3.10/site-packages/torch/cuda/__init__.py:187: UserWarning: CUDA initialization: The NVIDIA driver on your system is too old (found version 12030). Please update your GPU driver by downloading and installing a new version from the URL: http://www.nvidia.com/Download/index.aspx Alternatively, go to: https://pytorch.org to install a PyTorch version that has been compiled with your version of the CUDA driver. (Triggered internally at /pytorch/c10/cuda/CUDAFunctions.cpp:119.)
+  return torch._C._cuda_getDeviceCount() > 0
+[ExDark] binned + floor-sqrt (BIT-EXACT deployed HLS tone) mAP=0.0906 95%CI[0.0784,0.1167] mAP50=0.1891 AP_S=0.0019 AP_M=0.0321 AP_L=0.1203
+[ExDark] full-res + floor-sqrt (deployed tone, binning removed) mAP=0.0947 95%CI[0.0804,0.1219] mAP50=0.1945 AP_S=0.0044 AP_M=0.0338 AP_L=0.1281
+wrote results/map_rmfine_deployexact_exdark_yolov8n_2026-07-05.csv

@@ -1,0 +1,12 @@
+sv work "glbl.v"
+sv xil_defaultlib "AESL_axi_slave_control.v"
+sv xil_defaultlib "checker_scan_flow_control_loop_pipe_sequential_init.v"
+sv xil_defaultlib "checker_scan_mul_32s_32s_32_1_1.v"
+sv xil_defaultlib "checker_scan.autotb.v"
+sv xil_defaultlib "checker_scan.v"
+sv xil_defaultlib "checker_scan_checker_scan_Pipeline_VITIS_LOOP_38_1.v"
+sv xil_defaultlib "checker_scan_control_s_axi.v"
+sv xil_defaultlib "AESL_axi_master_gmem0.v"
+sv xil_defaultlib "checker_scan_gmem0_m_axi.v"
+sv xil_defaultlib "dataflow_monitor.sv"
+

@@ -1,0 +1,5 @@
+scope,frames,stage,status,bit_exact_rate,reason
+representative_real_crops,4,csim,completed,100.00%,Python and CSim matched 4/4
+representative_real_crops,4,csynth,completed,N/A,RTL generated and snapshot elaborated
+representative_real_crops,4,rtl_cosim,not_confirmed,N/A,xsim launcher unexpected exception
+checker_ip_synthetic_chain,5,xsim,not_confirmed,N/A,xsim launcher unexpected exception in this session

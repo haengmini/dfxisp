@@ -1,0 +1,16 @@
+INFO: [COSIM-47] Using XSIM for RTL simulation.
+INFO: [COSIM-14] Instrumenting C test bench ...
+   Build using "/tools/Xilinx/Vitis_HLS/2024.1/vcxx/libexec//clang++"
+   Compiling apatb_checker_scan.cpp
+   Compiling checker.cpp_pre.cpp.tb.cpp
+   Compiling checker_hls_tb.cpp_pre.cpp.tb.cpp
+   Compiling apatb_checker_scan_ir.ll
+   Generating cosim.tv.exe
+INFO: [COSIM-302] Starting C TB testing ... 
+INFO: [COSIM-333] Generating C post check test bench ...
+INFO: [COSIM-12] Generating RTL test bench ...
+INFO: [COSIM-1] *** C/RTL co-simulation file generation completed. ***
+INFO: [COSIM-323] Starting verilog simulation. 
+INFO: [COSIM-15] Starting XSIM ...
+HLS_TB_COMPLETE frames=4 output=/home/mini/workspace/dfxisp_v2/results/checker_validation_2026-08-06/checker_crop_cosim_frames_2026-08-06.csv
+ERROR: [COSIM-4] *** C/RTL co-simulation finished: FAIL ***

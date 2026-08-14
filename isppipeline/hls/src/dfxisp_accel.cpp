@@ -1,4 +1,5 @@
 #include "dfxisp_accel.hpp"
+#include "checker.hpp"
 
 #include <cstdint>
 
@@ -92,22 +93,6 @@ constexpr int AWB_B = 307;
 constexpr int GAIN_NORMAL_NUM = 5, GAIN_NORMAL_DEN = 4;      // normal 1.25x
 constexpr int GAIN_LOWLIGHT_NUM = 2, GAIN_LOWLIGHT_DEN = 1;  // low-light 2.0x
 // gamma 2.0 realized exactly as integer sqrt: 255*(v/255)^(1/2) = floor(sqrt(255*v))
-// --- checker ---
-// C1 operating point deployed 2026-07-20 (gate 4, checker-status-2026-07-10.md
-// §1/§4): dark16 ratio > 0.62 replaces the 2026-07-02 C0 rule (dark50 > 0.80).
-// C1 dominates C0 on every metric (recall 0.936 vs 0.918, false-trigger 0.089
-// vs 0.125, Youden J 0.847 vs 0.793) with ZERO RTL change: the dark-pixel
-// threshold is the runtime `dark_pixel_threshold` AXI-lite register -- the
-// driver must now write 256 (= 16<<4 in this raw12 domain; dataset pseudo-RAW16
-// equivalent is 16<<8 = 4096) instead of the old dark50 value -- and only this
-// ratio constant changes at compile time. Gate-3 real-sensor validation:
-// SonyNOD recall + PASCALRAW false-trigger (C0 92.9% -> C1 41.8%), see
-// checker-adaptive-tau-realdata-2026-07-13.md / pascalraw-adapter-2026-07-13.md
-// §7. The Schmitt hysteresis band (delta = 2%p) of the C1 spec is driver-side
-// policy state (one mode FF, see tools/scheduler_sim.py); the single-frame
-// rule here stays a pure threshold compare.
-constexpr int DARK_RATIO_PCT = 62;      // AUTO -> LOW_LIGHT when dark pixels > 62%
-
 static inline int clamp_i(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
 static inline uint8_t clamp_u8(int v) { return static_cast<uint8_t>(clamp_i(v, 0, 255)); }
 
@@ -153,22 +138,6 @@ static inline uint16_t sample_clamped(const uint16_t* raw, int width, int height
 // budget: dev 640x480 .. eval 1280x720; matches existing LOOP_TRIPCOUNT max=960
 // on the binned-grid loops, i.e. supports raw width up to 1920).
 constexpr int MAX_BINNED_W = 960;
-
-// ---------------------------------------------------------------------------
-// Scene checker / mode decision (static region). Dark-pixel ratio on RAW.
-// ---------------------------------------------------------------------------
-static int checker_select_mode(const uint16_t* raw, int width, int height, int mode,
-                               uint16_t dark_pixel_threshold) {
-    if (mode == DFXISP_MODE_NORMAL) return DFXISP_MODE_NORMAL;
-    if (mode == DFXISP_MODE_LOW_LIGHT) return DFXISP_MODE_LOW_LIGHT;
-    const int n = width * height;
-    int dark = 0;
-    for (int i = 0; i < n; ++i) {
-#pragma HLS LOOP_TRIPCOUNT min=16 max=2073600
-        if (raw[i] < dark_pixel_threshold) ++dark;
-    }
-    return (dark * 100 > DARK_RATIO_PCT * n) ? DFXISP_MODE_LOW_LIGHT : DFXISP_MODE_NORMAL;
-}
 
 // ---------------------------------------------------------------------------
 // RGGB demosaic keeping 12-bit precision (no >>4 here). Pattern:
@@ -398,7 +367,8 @@ extern "C" void dfxisp_accel(
     int* out_width,
     int* out_height,
     int* selected_mode,
-    int* selected_rm) {
+    int* selected_rm,
+    int* hyst_flags) {
 // depth= is a cosim/BFM memory-model sizing hint required for C/RTL cosim's
 // m_axi bus functional model; it does not affect synthesized RTL behavior
 // (real depth is width*height at runtime). depth=1920*1080 (full design
@@ -420,6 +390,11 @@ extern "C" void dfxisp_accel(
 #pragma HLS INTERFACE s_axilite port=out_height bundle=control
 #pragma HLS INTERFACE s_axilite port=selected_mode bundle=control
 #pragma HLS INTERFACE s_axilite port=selected_rm bundle=control
+// hyst_flags is a fabric wire (value + ap_vld pulse), NOT an s_axilite
+// register: it feeds checker_hysteresis.v in the static region directly.
+// One vld pulse per completed frame; no pulse on the invalid-arg early
+// return (the hysteresis block simply holds state).
+#pragma HLS INTERFACE ap_vld port=hyst_flags
 #pragma HLS INTERFACE s_axilite port=return bundle=control
 
     if (!raw_bayer || !rgb_out || width <= 0 || height <= 0) {
@@ -430,7 +405,9 @@ extern "C" void dfxisp_accel(
         return;
     }
 
-    const int selected = checker_select_mode(raw_bayer, width, height, mode, dark_pixel_threshold);
+    int flags = 0;
+    const int selected = checker_select_mode(raw_bayer, width, height, mode, dark_pixel_threshold, flags);
+    if (hyst_flags) *hyst_flags = flags;
 
     int out_w = width, out_h = height, sel_rm = DFXISP_RM_NORMAL_TONE;
     if (selected == DFXISP_MODE_LOW_LIGHT) {
