@@ -412,14 +412,12 @@ C-sim에는 Vitis 전용 헤더가 필요 없다; HLS pragma만 존재하며 로
   컴파일부터 실패한다(2026-08-14에 실제로 재현·정정).
 - **종료-hang:** `close_project` 이후 프로세스가 종료되지 않음(작업 자체는 이미 끝난 상태).
   `timeout -k <grace> <sec> vitis_hls -f run.tcl`로 감싸고 로그의 완료 마커를 확인.
-- **cosim `depth=`:** `m_axi` 인터페이스는 co-simulation에 `depth=`가 있어야 한다. 현재
-  `src/dfxisp_accel.cpp`엔 **`depth=2048`**이 박혀 있다(소스 내 주석 참고: 전체 설계
-  envelope인 1920×1080은 `ENTER_WRAPC`에서 SIGSEGV, `depth=1024`는 링크는 되지만 7-call
-  누적 주소 범위 부족으로 `ENTER_WRAPC_PC`(post-check)에서 SIGSEGV — 2048로 여유를 둠).
-  **2026-08-14 재실행 결과:** RTL 시뮬레이션 자체는 16/16 트랜잭션 100% 완주(latency
-  min/avg/max 161/739/1261 cycles, 총 11,225 cycles)하고 이번엔 SIGSEGV 없이 "C TB post
-  check failed"로만 종료 — `dfxisp_accel_cosim.rpt`의 "RTL Status: Fail"은 이 post-check
-  실패 때문이지 RTL 동작 실패가 아니다(`cosim-waveform-analysis-2026-07-03.md` §6,
-  `blc-c1-csynth-cosim-rerun-2026-07-20.md`와 같은 부류의 기존 한계, 새 버그 아님). csynth
-  자원은 BRAM_18K 9 / DSP 24 / FF 5,540 / LUT 8,439, timing 3.650 ns(07-02/07-20 대비 BRAM/DSP/
-  timing 불변, FF/LUT는 그 사이 늘어난 hyst_flags/checker.hpp 코드만큼 소폭 증가).
+- **cosim `depth=`와 전용 TB:** AMD UG1399에서 `depth`는 C/RTL co-sim 검증 어댑터가
+  처리할 **한 TB 트랜잭션의 최대 샘플 수**다. 과거의 1024/2048 값은 여러 TB 호출의
+  누적 주소 범위라는 잘못된 가정으로 튜닝한 값이었다. Vitis HLS 2024.1은 최신 문서의
+  `depth=width*height` 표현도 const integer가 아니라며 무시하므로, 현재 전용 8×8 co-sim
+  TB(`tests/test_dfxisp_cosim.cpp`)에 맞춰 `depth=64`를 사용한다. 전용 TB는 모든 top-level
+  출력 포인터(`hyst_flags` 포함)에 유효한 저장공간을 전달하며 normal/low-light 두
+  트랜잭션을 검사한다. 2026-08-14 WSL2 + Vitis HLS 2024.1 + XSIM 실측에서 RTL 2/2와
+  C post-check가 모두 통과해 `C/RTL co-simulation finished: PASS`를 확인했다. 이 depth는
+  co-sim 어댑터 전용이며 합성된 AXI master의 실제 프레임 크기를 제한하지 않는다.

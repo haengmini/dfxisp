@@ -369,17 +369,13 @@ extern "C" void dfxisp_accel(
     int* selected_mode,
     int* selected_rm,
     int* hyst_flags) {
-// depth= is a cosim/BFM memory-model sizing hint required for C/RTL cosim's
-// m_axi bus functional model; it does not affect synthesized RTL behavior
-// (real depth is width*height at runtime). depth=1920*1080 (full design
-// envelope) SIGSEGV'd in ENTER_WRAPC (likely wrapc harness stack overflow);
-// depth=1024 got past that but SIGSEGV'd in ENTER_WRAPC_PC (post-check) after
-// all 7 RTL transactions in test_dfxisp_csim.cpp completed successfully --
-// likely too small for the *cumulative* address span cosim's m_axi BFM uses
-// across all calls in one session (7 calls x up to 256px each ~ 1800). Sized
-// with headroom above that for the current fixture set.
-#pragma HLS INTERFACE m_axi port=raw_bayer offset=slave bundle=gmem0 depth=2048
-#pragma HLS INTERFACE m_axi port=rgb_out offset=slave bundle=gmem1 depth=2048
+// UG1399 defines depth as the maximum samples processed by one test-bench
+// transaction. Vitis HLS 2024.1 requires a constant here (it rejects the newer
+// documented depth=width*height form), and test_dfxisp_cosim.cpp uses 8x8
+// transactions. This sizes the verification adapter exactly for that TB;
+// depth does not limit the synthesized AXI master at run time.
+#pragma HLS INTERFACE m_axi port=raw_bayer offset=slave bundle=gmem0 depth=64
+#pragma HLS INTERFACE m_axi port=rgb_out offset=slave bundle=gmem1 depth=64
 #pragma HLS INTERFACE s_axilite port=raw_bayer bundle=control
 #pragma HLS INTERFACE s_axilite port=rgb_out bundle=control
 #pragma HLS INTERFACE s_axilite port=width bundle=control

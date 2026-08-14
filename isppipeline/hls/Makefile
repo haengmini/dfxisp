@@ -19,6 +19,7 @@ LOWLIGHT_ISP_CSIM_BIN := $(BUILD_DIR)/lowlight_isp_csim
 REPORT_MD := reports/latest.md
 HLS_SRC := src/dfxisp_accel.cpp include/dfxisp_accel.hpp
 HLS_TB := tests/test_dfxisp_csim.cpp $(GOLDEN_CSV)
+COSIM_TB_BIN := $(BUILD_DIR)/dfxisp_cosim_tb
 
 .PHONY: all csim golden verify cross-check report hls-report hls rm-golden rm-csim rm-verify default-isp-golden default-isp-csim default-isp-verify lowlight-isp-golden lowlight-isp-csim lowlight-isp-verify verify-new-arms scheduler analysis sw-stage py-verify clean
 
@@ -32,6 +33,9 @@ $(CSIM_BIN): src/dfxisp_accel.cpp tests/test_dfxisp_csim.cpp include/dfxisp_acce
 
 csim: $(CSIM_BIN)
 	./$(CSIM_BIN)
+
+$(COSIM_TB_BIN): src/dfxisp_accel.cpp tests/test_dfxisp_cosim.cpp include/dfxisp_accel.hpp include/checker.hpp | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) src/dfxisp_accel.cpp tests/test_dfxisp_cosim.cpp -o $(COSIM_TB_BIN)
 
 golden:
 	$(PYTHON) tools/gen_golden_vectors.py --out $(GOLDEN_CSV)
