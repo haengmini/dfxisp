@@ -71,8 +71,24 @@ CCM_Q8 = (
 # ISO caveat: these are ISO 6400 constants (91 of the split's 100 frames). a
 # scales with analog gain and b with its square, so the 9 lower-ISO frames are
 # served by a compromise curve.
-A_Q8 = 4065                 # a = 15.878 DN (shot-noise slope), MEASURED
-B_DN2 = 746                 # b = 746 DN^2  (sigma_read = 27.3 DN), MEASURED
+#
+# STALE BUT INERT (audited 2026-08-14). Two things to know before reusing these:
+#   * Dataset: they are split_nod (SonyNOD) constants. The project's current
+#     dataset is dataset/LOD_test, whose own ISO-6400 subset refits to
+#     A_Q8 = 4114 / B_DN2 = 803 (sim/binning/binning_report.md Sec.2) -- +1.2%
+#     on a, +7.6% on b. sim/{binning,blc,gain} were all re-run on those newer
+#     values; the constants below were deliberately NOT updated to match.
+#   * Why not: they feed GAT_LUT and nothing else, and GAT was withdrawn
+#     (sim/gamma/gamma.md Sec.2.1.2). tone_lut()'s deployed path is TONE_GAMMA,
+#     lowlight_isp() defaults to TONE_GAMMA, and run_arm()'s deployed
+#     "lowlight_isp" arm is TONE_GAMMA -- so no golden vector and no deployed
+#     output depends on these numbers. Only the "lowlight_isp_gat" ablation arm
+#     reads them. Swapping in 4114/803 moves GAT_LUT by at most 1 LSB, in
+#     860 of 4096 entries.
+# So: update these together with any GAT revival, not before -- changing them
+# now would churn the ablation arm's numbers for no deployed benefit.
+A_Q8 = 4065                 # a = 15.878 DN (shot-noise slope), MEASURED (split_nod)
+B_DN2 = 746                 # b = 746 DN^2  (sigma_read = 27.3 DN), MEASURED (split_nod)
 
 # Soft-knee highlight roll-off is deliberately NOT implemented: the measured
 # saturation rate is at most 2.13%, so no evidence justifies the extra shaping
