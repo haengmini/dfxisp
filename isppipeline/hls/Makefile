@@ -94,7 +94,7 @@ rm-verify: rm-golden rm-csim
 # order (Bayer-domain BLC/gain -> demosaic -> adaptive AWB -> CCM -> gamma).
 # Additive arm; does not touch dfxisp_accel's golden contract.
 default-isp-golden:
-	$(PYTHON) tools/gen_default_isp_golden.py --out $(DEFAULT_ISP_GOLDEN_CSV)
+	$(PYTHON) ../sw/gen_default_isp_golden.py --out $(DEFAULT_ISP_GOLDEN_CSV)
 
 $(DEFAULT_ISP_CSIM_BIN): src/default_isp.cpp tests/test_default_isp_csim.cpp include/default_isp.hpp | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) src/default_isp.cpp tests/test_default_isp_csim.cpp -o $(DEFAULT_ISP_CSIM_BIN)
@@ -108,7 +108,7 @@ default-isp-verify: default-isp-golden default-isp-csim
 # backbone; specialisation = 2x2 binning + 2.0x upstream gain + GAT/VST tone
 # curve. Additive; RM_LOW_LIGHT_TONE is untouched.
 lowlight-isp-golden:
-	$(PYTHON) tools/gen_lowlight_isp_golden.py --out $(LOWLIGHT_ISP_GOLDEN_CSV)
+	$(PYTHON) ../sw/gen_lowlight_isp_golden.py --out $(LOWLIGHT_ISP_GOLDEN_CSV)
 
 $(LOWLIGHT_ISP_CSIM_BIN): src/lowlight_isp.cpp tests/test_lowlight_isp_csim.cpp include/lowlight_isp.hpp | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) src/lowlight_isp.cpp tests/test_lowlight_isp_csim.cpp -o $(LOWLIGHT_ISP_CSIM_BIN)
@@ -123,7 +123,7 @@ lowlight-isp-verify: lowlight-isp-golden lowlight-isp-csim
 # can be rendered. Fuzz them against the scalar canonical goldens -- the same
 # class of bug as the 2026-07-02 chroma collapse lives here.
 verify-new-arms:
-	cd tools && $(PYTHON) verify_new_arm_pipelines.py
+	cd ../sw && $(PYTHON) verify_new_arm_pipelines.py
 
 scheduler: | $(BUILD_DIR)
 	$(PYTHON) tools/scheduler_sim.py --out results/scheduler.csv
