@@ -25,6 +25,13 @@ from __future__ import annotations
 
 import argparse
 import random
+import sys
+from pathlib import Path
+
+# baseline_isp_pipeline.py / checker.py live in isppipeline/sw/ (2026-08-14
+# restructure), not alongside this file -- add it to the path so the plain
+# imports below still resolve regardless of cwd.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "sw"))
 
 import baseline_isp_pipeline as BP
 import checker as CK

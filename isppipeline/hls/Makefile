@@ -12,8 +12,6 @@ BUILD_DIR := build
 CSIM_BIN := $(BUILD_DIR)/dfxisp_csim
 HLS_TCL := scripts/vitis_hls.tcl
 GOLDEN_CSV := tests/golden_vectors.csv
-RM_GOLDEN_CSV := tests/rm_golden_vectors.csv
-RM_CSIM_BIN := $(BUILD_DIR)/dfxisp_rm_csim
 DEFAULT_ISP_GOLDEN_CSV := tests/default_isp_golden_vectors.csv
 DEFAULT_ISP_CSIM_BIN := $(BUILD_DIR)/default_isp_csim
 LOWLIGHT_ISP_GOLDEN_CSV := tests/lowlight_isp_golden_vectors.csv
@@ -79,16 +77,20 @@ hls:
 	fi
 	DFXISP_HLS_PROJECT=$(DFXISP_HLS_PROJECT) DFXISP_HLS_PART=$(DFXISP_HLS_PART) DFXISP_HLS_CLOCK=$(DFXISP_HLS_CLOCK) DFXISP_HLS_FLOW=$(DFXISP_HLS_FLOW) $(VITIS_HLS) -f $(HLS_TCL)
 
-rm-golden:
-	$(PYTHON) tools/gen_rm_golden.py --out $(RM_GOLDEN_CSV)
-
-$(RM_CSIM_BIN): src/dfxisp_rm.cpp tests/test_rm_csim.cpp include/dfxisp_rm.hpp | $(BUILD_DIR)
-	$(CXX) $(CXXFLAGS) src/dfxisp_rm.cpp tests/test_rm_csim.cpp -o $(RM_CSIM_BIN)
-
-rm-csim: $(RM_CSIM_BIN)
-	./$(RM_CSIM_BIN) $(RM_GOLDEN_CSV)
-
-rm-verify: rm-golden rm-csim
+# v1 RM ablation track (static/reg_only/dfx_bin/dfx_fp variants, RESEARCH.md
+# §7/§12 Task 5) -- retired 2026-08-07: src/dfxisp_rm.cpp + include/dfxisp_rm.hpp
+# moved to archive/dfxisp-v2-renewal-2026-08-07/isppipeline-hls-superseded-files/,
+# and tools/gen_rm_golden.py + tools/rm_model.py moved to
+# archive/isppipeline-sw-cleanup-2026-08-07/tools/. Kept as explicit stubs (not
+# silently deleted) so these targets fail with a clear reason instead of a bare
+# "No rule to make target" -- see README.md "로컬 C-sim 실행" for the full note.
+rm-golden rm-csim rm-verify:
+	@echo "ERROR: '$@' targets the retired v1 RM ablation track (static/reg_only/dfx_bin/dfx_fp)." >&2
+	@echo "  src/dfxisp_rm.cpp + include/dfxisp_rm.hpp are in" >&2
+	@echo "  archive/dfxisp-v2-renewal-2026-08-07/isppipeline-hls-superseded-files/;" >&2
+	@echo "  tools/gen_rm_golden.py + tools/rm_model.py are in" >&2
+	@echo "  archive/isppipeline-sw-cleanup-2026-08-07/tools/. Intentionally not restored." >&2
+	@exit 1
 
 # default_ISP: standard ISP arm following the Vitis Vision isppipeline stage
 # order (Bayer-domain BLC/gain -> demosaic -> adaptive AWB -> CCM -> gamma).
@@ -128,11 +130,17 @@ verify-new-arms:
 scheduler: | $(BUILD_DIR)
 	$(PYTHON) tools/scheduler_sim.py --out results/scheduler.csv
 
-analysis: | $(BUILD_DIR)
-	$(PYTHON) tools/isp_variant_analysis.py --out results/isp_analysis.csv
+# isp_variant_analysis.py imports tools/rm_model.py -- same retired v1 RM
+# ablation track as rm-golden/rm-csim/rm-verify above (archive/isppipeline-sw-
+# cleanup-2026-08-07/tools/), so this is a stub for the same reason.
+analysis:
+	@echo "ERROR: '$@' targets the retired v1 RM ablation track (needs tools/rm_model.py + tools/isp_variant_analysis.py, archive/isppipeline-sw-cleanup-2026-08-07/tools/). Intentionally not restored." >&2
+	@exit 1
 
-# Full software stage (no board): variants bit-exact + scheduler + ISP analysis.
-sw-stage: verify rm-verify scheduler analysis
+# Full software stage (no board): variants bit-exact + scheduler.
+# rm-verify/analysis dropped 2026-08-14 -- both targeted the retired v1 RM
+# ablation track (see the rm-golden/rm-csim/rm-verify/analysis stubs above).
+sw-stage: verify scheduler
 
 # Lightweight Python-only gate (2026-07-08 Hermes robustness review, P2): compiles
 # every tools/*.py, re-runs the binning cross-check, the scheduler sweep, and the

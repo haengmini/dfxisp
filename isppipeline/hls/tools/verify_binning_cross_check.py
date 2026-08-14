@@ -25,6 +25,12 @@ from __future__ import annotations
 import argparse
 import random
 import sys
+from pathlib import Path
+
+# low_light_isp_pipeline.py lives in isppipeline/sw/ (2026-08-14 restructure),
+# not alongside this file -- add it to the path so the plain import below
+# still resolves regardless of cwd.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "sw"))
 
 import gen_golden_vectors as G
 import low_light_isp_pipeline as P

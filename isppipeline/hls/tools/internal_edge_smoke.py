@@ -43,6 +43,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+# baseline_isp_pipeline.py / checker.py live in isppipeline/sw/ (2026-08-14
+# restructure), not alongside this file -- add it to the path too.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "sw"))
 
 import numpy as np
 
