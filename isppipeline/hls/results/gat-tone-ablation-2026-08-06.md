@@ -22,8 +22,8 @@ Sources: results/map_gat_ablation_nod100_2026-08-06.csv (YOLOv8n)
    **구조가 다른 검출기(SSDLite MobileNetV3)로 교차검증한 결과 순위와
    효과 크기가 그대로 재현됐다**(`+0.0105 / +0.0113`, §6).
 3. 따라서 `src/lowlight_isp.md` §2.1이 "이 설계의 중심"이라고 적은 GAT는
-   **측정으로 지지되지 않는다.** 본 문서는 측정 결과만 확정하고, 배포 커브
-   교체는 별도 결정으로 남긴다(§5).
+   **측정으로 지지되지 않는다.** 교차검증까지 확인한 뒤 **배포 커브를
+   gamma 2.0으로 교체했다**(§5) — 자원도 함께 크게 줄었다(§5.1).
 4. binning(①)은 유지가 옳다: same-color가 subsample을 `+0.0040 / +0.0281`로
    앞선다.
 
@@ -42,10 +42,13 @@ stage (5)의 4096-entry LUT **하나만** 바꾼다. binning·BLC·게인·CCM·
 
 | arm | stage (5) |
 |---|---|
-| `lowlight_isp` | GAT/Anscombe VST (배포 커브) |
+| `lowlight_isp` | GAT/Anscombe VST (**측정 당시의** 배포 커브) |
 | `lowlight_isp_gamma` | gamma 2.0 — `default_ISP` 골든에서 **import**해 표류 불가 |
 | `lowlight_isp_linear` | 커브 없음, `z >> 4` 절단 (바닥 대조군) |
 | `lowlight_isp_subsample` | GAT, 단 binning만 구 subsample (①의 대조) |
+
+> arm 이름은 측정 당시 기준이다. §5의 교체 이후 `lowlight_isp` = gamma 2.0,
+> 구 GAT arm은 `lowlight_isp_gat`으로 이름이 바뀌었다.
 
 세 커브의 모양(입력 12-bit → 출력 8-bit):
 
@@ -179,7 +182,7 @@ denoise 단계와 그것을 먹이던 3행 슬라이딩 버퍼를 코드에서 �
 적었던 미실행 항목이 이번에 닫혔다. DSP 20 → 14 감소는 예상 밖이었는데,
 σ-clip의 `total / count`가 **가변 제수 나눗셈**이었기 때문으로 보인다.
 
-자원 서사:
+자원 서사(이 시점 기준 — 이후 gamma 교체로 §5.1의 값까지 더 내려갔다):
 
 - v1 저조도(`rm_low_light_tone_top`, LUT 4,204) 대비 **3.05배 → 1.65배**
 - v2 일반(`rm_default_isp_top`, LUT 12,659) 대비 **45% 작다**
