@@ -47,10 +47,18 @@ import shutil
 import struct
 from functools import partial
 from multiprocessing import Pool
+import sys
 from pathlib import Path
 
 import numpy as np
 from PIL import Image
+
+# checker.py/default_isp_pipeline.py/lowlight_isp_pipeline.py's canonical home
+# is isppipeline/sw/ (2026-08-06 v2 arm move); this script lives one level
+# over in isppipeline/hls/tools/, so it needs the sibling dir on the path
+# (same fix already applied to verify_binning_cross_check.py/
+# internal_edge_smoke.py on restoration -- missed here until 2026-08-18).
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "sw"))
 
 import baseline_isp_pipeline as PB
 import low_light_isp_pipeline as PL
