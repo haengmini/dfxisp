@@ -42,6 +42,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import os
 import shutil
 import struct
@@ -99,6 +100,19 @@ def jpg_dims(p: Path):
     raise ValueError(f"no SOF in {p}")
 
 
+def frame_dims(root: Path):
+    """(w, h) from root/meta.json's out_width/out_height -- the *_hw dataset
+    contract (dataset/dataset.md SS3): a single fixed decimated size for every
+    frame, no per-stem images/ dir. None if meta.json is absent, so callers
+    fall back to jpg_dims() per frame (the sonynod_test/images/ convention
+    this script originally targeted -- 2026-08-18)."""
+    meta = root / "meta.json"
+    if not meta.exists():
+        return None
+    d = json.loads(meta.read_text())
+    return d["out_width"], d["out_height"]
+
+
 def load_adaptive_verdicts(manifest: Path) -> dict[str, bool]:
     """stem -> adaptive-tau LOW_LIGHT verdict, precomputed by
     build_matched_splits.py (checker_adaptive_tau.tau_for_frame-based, the
@@ -145,12 +159,12 @@ def render_arm(bayer, w, h, arm, blc_offset, stem=None, adaptive_verdicts=None,
     raise ValueError(f"unsupported arm for BLC ablation: {arm}")
 
 
-def _render_one(stem, raw_dir: Path, lab_dir: Path, img_dir: Path, work: Path,
+def _render_one(stem, raw_dir: Path, lab_dir: Path, img_dir: Path, dims, work: Path,
                 arms, blc_offset, adaptive_verdicts, wb_lowlight) -> int:
     """Render every arm for one frame. Self-contained so it can run in a
     worker process: each frame reads its own raw and writes its own outputs,
     with no shared state."""
-    w, h = jpg_dims(img_dir / f"{stem}.jpg")
+    w, h = dims if dims is not None else jpg_dims(img_dir / f"{stem}.jpg")
     bayer = np.fromfile(raw_dir / f"{stem}.bin", dtype="<u2")
     if bayer.size != w * h:
         return 0
@@ -179,8 +193,13 @@ def default_jobs() -> int:
 def build_arm_images(root: Path, work: Path, arms, limit: int, blc_offset: int,
                       adaptive_verdicts=None, wb_lowlight=None, jobs=None) -> int:
     raw_dir = root / "raw_bin"; lab_dir = root / "labels"; img_dir = root / "images"
-    stems = sorted(p.stem for p in raw_dir.glob("*.bin")
-                   if (img_dir / f"{p.stem}.jpg").exists() and (lab_dir / f"{p.stem}.txt").exists())
+    dims = frame_dims(root)
+    if dims is not None:
+        stems = sorted(p.stem for p in raw_dir.glob("*.bin")
+                       if (lab_dir / f"{p.stem}.txt").exists())
+    else:
+        stems = sorted(p.stem for p in raw_dir.glob("*.bin")
+                       if (img_dir / f"{p.stem}.jpg").exists() and (lab_dir / f"{p.stem}.txt").exists())
     if limit:
         stems = stems[:limit]
     for a in arms:
@@ -188,7 +207,7 @@ def build_arm_images(root: Path, work: Path, arms, limit: int, blc_offset: int,
         (work / a / "labels").mkdir(parents=True, exist_ok=True)
 
     jobs = default_jobs() if jobs is None else max(1, int(jobs))
-    fn = partial(_render_one, raw_dir=raw_dir, lab_dir=lab_dir, img_dir=img_dir,
+    fn = partial(_render_one, raw_dir=raw_dir, lab_dir=lab_dir, img_dir=img_dir, dims=dims,
                  work=work, arms=arms, blc_offset=blc_offset,
                  adaptive_verdicts=adaptive_verdicts, wb_lowlight=wb_lowlight)
     if len(stems) <= 1:
