@@ -79,11 +79,14 @@ def run_lowlight(bayer16, w, h, blc_offset=None, wb=None):
     """LOW_LIGHT arm: 2x2 RAW bin-demosaic -> BLC/WB/gain(2.0x) -> CCM(identity)
     -> gamma 2.0. -> (H/2) x (W/2) x 3 uint8.
 
-    blc_offset: optional override for the BLC constant (8-bit-equivalent
-    black-level value, shifted into the RAW16 domain via <<SHIFT). When None
-    (default), the existing module constant BLC_OFFSET_LOWLIGHT is used
-    unchanged -- purely additive, backward-compatible parameter for the BLC
-    recalibration ablation.
+    blc_offset: optional override for the BLC constant, in 12-bit BLC_LEVEL12
+    units (matching dfxisp_accel.cpp/gen_golden_vectors.py's convention),
+    shifted into the RAW16 domain via <<4 (raw12->raw16). Native 12-bit, not
+    the module's internal 8-bit-equivalent BLC_OFFSET_LOWLIGHT convention --
+    the pipeline itself is 12-bit throughout, so ablation sweeps should be
+    too (2026-08-18). When None (default), the existing module constant
+    BLC_OFFSET_LOWLIGHT is used unchanged -- purely additive, backward-
+    compatible parameter for the BLC recalibration ablation.
 
     wb: optional (R,G,B) Q8 white-balance gain override. When None (default)
     the shared module constants AWB_R/G/B are used, so existing callers are
@@ -92,7 +95,7 @@ def run_lowlight(bayer16, w, h, blc_offset=None, wb=None):
     at 0.92x of PASCAL's gray-world optimum but only 0.50x of SonyNOD's, i.e.
     low-light gets half the blue correction it needs).
     """
-    blk_raw = BLC_OFFSET_LOWLIGHT if blc_offset is None else (int(blc_offset) << SHIFT)
+    blk_raw = BLC_OFFSET_LOWLIGHT if blc_offset is None else (int(blc_offset) << 4)
     rgb8 = _blc_wb_gain(_bin_demosaic_rggb16(bayer16, w, h), GAIN_LOWLIGHT_NUM, GAIN_LOWLIGHT_DEN,
                         blk_raw=blk_raw, wb=wb)
     return GAMMA2_LUT[rgb8]

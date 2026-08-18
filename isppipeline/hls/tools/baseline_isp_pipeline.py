@@ -127,14 +127,16 @@ def _blc_wb_gain(rgb16, gnum, gden, blk_raw=BLK_RAW):
 def run_normal(bayer16, w, h, blc_offset=None):
     """NORMAL arm: demosaic -> BLC/WB/gain(1.25x) -> CCM(identity) -> gamma 2.0. -> H x W x 3 uint8.
 
-    blc_offset: optional override for the BLC constant, in the same units as
-    the module constant BLK_RAW is derived from (i.e. an 8-bit-equivalent
-    black-level value that gets shifted into the RAW16 domain via <<SHIFT).
+    blc_offset: optional override for the BLC constant, in 12-bit BLC_LEVEL12
+    units (matching dfxisp_accel.cpp/gen_golden_vectors.py's convention),
+    shifted into the RAW16 domain via <<4 (raw12->raw16). Native 12-bit, not
+    the module's internal 8-bit-equivalent BLK_RAW convention -- the pipeline
+    itself is 12-bit throughout, so ablation sweeps should be too (2026-08-18).
     When None (default), the existing module constant BLK_RAW is used
     unchanged -- this is a purely additive, backward-compatible parameter
     for the BLC recalibration ablation.
     """
-    blk_raw = BLK_RAW if blc_offset is None else (int(blc_offset) << SHIFT)
+    blk_raw = BLK_RAW if blc_offset is None else (int(blc_offset) << 4)
     rgb8 = _blc_wb_gain(_demosaic_rggb16(bayer16, w, h), GAIN_NORMAL_NUM, GAIN_NORMAL_DEN, blk_raw=blk_raw)
     return GAMMA2_LUT[rgb8]
 

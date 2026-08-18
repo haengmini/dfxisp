@@ -60,14 +60,26 @@ isppipeline/hls/
 │   ├── test_rm_csim.cpp + rm_golden_vectors.csv      (rm-verify는 비활성 — 은퇴한 v1 RM 트랙, 아래 참고)
 │   └── golden_csv.hpp         — 공용 CSV 파서(2026-08-06 ponytail 리뷰로 3중복 통합)
 ├── tools/                    — golden 생성기·검증 스크립트(2026-08-14: 2026-08-07 restructure로
-│   │                           archive에 갔던 7개를 복원, 아래 참고)
+│   │                           archive에 갔던 7개를 복원, 2026-08-18에 eval_map_isp.py 추가 복원, 아래 참고)
 │   ├── gen_golden_vectors.py     — `src/dfxisp_accel.cpp` bit-exact golden 생성기(`make golden`)
 │   ├── gen_verification_report.py — `reports/latest.md` 생성기(`make report`)
 │   ├── verify_binning_cross_check.py / verify_demosaic_bilinear_cross_check.py
 │   │     — 독립 3자 fuzz 교차검증 gate(`make cross-check`)
 │   ├── internal_edge_smoke.py    — 극소/홀수 그리드 + demosaic 경계 회귀(`make py-verify`)
 │   ├── baseline_isp_pipeline.py / low_light_isp_pipeline.py — 위 cross-check들의 독립
-│   │     구현 오라클(v1 SW-eval proxy, v2 이관 후 이 용도로만 복원)
+│   │     구현 오라클(v1 SW-eval proxy, v2 이관 후 이 용도로만 복원). `blc_offset` 오버라이드는
+│   │     2026-08-18부터 네이티브 12-bit `BLC_LEVEL12` 단위(이전엔 8-bit-equivalent 단위라
+│   │     12-bit 기준 16 간격 grid로 스윕이 강제됐음 — 파이프라인 자체는 처음부터 끝까지
+│   │     12-bit인데 스윕 grid만 8-bit 관례를 물려받고 있었다는 문제, 아래 `eval_map_isp.py`
+│   │     항목 참고)
+│   ├── eval_map_isp.py           — BLC_OFFSET(정확히는 위 `blc_offset` 파라미터) mAP 스윕 러너
+│   │     (`isp-pipeline-recalibration-2026-07-08.md`/`blc-recalibration-deploy-2026-07-20.md`의
+│   │     근거 스크립트). 2026-08-07 restructure로 archive에 갔다가 **2026-08-18에 복원** —
+│   │     `--blc-offsets` 기본값도 8-bit-equivalent(`0,1,2,4,8,16`, 6점)에서 네이티브 12-bit
+│   │     (`0,8,16,24,32,48,64,96,128,192,256`, 11점 — `sw/sim/blc/blc_sim.py`의
+│   │     `SIGNAL_LEVELS`를 256(과거 최대 실측값)에서 자른 것과 동일한 grid)로 변경, 6점짜리
+│   │     성긴 grid 대신 전 구간을 조밀하게 커버. 실제 mAP 재스윕은 아직 미실행(GPU 수 시간
+│   │     소요, 별도 진행 예정) — 이번엔 코드 변경만
 │   ├── scheduler_sim.py / scheduler_sweep.py — 스케줄러 정책 시뮬레이션(`make scheduler`)
 │   ├── build_hw_dataset.py
 │   ├── calibrate_noise_model.py  — 실 RAW 노이즈 모델(σ²=a·y+b) 추정, GAT ablation 상수용
