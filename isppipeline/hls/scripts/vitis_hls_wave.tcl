@@ -26,6 +26,9 @@ set tb_file      [env_or DFXISP_HLS_TB    "tests/test_dfxisp_csim.cpp"]
 set part_name    [env_or DFXISP_HLS_PART  "xczu7ev-ffvc1156-2-e"]
 set clock_period [env_or DFXISP_HLS_CLOCK "5.0"]
 set flow         [env_or DFXISP_HLS_FLOW  "csim"]
+if {$flow eq "cosim" && ![info exists ::env(DFXISP_HLS_TB)]} {
+    set tb_file "tests/test_dfxisp_cosim.cpp"
+}
 set project_dir  [file normalize [env_or DFXISP_HLS_PROJECT [file join $hls_root "build" "vitis_hls" $top_name]]]
 set solution_name "solution1"
 

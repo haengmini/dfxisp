@@ -34,21 +34,124 @@ C-sim이 증명하는 불변식(RESEARCH.md §8.2):
 의도적으로 Ponytail 스타일이다: 작은 HLS top 하나, stdlib만 쓰는 C-sim, 로컬 smoke
 테스트에 Vitis 의존성 없음, Vitis HLS/Vitis flow용 HLS pragma는 보존.
 
-## 파일
+## 파일 구조
+
+```text
+isppipeline/hls/
+├── Makefile                — csim/golden/report/HLS 진입점. `rm-golden`/`rm-csim`/
+│                              `rm-verify`/`analysis`는 은퇴한 v1 RM 트랙을 가리키는
+│                              명시적 stub(§"로컬 C-sim 실행" 참고)
+├── README.md                — 이 문서
+├── vitis_hls.log             — 마지막 vitis_hls 실행 세션 로그(잔여물)
+│
+├── src/                      — HLS C++ 소스(csim + Vitis HLS 합성 대상)
+│   ├── dfxisp_accel.cpp      — 배포 unified top: checker + baseline core + RM_NORMAL_TONE/RM_LOW_LIGHT_TONE
+│   ├── checker.cpp           — standalone checker HLS IP 소스(checker_scan top, checker/ 패키징용)
+│   ├── default_isp.cpp       — default_ISP arm(Vitis Vision 정렬, 2026-08-06 신규)
+│   ├── default_isp.md / default_isp_v2.md
+│   ├── lowlight_isp.cpp      — lowlight_ISP v2 arm(2026-08-06 신규, binning+gain+gamma2.0)
+│   └── lowlight_isp.md
+├── include/                  — 각 top의 헤더(mode/RM enum, 인터페이스, 4-scalar 메타데이터 출력)
+│   └── {dfxisp_accel,checker,default_isp,lowlight_isp}.hpp
+├── tests/                    — C-sim 테스트벤치 + bit-exact golden CSV
+│   ├── test_dfxisp_csim.cpp + golden_vectors.csv
+│   ├── test_default_isp_csim.cpp + default_isp_golden_vectors.csv
+│   ├── test_lowlight_isp_csim.cpp + lowlight_isp_golden_vectors.csv
+│   ├── test_rm_csim.cpp + rm_golden_vectors.csv      (rm-verify는 비활성 — 은퇴한 v1 RM 트랙, 아래 참고)
+│   └── golden_csv.hpp         — 공용 CSV 파서(2026-08-06 ponytail 리뷰로 3중복 통합)
+├── tools/                    — golden 생성기·검증 스크립트(2026-08-14: 2026-08-07 restructure로
+│   │                           archive에 갔던 7개를 복원, 2026-08-18에 eval_map_isp.py 추가 복원, 아래 참고)
+│   ├── gen_golden_vectors.py     — `src/dfxisp_accel.cpp` bit-exact golden 생성기(`make golden`)
+│   ├── gen_verification_report.py — `reports/latest.md` 생성기(`make report`)
+│   ├── verify_binning_cross_check.py / verify_demosaic_bilinear_cross_check.py
+│   │     — 독립 3자 fuzz 교차검증 gate(`make cross-check`)
+│   ├── internal_edge_smoke.py    — 극소/홀수 그리드 + demosaic 경계 회귀(`make py-verify`)
+│   ├── baseline_isp_pipeline.py / low_light_isp_pipeline.py — 위 cross-check들의 독립
+│   │     구현 오라클(v1 SW-eval proxy, v2 이관 후 이 용도로만 복원). `blc_offset` 오버라이드는
+│   │     2026-08-18부터 네이티브 12-bit `BLC_LEVEL12` 단위(이전엔 8-bit-equivalent 단위라
+│   │     12-bit 기준 16 간격 grid로 스윕이 강제됐음 — 파이프라인 자체는 처음부터 끝까지
+│   │     12-bit인데 스윕 grid만 8-bit 관례를 물려받고 있었다는 문제, 아래 `eval_map_isp.py`
+│   │     항목 참고)
+│   ├── eval_map_isp.py           — BLC_OFFSET(정확히는 위 `blc_offset` 파라미터) mAP 스윕 러너
+│   │     (`isp-pipeline-recalibration-2026-07-08.md`/`blc-recalibration-deploy-2026-07-20.md`의
+│   │     근거 스크립트). 2026-08-07 restructure로 archive에 갔다가 **2026-08-18에 복원** —
+│   │     `--blc-offsets` 기본값도 8-bit-equivalent(`0,1,2,4,8,16`, 6점)에서 네이티브 12-bit
+│   │     (`0,8,16,24,32,48,64,96,128,192,256`, 11점 — `sw/sim/blc/blc_sim.py`의
+│   │     `SIGNAL_LEVELS`를 256(과거 최대 실측값)에서 자른 것과 동일한 grid)로 변경, 6점짜리
+│   │     성긴 grid 대신 전 구간을 조밀하게 커버. 실제 mAP 재스윕은 아직 미실행(GPU 수 시간
+│   │     소요, 별도 진행 예정) — 이번엔 코드 변경만
+│   ├── scheduler_sim.py / scheduler_sweep.py — 스케줄러 정책 시뮬레이션(`make scheduler`)
+│   ├── build_hw_dataset.py
+│   ├── calibrate_noise_model.py  — 실 RAW 노이즈 모델(σ²=a·y+b) 추정, GAT ablation 상수용
+│   └── camera_wb.json / sonynod_{boundary31,flip13}.json
+├── scripts/                  — Vitis HLS / Vivado DFX Tcl
+│   ├── vitis_hls.tcl          — HLS 프로젝트 스캐폴드(csim/csynth/cosim/export, top은 env로 지정)
+│   ├── vitis_hls_wave.tcl
+│   └── dfx/                   — DFX flow(controller 생성, flat-arm impl, bitstream 작성)
+├── checker/                  — standalone checker HLS IP 패키징(Vivado IP repo)
+│   ├── checker_ip.v / checker_hysteresis.v(+tb) / dfxc_trigger_adapter.v(+tb)
+│   ├── package_checker_ip.tcl / synth_checker.tcl
+│   └── ip_repo/                — 패키징된 Vivado IP(component.xml + 합성 RTL)
+├── reports/                  — 최신 csynth/postroute 실측 리포트(git 추적, 정본)
+│   ├── latest.md               — make report 산출물(2026-08-14 재생성, 동작)
+│   ├── csynth/*.rpt            — top별 C-synthesis 리포트
+│   └── postroute/*.rpt         — arm1/2/3 post-route timing/utilization
+├── results/                  — 실험/HW 실측 산출물 아카이브 — **읽을 땐 results/INDEX.md부터**
+│   ├── INDEX.md
+│   ├── pr_controller/, icap_sim/  — PR latency RTL/TB
+│   └── archive/                — superseded 문서/CSV(git mv만, 삭제 없음)
+│
+├── build/            (gitignored) — g++ 로컬 csim 바이너리 + build/vitis_hls/<top>/ HLS 프로젝트
+├── data/             (gitignored) — 실험 렌더 산출물(대용량 데이터셋 파생물)
+└── runs/             (gitignored) — YOLO 검출 val 산출물
+```
+
+관련 위치(`isppipeline/hls/` 바깥):
+
+- `isppipeline/sw/` — v2 golden 생성기/검증 스크립트의 **정본** 위치: `checker.py`,
+  `default_isp_pipeline.py` + `gen_default_isp_golden.py`, `lowlight_isp_pipeline.py` +
+  `gen_lowlight_isp_golden.py`, `verify_new_arm_pipelines.py`(2026-08-14 이관).
+  `sw/sim/{AWB,blc,binning,checker,gain,gamma}/`에 관련 실험 노트. `isppipeline/hls/tools/`의
+  cross-check 스크립트들이 여기 `checker.py`/`low_light_isp_pipeline.py`(*)를
+  `sys.path.insert`로 import한다(*이건 sw/에 없고 hls/tools/ 자체에 오라클로 복원돼 있음,
+  아래 참고).
+- `archive/isppipeline-sw-cleanup-2026-08-07/tools/` — **2026-08-14에 대부분 복원 완료.**
+  `gen_golden_vectors.py`/`gen_verification_report.py`/`scheduler_sim.py`/
+  `scheduler_sweep.py`/`verify_binning_cross_check.py`/`verify_demosaic_bilinear_cross_check.py`
+  /`internal_edge_smoke.py`/`baseline_isp_pipeline.py`/`low_light_isp_pipeline.py`를
+  `isppipeline/hls/tools/`로 `git mv`, Makefile `golden`/`verify`/`report`/`cross-check`/
+  `scheduler`/`py-verify` 전부 재확인 완료(PASS, golden CSV byte-identical). 이 archive
+  경로엔 이제 **`isp_variant_analysis.py`/`gen_rm_golden.py`/`rm_model.py`만** 남아있고
+  이건 아래 은퇴한 v1 RM 트랙 전용이라 복원 안 했다.
+- `archive/dfxisp-v2-renewal-2026-08-07/isppipeline-hls-superseded-files/` — 구
+  `dfxisp_rm.{cpp,hpp}`(v1 RM ablation top) — `archive/isppipeline-sw-cleanup-2026-08-07/tools/`의
+  `rm_model.py`와 함께 **진짜로 은퇴한 v1 RM 트랙**(static/reg_only/dfx_bin/dfx_fp 변종
+  비교용, 2026-08-06 GAT 실험과 무관). `rm-golden`/`rm-csim`/`rm-verify`/`analysis`는 이
+  둘이 없어서 비활성 — 위 7개와 달리 단순 경로 문제가 아니라 대상 자체가 의도적으로
+  은퇴했으므로 코드는 복원하지 않고 Makefile 타겟 4개를 명시적 stub으로 정리했다
+  (§"로컬 C-sim 실행" 참고).
+
+## 핵심 파일 상세
 
 - `include/dfxisp_accel.hpp` — HLS top 인터페이스, mode/selected-RM enum, 4개 scalar 메타데이터 출력 포인터
 - `src/dfxisp_accel.cpp` — checker + baseline core12(demosaic/BLC/WB/CCM, 12-bit) + RM_NORMAL_TONE(gain 1.25x + gamma2.0) + RM_LOW_LIGHT_TONE(2x2 bin + gain 2.0x + gamma2.0)
 - `tests/test_dfxisp_csim.cpp` — C-sim smoke 테스트 + golden CSV bit-compare + 아키텍처 불변식 검사
-- `tools/gen_golden_vectors.py` — stdlib-only 결정적 golden 생성기(`src/dfxisp_accel.cpp` bit-exact 미러)
-- `tools/gen_verification_report.py` — stdlib-only Markdown 검증/리포트 생성기
-- `scripts/vitis_hls.tcl` — `dfxisp_accel`용 Vitis HLS 프로젝트 스캐폴드
-- `Makefile` — g++ 로컬 C-sim, golden 생성, verify/report, Vitis HLS dry-run 리포트
+- `tools/gen_golden_vectors.py` — stdlib-only 결정적 golden 생성기(`src/dfxisp_accel.cpp` bit-exact 미러).
+  2026-08-07 restructure로 잠시 `archive/`로 이동했었으나 **2026-08-14에 복원**, `make golden`
+  정상 동작 확인(재생성한 CSV가 커밋된 것과 byte-identical — 드리프트 없었음)
+- `tools/gen_verification_report.py` — stdlib-only Markdown 검증/리포트 생성기. 같은 이유로
+  잠시 이동했다가 **2026-08-14에 복원**, `make report` 정상 동작(`reports/latest.md` 재생성 확인)
+- `scripts/vitis_hls.tcl` — `dfxisp_accel`용 Vitis HLS 프로젝트 스캐폴드(`DFXISP_HLS_TOP` 등을
+  바꾸면 다른 top에도 재사용 가능)
+- `Makefile` — g++ 로컬 C-sim, golden 생성, verify/report, Vitis HLS dry-run 리포트(일부 타겟
+  비활성 — §"로컬 C-sim 실행")
 - `include/default_isp.hpp` · `src/default_isp.cpp` — **default_ISP**(2026-08-06 신규):
   AMD Vitis Vision L3 `isppipeline`의 스테이지 순서·도메인을 따르는 표준 ISP arm
   (Bayer 도메인 BLC/gain → demosaic → 적응 AWB → 실제 CCM → gamma). `RM_NORMAL_TONE`과
   **병존**하며 기존 golden 계약을 건드리지 않는다. 상세: `src/default_isp.md`
-- `tools/gen_default_isp_golden.py` · `tests/test_default_isp_csim.cpp` — 위 arm의
-  canonical golden + C-sim (`make default-isp-verify`)
+- `isppipeline/sw/gen_default_isp_golden.py`(구 `tools/`, 2026-08-14 이관) ·
+  `tests/test_default_isp_csim.cpp` — 위 arm의 canonical golden + C-sim
+  (`make default-isp-verify`)
 - `include/lowlight_isp.hpp` · `src/lowlight_isp.cpp` — **lowlight_ISP**(2026-08-06 신규):
   제안 저조도 arm v2. default_ISP와 보정 백본·톤 커브를 공유하고
   **{binning, 2.0× 상류 게인, H/2×W/2 출력}** 만 다르다 → 통제된 arm 비교가 가능하다.
@@ -56,14 +159,37 @@ C-sim이 증명하는 불변식(RESEARCH.md §8.2):
   2026-08-06 측정으로 각각 제거·교체됐고, csynth LUT 12,826 → 4,150으로 줄어
   **v1 저조도 arm과 사실상 동등**해졌다.
   배포 arm(RM_LOW_LIGHT_TONE)은 무변경. 상세: `src/lowlight_isp.md`
-- `tools/gen_lowlight_isp_golden.py` · `tests/test_lowlight_isp_csim.cpp` — 위 arm의
-  canonical golden + C-sim (`make lowlight-isp-verify`)
+- `isppipeline/sw/gen_lowlight_isp_golden.py`(구 `tools/`, 2026-08-14 이관) ·
+  `tests/test_lowlight_isp_csim.cpp` — 위 arm의 canonical golden + C-sim
+  (`make lowlight-isp-verify`)
 
-> 실험 arm(§7)·ablation(§12 Task 5)은 `src/dfxisp_rm.cpp`·`tools/rm_model.py`
-> (static / reg_only / dfx_bin / dfx_fp)에 별도로 있다. 현재 스캐폴드의 과거
-> post-RGB8 gain/lift 경로는 그 dfx 변종 세트로 이관되어 ablation으로만 남는다.
+> 실험 arm(§7)·ablation(§12 Task 5)은 원래 `src/dfxisp_rm.cpp`·`tools/rm_model.py`
+> (static / reg_only / dfx_bin / dfx_fp)에 있었다(현재 스캐폴드의 과거 post-RGB8
+> gain/lift 경로가 그 dfx 변종 세트로 이관되어 ablation으로만 남던 시절 기록). **둘 다
+> 2026-08-07 restructure로 은퇴** — `dfxisp_rm.cpp`는
+> `archive/dfxisp-v2-renewal-2026-08-07/isppipeline-hls-superseded-files/src/`,
+> `rm_model.py`는 `archive/isppipeline-sw-cleanup-2026-08-07/tools/`에 있다. `tests/test_rm_csim.cpp`
+> + `tests/rm_golden_vectors.csv`는 여전히 `isppipeline/hls/`에 남아 있지만, 그 테스트가
+> `#include`하는 `src/dfxisp_rm.cpp`/`include/dfxisp_rm.hpp` 자체가 없다. **2026-08-14에
+> `rm-golden`/`rm-csim`/`rm-verify`/`analysis` Makefile 타겟을 명시적 stub으로 정리**했다
+> (되살리는 대신 — 은퇴가 의도적이라는 판단, §"로컬 C-sim 실행" 참고) — 실행하면 이유를
+> 설명하는 메시지와 함께 exit 1, 더는 `No such file or directory` 같은 불친절한 에러가 아니다.
 
 ## `tools/` 파일 상태 (canonical / proxy / legacy, 2026-07-08 Hermes 리뷰 + 같은 날 gamma 재정합)
+
+> **2026-08-14 경로 갱신(당일 두 번):** 아래 표는 2026-07-08 시점 배치를 기록한 것이라
+> 파일 경로가 그때와 다르다. 오전엔 2026-08-07 restructure로 이 표의 대부분이 저장소 루트
+> `archive/isppipeline-sw-cleanup-2026-08-07/tools/`로, `default_isp_pipeline.py`/
+> `lowlight_isp_pipeline.py`/`verify_new_arm_pipelines.py`는 `isppipeline/sw/`로 이관됐다.
+> **오후에 `gen_golden_vectors.py`/`gen_verification_report.py`/`scheduler_sim.py`/
+> `scheduler_sweep.py`/`verify_binning_cross_check.py`/`verify_demosaic_bilinear_cross_check.py`
+> /`internal_edge_smoke.py`/`baseline_isp_pipeline.py`/`low_light_isp_pipeline.py`를 archive에서
+> 다시 `isppipeline/hls/tools/`로 복원**(cross-check 3개는 `isppipeline/sw/`의
+> `checker.py`를 가리키도록 `sys.path.insert` 추가), `checker.py`/`default_isp_pipeline.py`/
+> `lowlight_isp_pipeline.py`/`verify_new_arm_pipelines.py`는 여전히 `isppipeline/sw/`가
+> 정본. `newrm_pipeline.py`/`isp_pipeline_ver1.py`는 archive 하위 `archive/`(2026-07-08
+> 아카이브)에 그대로. 표 자체는 2026-07-08 시점의 canonical/proxy/legacy **분류 근거**를
+> 보존하려고 그대로 두고, 현재 위치는 위 "파일 구조" 절과 각 행의 굵은 경로 주석을 참고할 것.
 
 golden/C-sim/cross-check 경로 자체는 견고하나, canonical golden ↔ SW-eval proxy ↔
 legacy/ver0 코드 사이 경계가 문서화되어 있지 않아 혼동 위험이 있었다. 아래 표가 그
@@ -91,7 +217,7 @@ legacy/ver0 코드 사이 경계가 문서화되어 있지 않아 혼동 위험�
 | `calibrate_noise_model.py` | **측정 도구**(08-06) | 실 RAW 원본에서 Poisson-Gaussian 노이즈 모델(σ²=a·y+b) 추정 — GAT 상수용. **GAT는 2026-08-06에 배포에서 내려갔고**(gamma 2.0으로 교체) 이 상수는 `lowlight_isp_gat` ablation arm 전용이다. 단일영상 photon-transfer(블록 분산 저백분위 + χ² 편향 보정). **`raw_bin`은 쓸 수 없다**(shift8이라 12-bit 노이즈가 양자화로 소실) — rawpy로 원본 NEF/ARW를 읽어야 한다. 결과·한계: `src/lowlight_isp.md` §4.1 |
 | `default_isp_pipeline.py` · `lowlight_isp_pipeline.py` | **SW eval proxy (canonical-matched)**(08-06 신규) | v2 arm(default_ISP / lowlight_ISP)의 **벡터화** 렌더러 — 스칼라 golden 생성기는 픽셀 루프라 20MP 프레임을 못 돌린다. 모든 상수를 golden에서 **import**해 드리프트를 원천 차단. `eval_map_isp.py`가 이 둘로 디스패치 |
 | `verify_new_arm_pipelines.py` | **검증 gate**(08-06 신규) | 위 벡터화 프록시가 스칼라 golden과 **bit-exact**인지 퍼징(`make verify-new-arms`). 2026-07-02 chroma-collapse와 같은 부류의 위험(두 번째 구현이 조용히 어긋남)을 막는다 |
-| `calibrate_noise_model.py` | **측정 도구**(2026-08-06 신규) | 1x1~8x8 극소/홀수 그리드 스모크 + demosaic 경계 clamp 회귀 테스트 (`make py-verify`). `baseline_isp_pipeline.py`/`checker.py` 양쪽의 독립 demosaic 사본을 각각 검사(2026-07-08 이전엔 `isp_pipeline_ver1.py` 대상) |
+| `internal_edge_smoke.py` | **검증 gate**(2026-08-06 신규) | 1x1~8x8 극소/홀수 그리드 스모크 + demosaic 경계 clamp 회귀 테스트 (`make py-verify`). `baseline_isp_pipeline.py`/`checker.py` 양쪽의 독립 demosaic 사본을 각각 검사(2026-07-08 이전엔 `isp_pipeline_ver1.py` 대상). (이 행의 파일명은 원래 `calibrate_noise_model.py`로 오기재돼 있었음 — 2026-08-14 정정) |
 
 ## Ponytail 리뷰 기록 (2026-08-06)
 
@@ -118,22 +244,54 @@ golden 4종 + xsim 2종 전부 재통과(수치 무변화).
 
 ## 로컬 C-sim 실행
 
+> **2026-08-14 기준 타겟 상태:** 2026-08-07 restructure가 `isppipeline/hls/tools/`의
+> golden 생성기·검증 스크립트 대부분을 저장소 루트 `archive/`로 옮기면서 Makefile의
+> `golden`/`cross-check`/`verify`/`report`/`py-verify`/`scheduler`가 한동안 그 옛 경로를
+> 참조해 실패했다(`c7e182e`가 `default-isp-golden`/`lowlight-isp-golden`/`verify-new-arms`
+> 세 타겟만 먼저 `../sw/`로 재배선). **같은 날 나머지도 마저 고쳤다:** `gen_golden_vectors.py`
+> · `gen_verification_report.py` · `scheduler_sim.py` · `scheduler_sweep.py` ·
+> `verify_binning_cross_check.py` · `verify_demosaic_bilinear_cross_check.py` ·
+> `internal_edge_smoke.py`를 archive에서 `isppipeline/hls/tools/`로 복원(`git mv`), 뒤
+> 세 개가 이제 `isppipeline/sw/`에 있는 `baseline_isp_pipeline.py`/`low_light_isp_pipeline.py`
+> /`checker.py`를 import하도록 `sys.path.insert`를 추가했다(이 중 앞 둘은 v2로 대체된 뒤
+> sw/로 안 옮겨져서 archive에서 같이 복원 — 지금은 이 cross-check 용도로만 쓰인다). 전부
+> 실행해서 검증 완료: `golden`/`report`/`scheduler`/`cross-check`/`verify`/`py-verify` 모두
+> PASS, 재생성한 `tests/golden_vectors.csv`는 커밋된 것과 byte-identical(드리프트 없음).
+>
+> **`rm-golden`/`rm-csim`/`rm-verify`/`analysis` — 명시적 stub으로 정리(2026-08-14, 같은 날
+> 두 번째 조치):** 이건 경로 문제가 아니라 대상 자체가 없다. `rm-csim`이 컴파일하는
+> `src/dfxisp_rm.cpp`/`include/dfxisp_rm.hpp`(v1 RM ablation top)와 `analysis`가 쓰는
+> `rm_model.py`는 2026-08-07 restructure에서 **superseded로 명시**되어 별도 archive
+> 버킷(`archive/dfxisp-v2-renewal-2026-08-07/isppipeline-hls-superseded-files/`)으로
+> 옮겨진, 진짜로 은퇴한 실험 트랙이다 — 위 7개처럼 단순 이관이 아니라 되살리는 순간 죽은
+> 코드를 부활시키는 셈이라 복원하지 않기로 했다. 대신 네 타겟 모두 이유를 설명하고 exit 1
+> 하는 stub으로 교체(`Makefile` 참고) — `make rm-verify`가 이제 `No such file or
+> directory`가 아니라 "은퇴한 트랙이고 archive 경로가 어디인지"를 바로 알려준다. `sw-stage`도
+> `rm-verify`/`analysis` 의존을 빼고 `verify scheduler`만 돌리도록 재정의했다.
+
 ```bash
 cd isppipeline/hls
-make csim      # smoke 테스트
-make verify    # golden 재생성 + packed RGB888 bit 단위 비교
-make report    # reports/latest.md 갱신 (아키텍처 gate 표 포함)
-make default-isp-verify   # default_ISP(Vitis Vision 정렬 arm) golden + C-sim
-make lowlight-isp-verify  # lowlight_ISP(제안 저조도 arm v2) golden + C-sim
+make csim                 # smoke 테스트 — 동작
+make golden                # golden CSV 재생성 — 동작(2026-08-14 복원)
+make verify                # golden 재생성 + packed RGB888 bit 단위 비교 — 동작(2026-08-14 복원)
+make report                 # reports/latest.md 갱신(아키텍처 gate 표 포함) — 동작(2026-08-14 복원)
+make cross-check            # binning/demosaic 독립 fuzz 교차검증 — 동작(2026-08-14 복원)
+make scheduler              # 스케줄러 정책 시뮬레이션 — 동작(2026-08-14 복원)
+make py-verify              # 위 검증들 + tools/*.py py_compile — 동작(2026-08-14 복원)
+make sw-stage                # verify + scheduler(rm-verify/analysis 제외, 2026-08-14 재정의) — 동작
+make default-isp-verify   # default_ISP(Vitis Vision 정렬 arm) golden + C-sim — 동작
+make lowlight-isp-verify  # lowlight_ISP(제안 저조도 arm v2) golden + C-sim — 동작
+make verify-new-arms      # 벡터화 SW proxy vs 스칼라 golden 퍼징(isppipeline/sw/ 경유) — 동작
+make rm-verify               # v1 RM ablation top 골든+C-sim — stub, exit 1로 은퇴 사유 안내
+make analysis                 # ISP variant 자원/전력 분석 — stub, exit 1로 은퇴 사유 안내
 ```
 
-`make verify` 예상 출력:
+`make csim` 실제 출력(2026-08-14):
 
 ```text
-python3 tools/gen_golden_vectors.py --out tests/golden_vectors.csv
-wrote tests/golden_vectors.csv (1498 rows including header; 1497 data rows; 9 cases)
 ./build/dfxisp_csim
-DFXISP golden vector compare passed (566 pixels)
+DFXISP hysteresis-flag export tests passed
+DFXISP golden vector compare passed (726 pixels)
 DFXISP C-sim smoke tests passed
 ```
 
@@ -153,13 +311,16 @@ threshold-boundary/bright-recovery/odd-dimension.
 cd isppipeline/hls
 make hls-report                              # dry-run
 make hls                                     # 기본 DFXISP_HLS_FLOW=csim
-DFXISP_HLS_PART=xczu7ev-ffvc1156-2-e \
-DFXISP_HLS_CLOCK=5.0 \
 DFXISP_HLS_FLOW=csynth make hls              # C-sim 후 synthesis
+DFXISP_HLS_FLOW=cosim  make hls              # + co-simulation(RTL)
 ```
 
 `vitis_hls`가 `PATH`에 없으면 `make hls`는 안내 메시지와 함께 종료한다.
-비표준 경로는 `VITIS_HLS=/path/to/vitis_hls`로 지정한다.
+비표준 경로는 `VITIS_HLS=/path/to/vitis_hls`로 지정한다. `DFXISP_HLS_TOP`을 바꾸면
+`dfxisp_accel` 외 다른 top(예: `default_isp`/`lowlight_isp`/`checker_scan`)도 같은 흐름으로
+돌릴 수 있다(`DFXISP_HLS_SRC`/`DFXISP_HLS_TB`도 함께 지정). **csynth/cosim을 실행하기
+전에 §"C-synthesis / Co-sim 실행 노트"의 source-path 우회를 먼저 읽을 것** — 표준 중첩
+경로(`build/vitis_hls/...`)에서 그대로 돌리면 링크 실패로 막힌다.
 
 ## HLS top 함수
 
@@ -251,13 +412,24 @@ C-sim에는 Vitis 전용 헤더가 필요 없다; HLS pragma만 존재하며 로
 과거 worklog와 동일한 두 가지 환경 이슈가 재현된다:
 
 - **source-path 버그:** 중첩된 `build/vitis_hls/...` 프로젝트 경로에서 `add_files`로 design
-  source를 추가해도 csim/csynth의 `HLS_SOURCES`에서 누락되어 링크 실패. **우회:** flat
-  temp-dir(예: `/tmp/hls_dfxisp/dfxisp_accel/`)에 hpp/cpp/tb를 같은 디렉터리로 복사하고 그
-  디렉터리에서 실행.
+  source를 추가해도 csim/csynth의 `HLS_SOURCES`에서 누락되어 링크 실패(`undefined symbol:
+  dfxisp_accel`). **우회:** flat temp-dir(예: `/tmp/hls_dfxisp/dfxisp_accel/`)에 소스를 같은
+  디렉터리로 복사하고 그 디렉터리에서 실행. **`dfxisp_accel`의 경우 복사해야 하는 전체
+  집합**(2026-08-14 기준, `#include` 사슬 그대로): `include/dfxisp_accel.hpp`,
+  `include/checker.hpp`(dfxisp_accel.cpp가 include, 2026-08-14부터), `src/dfxisp_accel.cpp`,
+  `tests/test_dfxisp_csim.cpp`, `tests/golden_csv.hpp`(2026-08-06 신설, tb가 include — tb와
+  **같은 디렉터리**에 둬야 함) — 넷 다 flat-dir 루트에, golden CSV만 그 아래 `tests/`
+  서브폴더에(코드가 `"tests/golden_vectors.csv"`로 상대경로 하드코딩). 이 두 헤더 중 하나라도
+  빠지면 각각 `'checker.hpp' file not found` / `'golden_csv.hpp' file not found`로 csim
+  컴파일부터 실패한다(2026-08-14에 실제로 재현·정정).
 - **종료-hang:** `close_project` 이후 프로세스가 종료되지 않음(작업 자체는 이미 끝난 상태).
   `timeout -k <grace> <sec> vitis_hls -f run.tcl`로 감싸고 로그의 완료 마커를 확인.
-- **cosim `depth=` 필수:** `m_axi` 인터페이스는 co-simulation에 `depth=`가 있어야 한다.
-  현재 C-sim fixture 최대(16×16=256px)에 맞춰 `depth=1024`로 설정 — 전체 설계
-  envelope(1920×1080)를 그대로 쓰면 cosim의 auto-wrapc 하네스에서 SIGSEGV(추정: 하네스
-  내부 스택 할당 오버플로) 발생. 실측 자원/타이밍은 Vitis top 함수 pragma와 무관(합성
-  결과에는 영향 없음, cosim 검증 전용 힌트).
+- **cosim `depth=`와 전용 TB:** AMD UG1399에서 `depth`는 C/RTL co-sim 검증 어댑터가
+  처리할 **한 TB 트랜잭션의 최대 샘플 수**다. 과거의 1024/2048 값은 여러 TB 호출의
+  누적 주소 범위라는 잘못된 가정으로 튜닝한 값이었다. Vitis HLS 2024.1은 최신 문서의
+  `depth=width*height` 표현도 const integer가 아니라며 무시하므로, 현재 전용 8×8 co-sim
+  TB(`tests/test_dfxisp_cosim.cpp`)에 맞춰 `depth=64`를 사용한다. 전용 TB는 모든 top-level
+  출력 포인터(`hyst_flags` 포함)에 유효한 저장공간을 전달하며 normal/low-light 두
+  트랜잭션을 검사한다. 2026-08-14 WSL2 + Vitis HLS 2024.1 + XSIM 실측에서 RTL 2/2와
+  C post-check가 모두 통과해 `C/RTL co-simulation finished: PASS`를 확인했다. 이 depth는
+  co-sim 어댑터 전용이며 합성된 AXI master의 실제 프레임 크기를 제한하지 않는다.

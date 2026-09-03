@@ -1,0 +1,6 @@
+read_verilog -sv "/home/mini/workspace/dfxisp/isppipeline/hls/figure/bambu/default_isp.v"
+hierarchy -check -top default_isp
+proc; opt; memory; opt
+write_json "/home/mini/workspace/dfxisp/isppipeline/hls/figure/hierarchy.json"
+flatten; opt
+write_json "/home/mini/workspace/dfxisp/isppipeline/hls/figure/flattened.json"

@@ -27,7 +27,10 @@ close_design
 #    It demands two stubs with identical signatures; passing the same stub
 #    twice trivially satisfies that and yields the same wrapper shape used
 #    for config1/config2 (black-box RM instantiated as u_rp).
-set gen /home/mini/workspace/dfxisp/.claude/worktrees/hw-interface-prompt/isppipeline/hls/scripts/dfx/generate_static_wrapper.py
+# Sibling file in this same scripts/dfx/ directory -- resolved relative to
+# this script's own path so the flow works from any checkout/worktree
+# (2026-08-14 fix: was hardcoded to a specific session's temp worktree path).
+set gen [file join [file dirname [file normalize [info script]]] generate_static_wrapper.py]
 if {[catch {exec /usr/bin/env -u PYTHONHOME -u PYTHONPATH /usr/bin/python3 \
         $gen $stub $stub $wrap} res]} {
     error "wrapper generation failed: $res"

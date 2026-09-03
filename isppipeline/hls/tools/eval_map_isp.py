@@ -19,22 +19,47 @@ archived eval_map_newrm_blcfix.py).
 
 Usage:
   python3 eval_map_isp.py --root ../../../sonynod_test \
-      --blc-offsets 0,1,2,4,8,16 --tag SonyNOD-ISPFix --model yolov8n.pt \
-      --out ../results/map_isp_sonynod_blcfix_yolov8n.csv
+      --blc-offsets 0,8,16,24,32,48,64,96,128,192,256 --tag SonyNOD-ISPFix \
+      --model yolov8n.pt --out ../results/map_isp_sonynod_blcfix_yolov8n.csv
+
+--blc-offsets is in native 12-bit BLC_LEVEL12 units (2026-08-18) -- the
+pipeline is 12-bit throughout (baseline_isp_pipeline.py/
+low_light_isp_pipeline.py's blc_offset override was previously 8-bit-
+equivalent units, e.g. old value 2 == 32 in 12-bit terms; that convention
+forced BLC ablations onto a 16-wide grid even though nothing about the
+pipeline is 8-bit). Old-style runs used --blc-offsets 0,1,2,4,8,16, which is
+equivalent to 0,16,32,64,128,256 under the new convention.
+
+The default sweep grid is sw/sim/blc/blc_sim.py's SIGNAL_LEVELS list
+truncated at 256 (the highest BLC value ever measured, isp-pipeline-
+recalibration-2026-07-08.md; mAP was already collapsing there, 0.0372 vs the
+0.214 peak, so nothing above it is worth the GPU time) -- same dense-near-
+zero/coarse-at-the-tail shape as that sim's signal sweep, now covering the
+full range instead of just the 16-32 tie zone the old 6-point grid left
+unresolved.
 """
 from __future__ import annotations
 
 import argparse
 import csv
+import json
 import os
 import shutil
 import struct
 from functools import partial
 from multiprocessing import Pool
+import sys
 from pathlib import Path
 
 import numpy as np
 from PIL import Image
+
+# checker.py/default_isp_pipeline.py/lowlight_isp_pipeline.py's canonical home
+# is isppipeline/sw/ (2026-08-06 v2 arm move); this script lives one level
+# over in isppipeline/hls/tools/, so it needs the sibling dir on the path
+# (same fix already applied to verify_binning_cross_check.py/
+# internal_edge_smoke.py on restoration -- missed here until 2026-08-18).
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "sw"))
 
 import baseline_isp_pipeline as PB
 import low_light_isp_pipeline as PL
@@ -73,6 +98,19 @@ def jpg_dims(p: Path):
             return w, h
         ln = struct.unpack(">H", d[i + 2:i + 4])[0]; i += 2 + ln
     raise ValueError(f"no SOF in {p}")
+
+
+def frame_dims(root: Path):
+    """(w, h) from root/meta.json's out_width/out_height -- the *_hw dataset
+    contract (dataset/dataset.md SS3): a single fixed decimated size for every
+    frame, no per-stem images/ dir. None if meta.json is absent, so callers
+    fall back to jpg_dims() per frame (the sonynod_test/images/ convention
+    this script originally targeted -- 2026-08-18)."""
+    meta = root / "meta.json"
+    if not meta.exists():
+        return None
+    d = json.loads(meta.read_text())
+    return d["out_width"], d["out_height"]
 
 
 def load_adaptive_verdicts(manifest: Path) -> dict[str, bool]:
@@ -121,12 +159,12 @@ def render_arm(bayer, w, h, arm, blc_offset, stem=None, adaptive_verdicts=None,
     raise ValueError(f"unsupported arm for BLC ablation: {arm}")
 
 
-def _render_one(stem, raw_dir: Path, lab_dir: Path, img_dir: Path, work: Path,
+def _render_one(stem, raw_dir: Path, lab_dir: Path, img_dir: Path, dims, work: Path,
                 arms, blc_offset, adaptive_verdicts, wb_lowlight) -> int:
     """Render every arm for one frame. Self-contained so it can run in a
     worker process: each frame reads its own raw and writes its own outputs,
     with no shared state."""
-    w, h = jpg_dims(img_dir / f"{stem}.jpg")
+    w, h = dims if dims is not None else jpg_dims(img_dir / f"{stem}.jpg")
     bayer = np.fromfile(raw_dir / f"{stem}.bin", dtype="<u2")
     if bayer.size != w * h:
         return 0
@@ -155,8 +193,13 @@ def default_jobs() -> int:
 def build_arm_images(root: Path, work: Path, arms, limit: int, blc_offset: int,
                       adaptive_verdicts=None, wb_lowlight=None, jobs=None) -> int:
     raw_dir = root / "raw_bin"; lab_dir = root / "labels"; img_dir = root / "images"
-    stems = sorted(p.stem for p in raw_dir.glob("*.bin")
-                   if (img_dir / f"{p.stem}.jpg").exists() and (lab_dir / f"{p.stem}.txt").exists())
+    dims = frame_dims(root)
+    if dims is not None:
+        stems = sorted(p.stem for p in raw_dir.glob("*.bin")
+                       if (lab_dir / f"{p.stem}.txt").exists())
+    else:
+        stems = sorted(p.stem for p in raw_dir.glob("*.bin")
+                       if (img_dir / f"{p.stem}.jpg").exists() and (lab_dir / f"{p.stem}.txt").exists())
     if limit:
         stems = stems[:limit]
     for a in arms:
@@ -164,7 +207,7 @@ def build_arm_images(root: Path, work: Path, arms, limit: int, blc_offset: int,
         (work / a / "labels").mkdir(parents=True, exist_ok=True)
 
     jobs = default_jobs() if jobs is None else max(1, int(jobs))
-    fn = partial(_render_one, raw_dir=raw_dir, lab_dir=lab_dir, img_dir=img_dir,
+    fn = partial(_render_one, raw_dir=raw_dir, lab_dir=lab_dir, img_dir=img_dir, dims=dims,
                  work=work, arms=arms, blc_offset=blc_offset,
                  adaptive_verdicts=adaptive_verdicts, wb_lowlight=wb_lowlight)
     if len(stems) <= 1:
@@ -179,7 +222,15 @@ def build_arm_images(root: Path, work: Path, arms, limit: int, blc_offset: int,
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--root", default="../../../sonynod_test")
-    ap.add_argument("--blc-offsets", default="0,1,2,4,8,16", help="comma-separated BLC_OFFSET sweep values")
+    ap.add_argument("--blc-offsets", default="0,8,16,24,32,48,64,96,128,192,256",
+                     help="comma-separated BLC_OFFSET sweep values, in native 12-bit "
+                          "BLC_LEVEL12 units (2026-08-18; previously 8-bit-equivalent "
+                          "units, e.g. the old default '0,1,2,4,8,16' meant 0/16/32/64/"
+                          "128/256 in 12-bit terms -- pass those 12-bit values directly now). "
+                          "Default grid mirrors sw/sim/blc/blc_sim.py's SIGNAL_LEVELS "
+                          "(dense near 0, coarser toward the tail), truncated at 256 -- "
+                          "the highest value ever measured, where mAP was already "
+                          "collapsing (see module docstring)")
     ap.add_argument("--work", default="data/_isp_work")
     ap.add_argument("--tag", default="SonyNOD-ISPFix")
     ap.add_argument("--model", default="yolov8n.pt")

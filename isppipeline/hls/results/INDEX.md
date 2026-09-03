@@ -1,6 +1,6 @@
 # results/ INDEX — 실험·시뮬레이션 산출물 카탈로그
 
-**갱신:** 2026-07-20 · 이 폴더의 모든 파일을 주제별로 분류한 탐색용 인덱스.
+**갱신:** 2026-08-14 · 이 폴더의 모든 파일을 주제별로 분류한 탐색용 인덱스.
 정본 요약은 `ROADMAP.md`(진행 상태) / `SPEC.md`(사양) 참조. 2026-07-20부터
 superseded 중간 산출물은 `archive/`로 이동한다(맨 아래 "아카이브 정책" 참고) —
 정본/최신 파일은 계속 이 폴더 바로 아래에 두고 여기서 색인한다.
@@ -81,6 +81,8 @@ superseded 중간 산출물은 `archive/`로 이동한다(맨 아래 "아카이�
 | `denoise-k-sweep-2026-08-06.md` | 08-06 | **lowlight_ISP denoise 임계 정정 + NOD100 k sweep** — binning 후 채널별 k=2.4 임계 SAMECOLOR R/B=11, G=8 및 SUBSAMPLE R/B=21, G=15로 재유도. 주 지표는 탐색 범위 내 k=4.0이 최고(OFF 대비 +0.0049)이나 mAP@50 −0.0027·경계점·단일 100장 한계로 조건부 권고, 배포는 OFF 유지. 근거 CSV `map_denoise_k_sweep_nod100_2026-08-06.csv` |
 | `gat-tone-ablation-2026-08-06.md` | 08-06 | **lowlight_ISP stage ⑤ 톤 커브 단독 ablation** — NOD100/YOLOv8n/BLC=2/shared WB에서 gamma 2.0(0.1876/0.3797) > GAT(0.1775/0.3710) > linear(0.1294/0.2651). **SSDLite MobileNetV3 교차검증에서 순위·효과크기 재현**(gamma−GAT: YOLO +0.0101, SSD +0.0105). GAT 중심 주장은 반증 확정 → **배포 커브를 gamma 2.0으로 교체**(재측정 0.1876/0.3797 일치 확인, csynth LUT 6,939→4,150·BRAM 5→1). 근거 CSV `map_gat_ablation_nod100_2026-08-06.csv`, `map_gat_ablation_nod100_ssdlite_2026-08-06.csv` |
 | `csim-rerun-2026-08-14.md` | 08-14 | **clean C-sim 회귀 재실행** — DFXISP/default_ISP/lowlight_ISP 726/528/147픽셀 bit-exact PASS + vectorised SW proxy 40 trials/15,966 channel samples PASS. `c7e182e`의 canonical `../sw/` Makefile 경로 수정과 golden CSV 무변경을 재확인; csynth/co-sim·자원·타이밍은 범위 밖 |
+| `cosim-postcheck-sigsegv-fix-2026-08-14.md` | 08-14 | **C/RTL co-sim post-check SIGSEGV 해결** — UG1399 기준으로 `m_axi depth` 누적주소 가설을 폐기하고 wrapper-facing 8×8 전용 TB(`depth=64`, 모든 출력 포인터 유효)를 분리. 동일 WSL2+Vitis HLS 2024.1+XSIM에서 RTL 2/2와 자동 C post-check `COSIM 212-1000 PASS` 실측. 2024.1이 최신 문서의 동적 `depth=width*height`를 거부하는 버전 차이도 기록 |
+| `csynth-cosim-rerun-2026-08-14.md` | 08-14 | **SIGSEGV 수정 후 clean csynth/co-sim 재실행 정본** — timing 3.650 ns, BRAM/DSP/FF/LUT 9/24/5,540/8,439, RTL 2/2 및 자동 post-check PASS, latency 346/753/1,160 cycles. 자원·타이밍·검증 체인 figure 3종과 수정본 원본 waveform(WDB/WCFG/full+essential VCD) 포함 |
 
 ## 4. 다이어그램 / RTL 부속물
 
