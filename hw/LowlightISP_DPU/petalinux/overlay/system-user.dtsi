@@ -1,0 +1,42 @@
+/include/ "system-conf.dtsi"
+/ {
+	/* LowlightISP DMA buffer: 8 MiB physically reserved DDR, exposed as UIO.
+	   Deliberately the SAME layout as NormalISP_DPU (raw @+0x000000, rgb @+0x200000)
+	   -- the static shell's data contract must not depend on which ISP is loaded, which
+	   is the precondition for the later DFX swap (docs/LowlightISP.md SS5).
+	   LowlightISP writes less than NormalISP into the rgb slot (it bins 2x2, so
+	   out_w*out_h*4 bytes), but the slot itself keeps its size and offset. */
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		lowlightisp_reserved: buffer@70000000 {
+			no-map;
+			reg = <0x0 0x70000000 0x0 0x00800000>;
+		};
+	};
+
+	lowlightisp_buffer: lowlightisp-buffer@70000000 {
+		compatible = "generic-uio";
+		linux,uio-name = "lowlightisp-buffer";
+		reg = <0x0 0x70000000 0x0 0x00800000>;
+	};
+};
+
+/* LowlightISP control registers @0xA000_0000 -> generic-uio ("lowlightisp-control").
+   Label case follows the BD cell name exactly -- &LowlightISP_0, not &lowlightisp_0
+   (docs/LowlightISP.md SS5 / NormalISP.md SS4, measured on the board). */
+&LowlightISP_0 {
+	compatible = "generic-uio";
+	linux,uio-name = "lowlightisp-control";
+};
+
+/* DPUCZDX8G @0xA100_0000 (Vivado flow, no XRT): drivers/misc/xlnx_dpu.c binds on
+   "xlnx,dpuczdx8g-4.1" and needs interrupt-names "dpu0_interrupt"
+   (Documentation/devicetree/bindings/misc/xlnx,dpu.yaml). DTG should already
+   emit both for the xilinx.com:ip:dpuczdx8g:4.1 instance; pinned here anyway. */
+&dpuczdx8g_0 {
+	compatible = "xlnx,dpuczdx8g-4.1";
+	interrupt-names = "dpu0_interrupt";
+};

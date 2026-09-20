@@ -1,0 +1,49 @@
+# ===== PetaLinux / Yocto build trees (수십 GB) =====
+**/project/xilinx-zcu104-2024.1/
+**/petalinux/lowlightisp_dpu_2024_1/
+**/petalinux/normalisp_dpu_2024_1/
+**/build/
+**/downloads/
+**/sstate-cache/
+**/tmp/
+*.rpm
+*.zstd
+*.packaged
+
+# ===== Vivado project build/runtime artifacts =====
+**/*.cache/
+**/*.runs/
+**/*.sim/
+**/*.gen/
+**/*.ip_user_files/
+**/*.hw/
+**/.Xil/
+*.jou
+*.log
+*.str
+vivado_*.backup.*
+
+# ===== Vitis HLS build/runtime artifacts =====
+**/hls/.autopilot/
+**/hls/csim/
+**/hls/sim/
+**/hls/impl/
+**/hls/syn/
+**/hls/.debug/
+**/hls/*.log
+**/hls/*.json
+**/*.hlscompile_summary
+**/*.hlsrun_*_summary
+**/*.zip
+
+# ===== IDE / editor / misc caches =====
+**/.theia/
+**/.wsdata/
+**/.vscode/
+**/compile_commands.json
+**/vitis-comp.json
+**/*.lock
+
+# ===== Large datasets, models, board test outputs =====
+/dataset/
+/board_test/

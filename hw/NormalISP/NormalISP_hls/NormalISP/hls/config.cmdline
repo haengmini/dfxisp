@@ -1,0 +1,3 @@
+relativeroot=/home/mini/Desktop/dfxisp/NormalISP/NormalISP_hls
+original_argv=--mode hls --package --config /home/mini/Desktop/dfxisp/NormalISP/NormalISP_hls/hls_config.cfg --work_dir NormalISP 
+
