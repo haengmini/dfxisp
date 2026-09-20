@@ -1,0 +1,36 @@
+/include/ "system-conf.dtsi"
+/ {
+	/* NormalISP DMA buffer: 8 MiB physically reserved DDR, exposed as UIO
+	   (same layout as NormalISP/project: raw @+0x000000, rgb @+0x200000). */
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		normalisp_reserved: buffer@70000000 {
+			no-map;
+			reg = <0x0 0x70000000 0x0 0x00800000>;
+		};
+	};
+
+	normalisp_buffer: normalisp-buffer@70000000 {
+		compatible = "generic-uio";
+		linux,uio-name = "normalisp-buffer";
+		reg = <0x0 0x70000000 0x0 0x00800000>;
+	};
+};
+
+/* NormalISP control registers @0xA000_0000 -> generic-uio ("normalisp-control") */
+&NormalISP_0 {
+	compatible = "generic-uio";
+	linux,uio-name = "normalisp-control";
+};
+
+/* DPUCZDX8G @0xA100_0000 (Vivado flow, no XRT): drivers/misc/xlnx_dpu.c binds on
+   "xlnx,dpuczdx8g-4.1" and needs interrupt-names "dpu0_interrupt"
+   (Documentation/devicetree/bindings/misc/xlnx,dpu.yaml). DTG should already
+   emit both for the xilinx.com:ip:dpuczdx8g:4.1 instance; pinned here anyway. */
+&dpuczdx8g_0 {
+	compatible = "xlnx,dpuczdx8g-4.1";
+	interrupt-names = "dpu0_interrupt";
+};

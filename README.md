@@ -85,6 +85,11 @@ isppipeline/proposal/       Proposal ISP 참고 자료 (historical)
 model/                      Detector 모델 메타데이터 (weights는 Drive 백업)
 include/aie-ml/             AIE-ML 참고 자료
 archive/                    이전 구조의 문서 보존 (archive/README.md 참조)
+hw/                         HW 구현 단계(laptop-linux, Vivado/HLS 프로젝트 + ZCU104 보드 검증).
+                            isppipeline/의 SW 설계를 이어받아 실제 보드에 구현·검증하는 후속 단계.
+                            LowlightISP/NormalISP(+_DPU 변형)/checker/board_test/docs/tools 구조.
+                            빌드 산출물(PetaLinux/Yocto, Vivado .runs/.gen/.sim, HLS csim/sim/impl)은
+                            hw/.gitignore로 제외 -- 소스.프로젝트 파일.설계 문서만 추적.
 ```
 
 ## Verification status
