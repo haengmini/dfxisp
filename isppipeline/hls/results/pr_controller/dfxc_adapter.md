@@ -59,13 +59,17 @@ the generated instantiation template (49 ports total):
 | `m_axi_mem_*` | AR/R only, 32-bit addr | read-only bitstream-fetch master (no write channels) |
 | `s_axi_reg_*` | AXI4-Lite, 32-bit addr | SW trigger/status register access |
 
-**Still open after the probe (honest):** per-RM settings
-(SHUTDOWN_REQUIRED=hw — required for the shutdown handshake to engage —
-RESET_REQUIRED, bitstream ADDRESS/SIZE table) could not be set through the
-dotted-path Tcl API in batch mode (RM-level keys errored; VS-level keys
-worked); configure them in the IP customization GUI / Block Design at
-Stage 6 and re-verify. Direct `CONFIG.ALL_PARAMS` assignment fails in 2024.1
-batch with a `GUI_SELECT_TRIGGER_3 = -1` propagation error — use the API.
+**Update (2026-09-28):** RM-level configuration is possible in Vivado 2024.1
+batch mode. The incremental dotted-path API still fails to materialize the RMs,
+but assigning a complete, internally consistent `CONFIG.ALL_PARAMS` dictionary
+in one call works. `hw/DFX/scripts/gen_dfx_controller.tcl` now configures both
+RMs with `SHUTDOWN_REQUIRED=hw`, `RESET_REQUIRED=high`, and
+`RESET_DURATION=8`. `validate_ip` and generation of the synthesis target
+completed. On UltraScale+, each RM must have exactly one BS entry; the
+initial two-entry attempt failed at synthesis-target generation. The BS
+ADDRESS/SIZE values are still zero placeholders, not deployed DDR locations.
+This verifies IP generation only, **not** insertion into the board static
+shell, Decoupler wiring, timing closure, or a safe on-board RM swap.
 
 `checker_to_dfxc_tb.v` still validates against a **behavioral contract
 model** (not the generated netlist); an IP-integrated simulation remains a
@@ -74,11 +78,11 @@ the generated ones.
 
 ## Stage 6 integration checklist (supersedes the custom-controller wiring plan)
 
-1. Generate/configure the DFX Controller IP: base generation is scripted
-   (`scripts/dfx/gen_dfx_controller.tcl`, port contract confirmed — see the
-   probe section above); still to configure via GUI/BD: per-RM
-   SHUTDOWN_REQUIRED=hw, RESET settings, and the DDR bitstream
-   ADDRESS/SIZE table.
+1. Generate/configure the DFX Controller IP: `hw/DFX/scripts/gen_dfx_controller.tcl`
+   now generates both RMs with shutdown/reset settings in batch mode (see
+   update above). Still required: assign real DDR bitstream ADDRESS/SIZE
+   values, integrate the IP into the static shell, and verify the generated
+   design, not just the standalone IP.
 2. Add DFX Decoupler IP on the RP boundary, driven by the IP's decouple
    output.
 3. Wire `hyst_flags`/`ap_vld` (re-synthesized `dfxisp_accel`) →
