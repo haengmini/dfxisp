@@ -1,0 +1,3 @@
+# Vivado runtime artifacts emitted beside the batch scripts
+clockInfo.txt
+hd_visual/
