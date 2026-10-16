@@ -67,7 +67,7 @@ extern "C" void LowlightISP_dev(
 
 | 스테이지 | 상수 | 값 | 비고 |
 |---|---|---|---|
-| (2) BLC | `BLC_LEVEL12` / `BLC_MUL_Q8` | 32 / 258 | NormalISP와 동일값(2026-07-20 배포) |
+| (2) BLC | `BLC_LEVEL12` / `BLC_MUL_Q8` | 16 / 257 | 2026-10-14 변경(NormalISP는 32 / 258 유지). 보드 야간 실측으로 선정 |
 | (3) gain | `EXPOSURE_GAIN_Q8` | 512 (2.0×) | |
 | (3) WB | `WB_R/G/B_Q8` | 286 / 256 / 307 | 고정 상수 — **AWB 없음**(NormalISP와 차이). WB는 세 차례 독립 캠페인에서 mAP 무반응(레버 아님)으로 확인돼 적응 로직을 안 씀 |
 | (4) CCM | 3×3 Q8 | NormalISP와 동일 행렬 | 백본 공유 |
@@ -110,8 +110,8 @@ extern "C" void LowlightISP_dev(
 ### BLC 상수 (cpp, `BLC_LEVEL12`/`BLC_MUL_Q8`)
 
 ```
-BLC_LEVEL12 = 2 << 4;   // 32; 실 RAW 배포값(2026-07-20)
-BLC_MUL_Q8  = 258;      // round(256 * 4095 / (4095 - 32))
+BLC_LEVEL12 = 1 << 4;   // 16; 보드 야간 실측 최적(2026-10-14, 이전 32)
+BLC_MUL_Q8  = 257;      // round(256 * 4095 / (4095 - 16))
 ```
 
 ### gain / WB 상수 (cpp, `EXPOSURE_GAIN_Q8`, `WB_*_Q8`)

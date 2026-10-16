@@ -32,8 +32,8 @@ from pathlib import Path
 RAW12_MAX = 4095
 
 # --- (2) black level ---------------------------------------------------------
-BLC_LEVEL12 = 2 << 4        # 32; deployed real-RAW recalibration (2026-07-20)
-BLC_MUL_Q8 = 258            # round(256 * 4095 / (4095 - 32))
+BLC_LEVEL12 = 1 << 4        # 16; board-measured night optimum (2026-10-14, replaces 32)
+BLC_MUL_Q8 = 257            # round(256 * 4095 / (4095 - 16))
 
 # --- (3) gain (binned domain) ---------------------------------------------------
 EXPOSURE_GAIN_Q8 = 512      # 2.0x low-light exposure gain

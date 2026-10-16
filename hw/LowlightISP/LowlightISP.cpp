@@ -8,8 +8,8 @@ namespace {
 
 constexpr int RAW12_MAX = 4095;
 
-constexpr int BLC_LEVEL12 = 2 << 4;
-constexpr int BLC_MUL_Q8 = 258;
+constexpr int BLC_LEVEL12 = 1 << 4;   // 16 (2026-10-14, board-measured night optimum; was 32)
+constexpr int BLC_MUL_Q8 = 257;       // round(256 * 4095 / (4095 - 16))
 
 constexpr int EXPOSURE_GAIN_Q8 = 512;
 constexpr int WB_R_Q8 = 286, WB_G_Q8 = 256, WB_B_Q8 = 307;

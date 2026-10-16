@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
     // gain nor the tone curve may resurrect it.
     {
         uint16_t pedestal[W * H];
-        for (int i = 0; i < W * H; ++i) pedestal[i] = 32;
+        for (int i = 0; i < W * H; ++i) pedestal[i] = 16;   // = BLC_LEVEL12 (16 since 2026-10-14; was 32)
         uint32_t out[(W / 2) * (H / 2)] = {};
         int ow = 0, oh = 0;
         lowlight_isp(pedestal, out, W, H, LOWLIGHT_ISP_BIN_BINNING, &ow, &oh);

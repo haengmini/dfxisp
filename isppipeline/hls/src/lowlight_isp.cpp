@@ -14,8 +14,8 @@ namespace {
 constexpr int RAW12_MAX = 4095;
 
 // --- (2) blackLevelCorrection [binned domain] -------------------------------
-constexpr int BLC_LEVEL12 = 2 << 4;   // 32; deployed real-RAW value (2026-07-20)
-constexpr int BLC_MUL_Q8 = 258;       // round(256 * 4095 / (4095 - 32))
+constexpr int BLC_LEVEL12 = 1 << 4;   // 16; board-measured night optimum (2026-10-14, replaces 32)
+constexpr int BLC_MUL_Q8 = 257;       // round(256 * 4095 / (4095 - 16))
 
 // --- (3) gain [binned domain, upstream of quantisation -- principle P3 4.3] --
 // Gain cannot change SNR, but placing it before the >>4 keeps quantisation loss
