@@ -1,0 +1,52 @@
+board RGB == PC reference on all 600 frames
+
+subset        mdl  |   Normal Lowlight DFX live  offline | live-offline
+night         old  |   0.1892   0.1729   0.1732   0.1732 | +0.0000
+night         oldfx |   0.2174   0.2012   0.2013   0.2013 | +0.0000
+night         s0   |   0.2433   0.2476   0.2478   0.2478 | +0.0000
+night         s1   |   0.2414   0.2487   0.2486   0.2486 | +0.0000
+night         s2   |   0.2383   0.2481   0.2482   0.2482 | +0.0000
+day           old  |   0.4514   0.4337   0.4519   0.4523 | -0.0004
+day           oldfx |   0.6035   0.5577   0.5977   0.5957 | +0.0020
+day           s0   |   0.5881   0.5709   0.5893   0.5884 | +0.0008
+day           s1   |   0.5811   0.5551   0.5758   0.5791 | -0.0033
+day           s2   |   0.5844   0.5737   0.5832   0.5818 | +0.0015
+mixed         old  |   0.2481   0.2354   0.2345   0.2391 | -0.0046
+mixed         oldfx |   0.3156   0.2914   0.3039   0.3014 | +0.0025
+mixed         s0   |   0.3310   0.3295   0.3296   0.3346 | -0.0050
+mixed         s1   |   0.3265   0.3275   0.3312   0.3324 | -0.0013
+mixed         s2   |   0.3263   0.3312   0.3303   0.3331 | -0.0027
+mixed_blocks  old  |   0.2481   0.2354   0.2395   0.2391 | +0.0004
+mixed_blocks  oldfx |   0.3156   0.2914   0.3022   0.3014 | +0.0008
+mixed_blocks  s0   |   0.3310   0.3295   0.3342   0.3346 | -0.0004
+mixed_blocks  s1   |   0.3265   0.3275   0.3320   0.3324 | -0.0004
+mixed_blocks  s2   |   0.3263   0.3312   0.3330   0.3331 | -0.0001
+
+RM selection and timing:
+  night         lowlight frames 94/100 | RM switches 2 | live RM == offline checker choice 100/100 | isp_ms normal 933.6 lowlight 410.2 | scan_ms 15.1
+  day           lowlight frames 38/100 | RM switches 16 | live RM == offline checker choice 91/100 | isp_ms normal 933.4 lowlight 410.2 | scan_ms 15.7
+  mixed         lowlight frames 125/200 | RM switches 53 | live RM == offline checker choice 174/200 | isp_ms normal 933.4 lowlight 410.2 | scan_ms 16.1
+  mixed_blocks  lowlight frames 132/200 | RM switches 19 | live RM == offline checker choice 193/200 | isp_ms normal 933.4 lowlight 410.2 | scan_ms 15.5
+
+Paired frame bootstrap, DFX live minus fixed RM (mAP50-95):
+  night  old DFX-Normal   -0.0160 [-0.0384,+0.0015]
+  night  old DFX-Lowlight +0.0003 [-0.0002,+0.0010]
+  night  oldfx DFX-Normal   -0.0161 [-0.0343,-0.0002]
+  night  oldfx DFX-Lowlight +0.0000 [-0.0007,+0.0007]
+  night  s0  DFX-Normal   +0.0045 [-0.0077,+0.0161]
+  night  s0  DFX-Lowlight +0.0002 [+0.0000,+0.0006]
+  night  s1  DFX-Normal   +0.0072 [-0.0068,+0.0207]
+  night  s1  DFX-Lowlight -0.0000 [-0.0007,+0.0005]
+  night  s2  DFX-Normal   +0.0099 [-0.0005,+0.0205]
+  night  s2  DFX-Lowlight +0.0001 [-0.0003,+0.0006]
+  mixed  old DFX-Normal   -0.0136 [-0.0312,+0.0022]
+  mixed  old DFX-Lowlight -0.0009 [-0.0081,+0.0062]
+  mixed  oldfx DFX-Normal   -0.0116 [-0.0254,+0.0010]
+  mixed  oldfx DFX-Lowlight +0.0125 [+0.0079,+0.0185]
+  mixed  s0  DFX-Normal   -0.0014 [-0.0093,+0.0056]
+  mixed  s0  DFX-Lowlight +0.0001 [-0.0060,+0.0058]
+  mixed  s1  DFX-Normal   +0.0046 [-0.0071,+0.0145]
+  mixed  s1  DFX-Lowlight +0.0037 [-0.0022,+0.0102]
+  mixed  s2  DFX-Normal   +0.0041 [-0.0039,+0.0139]
+  mixed  s2  DFX-Lowlight -0.0009 [-0.0060,+0.0040]
+DFX_ANALYSIS_DONE

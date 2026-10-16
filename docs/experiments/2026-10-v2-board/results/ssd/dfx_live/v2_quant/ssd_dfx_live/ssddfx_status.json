@@ -1,0 +1,11 @@
+{
+ "state": "COMPLETE",
+ "completed": [
+  "night",
+  "day",
+  "mixed",
+  "mixed_blocks"
+ ],
+ "scope": "SSD DFX checker-driven RM select live; BLC16 Lowlight partial; 5 SSDLite DPU models on same ISP output; sequential closed loop",
+ "current": null
+}
