@@ -1,4 +1,97 @@
+# DFXISP: 어두운 곳에서도 물체를 잘 찾는 카메라 영상 처리
+
+카메라가 어두운 장면을 찍으면 컴퓨터가 사람, 자동차, 자전거를 잘 못 찾습니다. 이 프로젝트는 **장면이 밝은지 어두운지에 따라 영상 처리 회로를 실시간으로 바꿔 끼우는 방법**을 만들고, 실제 FPGA 보드에서 잘 되는지 측정합니다.
+
+## 한눈에 보기
+
+![DFXISP 동작 흐름](docs/assets/overview_flow.png)
+
+1. 카메라는 사람이 보는 사진이 아니라 **원본 데이터(RAW)** 를 냅니다.
+2. **밝기 판단기(checker)** 가 장면이 밝은지 어두운지 봅니다.
+3. **ISP**(영상 처리 회로)가 원본 데이터를 컬러 영상으로 바꿉니다. 밝은 장면에는 `NormalISP`, 어두운 장면에는 `LowlightISP`를 씁니다. 칩 안에는 둘 중 하나만 올라가 있고, 장면이 바뀌면 그 자리만 **부분 재구성**(DFX)으로 교체합니다.
+4. **물체 찾는 AI**(검출 모델)가 영상에서 사람, 자동차, 자전거의 위치를 찾습니다.
+
+## 왜 이렇게 하나요?
+
+- 어두운 장면에 잘 맞는 처리와 밝은 장면에 잘 맞는 처리는 서로 다릅니다. 하나로 둘 다 잘하기는 어렵습니다.
+- 두 회로를 칩에 **항상 함께** 올려 두면 자리와 전력이 더 듭니다. 필요한 쪽만 바꿔 올리면 자원을 아낄 수 있습니다.
+
+## 결과 한 장 요약
+
+![정확도 요약](docs/assets/summary_accuracy.png)
+
+실제 ZCU104 보드에서 잰 값입니다. 숫자가 높을수록 물체를 더 정확히 찾습니다.
+
+- **밤:** 크게 좋아졌습니다. YOLOv8n은 0.28에서 0.41로, SSD-MobileNet은 0.20에서 0.25로 올랐습니다.
+- **낮과 밤 섞음:** 두 모델 모두 좋아졌습니다.
+- **낮:** 두 모델 모두 조금 낮아졌습니다. 낮 성능이 떨어지지 않는다고는 아직 말할 수 없습니다.
+- 좋아진 이유의 대부분은 **낮과 밤 사진을 함께 학습한 AI 모델**입니다. 회로를 바꿔 끼우는 방식 자체가 정확도를 높였다는 증거는 얻지 못했습니다.
+
+### 이 결과를 읽을 때 알아둘 점
+
+- **새 장면 검증은 아직 못 했습니다.** 이전에 쓴 시험 사진을 다시 사용했기 때문에, 처음 보는 장면에서도 같을지는 모릅니다.
+- **학습을 3번 반복한 평균입니다.** 같은 방법으로 반복한 것이라 완전히 독립된 확인은 아닙니다.
+- **회로 교체 방식(DFX)이 가장 좋은 고정 회로보다 정확하다는 근거는 없습니다.** 어두운 곳에서 어두운 장면용 회로를 고정해 둔 것과 같은 수준이었습니다. DFX의 장점은 정확도가 아니라 **자원 절감**에 있습니다.
+- 사진을 한 장씩 차례로 처리했습니다. 영상이 실시간으로 들어올 때 프레임을 놓치는지는 측정하지 않았습니다.
+
+## 용어 풀이
+
+| 용어 | 쉬운 설명 |
+|---|---|
+| **ISP** | 카메라 원본 데이터를 사람이 보는 컬러 영상으로 바꾸는 처리 회로 |
+| **RAW** | 카메라 센서가 낸 가공 전 데이터 |
+| **FPGA** | 회로를 다시 짤 수 있는 칩. 이 프로젝트는 AMD의 ZCU104 보드를 씁니다 |
+| **DFX (부분 재구성)** | 칩이 켜진 채로 일부 회로만 다른 회로로 바꿔 끼우는 기술 |
+| **DPU** | 보드 위에서 AI 모델을 돌리는 전용 회로 |
+| **mAP50-95** | 물체를 얼마나 정확히 찾는지 나타내는 점수(0에서 1, 높을수록 좋음) |
+| **YOLOv8n, SSD-MobileNet** | 이 프로젝트에서 쓴 두 가지 물체 찾기 AI 모델 |
+
+## 어디부터 읽을까요?
+
+| 이런 분은 | 여기를 보세요 |
+|---|---|
+| 결과가 궁금한 분 | [`docs/experiments/2026-10-v2-board/README.md`](docs/experiments/2026-10-v2-board/README.md) |
+| 숫자 표를 보고 싶은 분 | [`docs/experiments/2026-10-v2-board/results/final_live_comparison/comparison.md`](docs/experiments/2026-10-v2-board/results/final_live_comparison/comparison.md) |
+| 연구 목표와 설계가 궁금한 분 | [`SPEC.md`](SPEC.md) 와 [`ROADMAP.md`](ROADMAP.md), 연구 계획서 [`research_plan/DFXISP_연구계획서.pdf`](research_plan/DFXISP_연구계획서.pdf) |
+| 진행 상황이 궁금한 분 | [`ROADMAP.md`](ROADMAP.md) |
+| 회로 코드를 보고 싶은 분 | `isppipeline/hls/` (회로 설계 소스), `hw/` (보드 구현) |
+
+## 폴더 구조
+
+```text
+docs/experiments/   실험 결과 정리 (이번 보드 실험은 2026-10-v2-board)
+docs/assets/        이 README의 그림
+isppipeline/        ISP 설계 (소프트웨어 기준값, 회로 설계 소스)
+hw/                 FPGA 보드 구현 (NormalISP, LowlightISP, checker, 보드 시험)
+model/              AI 모델 정보 (모델 파일 자체는 별도 보관)
+archive/            이전 문서 보관
+```
+
+## 직접 확인해 보기
+
+```text
+cd isppipeline/hls
+make verify        # 소프트웨어 기준값과 회로 시뮬레이션이 정확히 일치하는지 확인
+make report        # 검증 결과를 reports/latest.md 에 정리
+```
+
+보드 실험을 다시 하려면 FPGA 보드(ZCU104)와 AMD 도구(Vivado, Vitis 2024.1)가 필요합니다.
+
+## 참고 링크
+
+- 코드 저장소: <https://github.com/haengmini/dfxisp>
+
 ---
+
+# 연구자용 상세 문서
+
+아래는 연구자를 위한 기존 개요입니다. 처음 보시는 분은 위 내용만 읽으셔도 됩니다.
+
+
+<details>
+<summary>프로젝트 메타데이터 (기존 문서 머리말)</summary>
+
+```yaml
 type: project
 title: DFXISP
 layer: production
@@ -9,8 +102,11 @@ created: 2026-06-23
 owner: 이형민
 tags: [fpga, dfx, isp, machine-vision, zynq-ultrascale, low-light]
 updated: 2026-08-04
----
-# DFXISP
+```
+
+</details>
+
+## DFXISP (연구자용 개요)
 
 DFXISP는 Zynq UltraScale+ ZCU104에서 **static shell(ISP 연산이 없는 AXI/체커/DFX 컨트롤러)** 위에 조도 조건에 따라 상호배타로 스왑되는 **mode-specific 전체 ISP pipeline RM**(`RM_NORMAL`/`RM_LOW_LIGHT`, 각각 demosaic→BLC→WB/AWB→CCM→gain→gamma를 통째로 소유)을 얹는 Dynamic Function eXchange 기반 AI-ISP 연구 프로젝트다. baseline core는 두 RM 사이에 하드웨어로 공유되지 않는다(소스 함수 `apply_blc_wb12()`만 공유 — 실리콘에는 RM마다 중복 구현, `SPEC.md` §7 "RP 경계"). 평상시에는 `RM_NORMAL`, 어두운 환경에서는 `RM_LOW_LIGHT`를 (체커가 판단해) 트리거한다.
 
@@ -64,10 +160,10 @@ Input real-RAW Bayer (PASCAL RAW 밝음 / LOD RAW 저조도; 초기엔 pseudo-RA
 ## Active documents
 
 - `README.md` — 프로젝트 한 페이지 요약 (이 문서)
-- `RESEARCH.md` — 연구 정본: 배경, 아키텍처, RM 명세, 실험/검증 계획
+- [`archive/dfxisp-v2-renewal-2026-08-07/RESEARCH.md`](archive/dfxisp-v2-renewal-2026-08-07/RESEARCH.md) — (보관됨) 연구 정본: 배경, 아키텍처, RM 명세, 실험/검증 계획
 - `SPEC.md` — 시스템 사양서: 입력 데이터셋 → checker → mode-specific 전체 ISP pipeline RM → RGB32 출력 → 평가
 - `ROADMAP.md` — Stage 0~6 진행 상태 추적 (근거 문서 링크 포함)
-- `STRATEGY.md` — Vitis-first 리팩토링 전략 (2026-07-03, 다음 구현 방향)
+- [`archive/dfxisp-v2-renewal-2026-08-07/STRATEGY.md`](archive/dfxisp-v2-renewal-2026-08-07/STRATEGY.md) — (보관됨) Vitis-first 리팩토링 전략 (2026-07-03, 다음 구현 방향)
 
 실험/시뮬레이션 산출물 전체 목록은 `isppipeline/hls/results/INDEX.md` 에서 찾을 수 있다.
 
